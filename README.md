@@ -71,7 +71,7 @@ TimeWise is a high-performance Flutter application designed to bridge the gap be
 
 | Dashboard | Mentor Mode | Announcements |
 | :---: | :---: | :---: |
-| [Placeholder] | [Placeholder] | [Placeholder] |
+| <img src="screenshots/dashboard.jpeg" width="200"> | <img src="screenshots/mentor.jpeg" width="200"> | <img src="screenshots/announcements.png" width="200"> |
 
 ---
 
