@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 import 'package:flutter_firebase_test/settings_page.dart';
+import 'package:flutter_firebase_test/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
@@ -99,7 +101,7 @@ class _DashboardPageState extends State<DashboardPage> {
   String selectedDay = DateFormat('EEEE').format(DateTime.now());
   bool isAdmin = false;
   bool notificationsEnabled = true;
-  final String adminPIN = "1234";
+
 
   final List<String> weekDays = [
     'Monday',
@@ -113,11 +115,32 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Update widget on app start
     _updateHomeScreenWidget();
-    // Schedule notifications on app start
     _loadSettings();
     NotificationService.scheduleTimetableNotifications();
+
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user == null) {
+        setState(() {
+          isAdmin = false;
+        });
+      } else {
+        _checkAdminStatus(user);
+      }
+    });
+  }
+
+  Future<void> _checkAdminStatus(User user) async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (doc.exists && doc.data()?['role'] == 'mentor') {
+      setState(() {
+        isAdmin = true;
+      });
+    } else {
+      setState(() {
+        isAdmin = false;
+      });
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -622,41 +645,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _showLoginDialog() {
     if (isAdmin) {
-      setState(() => isAdmin = false);
-      return;
+      FirebaseAuth.instance.signOut();
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
-    final pinController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Mentor PIN'),
-        content: TextField(
-          controller: pinController,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: "****"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (pinController.text == adminPIN) {
-                setState(() => isAdmin = true);
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text("Wrong PIN!")));
-              }
-            },
-            child: const Text('Unlock'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showEditOptions(DocumentSnapshot doc) {
