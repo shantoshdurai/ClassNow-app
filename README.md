@@ -24,18 +24,18 @@
 ### 🧩 Home Screen Widgets
 - Stay updated without even opening the app. Includes **Dynamic Timetable Widgets** and a unique **Robot Status Widget** for quick schedule glances.
 
-### 🔔 Smart Notifications
-- Automated reminders for upcoming classes to ensure punctuality (Toggleable via settings).
+- **Smart Notifications:** Automated reminders for upcoming classes to ensure punctuality (Toggleable via settings).
+- **Dynamic Saturday Sync:** Powerful Firebase Cloud Functionality to dynamically set Saturday schedules based on any weekday's timetable with a single click.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Framework:** [Flutter](https://flutter.dev)
-- **Backend:** [Cloud Firestore](https://firebase.google.com/docs/firestore) (NoSQL Database)
+- **Backend:** [Cloud Firestore](https://firebase.google.com/docs/firestore) & [Cloud Functions](https://firebase.google.com/docs/functions)
 - **Local Storage:** [Shared Preferences](https://pub.dev/packages/shared_preferences)
 - **State Management:** Stateful Widgets & Streams
-- **Deep Integration:** Android Home Screen Widgets & Local Notifications
+- **Deep Integration:** Android Home Screen Widgets, Local Notifications & Dynamic Schedule Sync
 
 ---
 
