@@ -13,6 +13,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:workmanager/workmanager.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -92,8 +93,140 @@ class AppTextStyles {
   );
 }
 
+// Background task dispatcher for WorkManager
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      print('🔄 Background widget update task started: $task');
+      
+      // Initialize Firebase for background task
+      await Firebase.initializeApp();
+      
+      // Get user selection from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final departmentId = prefs.getString('departmentId');
+      final yearId = prefs.getString('yearId');
+      final sectionId = prefs.getString('sectionId');
+      
+      if (departmentId != null && yearId != null && sectionId != null) {
+        // Fetch schedule data
+        final snapshot = await FirebaseFirestore.instance
+            .collection('departments')
+            .doc(departmentId)
+            .collection('years')
+            .doc(yearId)
+            .collection('sections')
+            .doc(sectionId)
+            .collection('schedule')
+            .orderBy('startTime')
+            .get();
+        
+        final scheduleData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
+        
+        // Find current and next class
+        final now = DateTime.now();
+        final currentTime = DateFormat('HH:mm').format(now);
+        final currentDay = DateFormat('EEEE').format(now);
+        
+        Map<String, dynamic>? currentClass;
+        Map<String, dynamic>? nextClass;
+        String? timeRemaining;
+        double progress = 0.0;
+        
+        for (var i = 0; i < scheduleData.length; i++) {
+          final classData = scheduleData[i];
+          final startTime = classData['startTime'] as String;
+          final endTime = classData['endTime'] as String;
+          final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
+          if (dayOfWeek == null) continue;
+          
+          if (dayOfWeek == currentDay) {
+            final start = DateFormat('HH:mm').parse(startTime);
+            final end = DateFormat('HH:mm').parse(endTime);
+            final current = DateFormat('HH:mm').parse(currentTime);
+            
+            if (current.isAfter(start) && current.isBefore(end)) {
+              currentClass = classData;
+              final totalMinutes = end.difference(start).inMinutes;
+              final elapsedMinutes = current.difference(start).inMinutes;
+              progress = elapsedMinutes / totalMinutes;
+              
+              final remaining = end.difference(current);
+              if (remaining.inHours > 0) {
+                timeRemaining = '${remaining.inHours}h ${remaining.inMinutes % 60}m';
+              } else {
+                timeRemaining = '${remaining.inMinutes}m';
+              }
+              break;
+            } else if (current.isBefore(start)) {
+              nextClass = classData;
+              break;
+            }
+          }
+        }
+        
+        // Update widgets
+        await HomeWidget.renderFlutterWidget(
+          StaticTimetableWidget(
+            currentClass: currentClass,
+            nextClass: nextClass,
+            timeRemaining: timeRemaining,
+            progress: progress,
+          ),
+          key: 'timetable_widget',
+          logicalSize: const Size(320, 160),
+        );
+
+        await HomeWidget.renderFlutterWidget(
+          SmallRobotWidget(
+            currentClass: currentClass,
+            nextClass: nextClass,
+          ),
+          key: 'robot_widget',
+          logicalSize: const Size(160, 160),
+        );
+
+        await HomeWidget.updateWidget(
+          name: 'TimetableWidgetProvider',
+          androidName: 'com.example.flutter_firebase_test.TimetableWidgetProvider',
+          iOSName: 'TimetableWidget',
+        );
+
+        await HomeWidget.updateWidget(
+          name: 'RobotWidgetProvider',
+          androidName: 'com.example.flutter_firebase_test.RobotWidgetProvider',
+          iOSName: 'RobotWidget',
+        );
+        
+        print('✅ Background widget update completed successfully');
+      }
+      
+      return Future.value(true);
+    } catch (e) {
+      print('❌ Background widget update failed: $e');
+      return Future.value(false);
+    }
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize WorkManager for background updates
+  await Workmanager().initialize(callbackDispatcher);
+  
+  // Schedule periodic background updates every 15 minutes (minimum on Android)
+  await Workmanager().registerPeriodicTask(
+    "widgetUpdate",
+    "widgetUpdateTask",
+    frequency: const Duration(minutes: 15),
+    constraints: Constraints(
+      networkType: NetworkType.connected,
+      requiresCharging: false,
+      requiresDeviceIdle: false,
+    ),
+  );
   
   await Firebase.initializeApp();
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
@@ -171,6 +304,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   bool retroDisplayEnabled = true;
   bool isOnline = true;
   Timer? _connectivityTimer;
+  Timer? _widgetUpdateTimer;
+  Timer? _notificationTimer;
+  Timer? _duringClassTimer;
+  Timer? _classScheduleTimer;
 
   String? _scheduleCacheKey;
   List<Map<String, dynamic>> _cachedSchedule = [];
@@ -193,6 +330,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    print('🚀 DashboardPage initState - Setting up timers and observers');
+    
     _loadSettings().then((_) {
       if (!mounted) return;
       if (widgetsEnabled) {
@@ -204,6 +343,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     // Trigger during-class notification immediately if needed
     NotificationService.triggerDuringClassNotification();
     _startConnectivityMonitoring();
+    _startWidgetUpdateTimer();
+    _scheduleNextClassUpdate();
 
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (!mounted) return;
@@ -219,38 +360,116 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
   @override
   void dispose() {
+    print('🗑️ DashboardPage dispose - Canceling all timers');
     WidgetsBinding.instance.removeObserver(this);
+    
+    // Cancel all timers to prevent memory leaks
     _connectivityTimer?.cancel();
+    _widgetUpdateTimer?.cancel();
+    _notificationTimer?.cancel();
+    _duringClassTimer?.cancel();
+    _classScheduleTimer?.cancel();
+    
     super.dispose();
   }
 
   void _startConnectivityMonitoring() {
+    print('🌐 Starting connectivity monitoring');
+    _connectivityTimer?.cancel();
     _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       await _checkConnectivity();
     });
     
     // Initial check
     _checkConnectivity();
-    
-    // Start automatic widget updates every minute
-    Timer.periodic(const Duration(minutes: 1), (timer) async {
-      if (!mounted) return;
+  }
+  
+  void _startWidgetUpdateTimer() {
+    print('⏰ Starting widget update timer (every 1 minute)');
+    _widgetUpdateTimer?.cancel();
+    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (widgetsEnabled) {
+        print('🔄 Updating widgets (scheduled timer)');
         await _updateHomeScreenWidget();
       }
     });
+  }
+  
+  void _scheduleNextClassUpdate() {
+    print('📅 Scheduling next class update');
+    _classScheduleTimer?.cancel();
     
-    // Start automatic notification refresh every 5 minutes
-    Timer.periodic(const Duration(minutes: 5), (timer) async {
-      if (!mounted) return;
-      await NotificationService.refreshNotificationsWhenOnline();
-    });
+    final now = DateTime.now();
+    DateTime? nextUpdateTime;
     
-    // Check for during-class notifications every 2 minutes
-    Timer.periodic(const Duration(minutes: 2), (timer) async {
-      if (!mounted) return;
-      await NotificationService.triggerDuringClassNotification();
-    });
+    // Find the next class start or end time
+    for (var classData in _cachedSchedule) {
+      final startTime = DateFormat('HH:mm').parse(classData['startTime']);
+      final endTime = DateFormat('HH:mm').parse(classData['endTime']);
+      final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
+      
+      if (dayOfWeek == DateFormat('EEEE', 'en_US').format(now)) {
+        final startDateTime = DateTime(now.year, now.month, now.day, 
+                                       startTime.hour, startTime.minute);
+        final endDateTime = DateTime(now.year, now.month, now.day, 
+                                     endTime.hour, endTime.minute);
+        
+        if (startDateTime.isAfter(now) && 
+            (nextUpdateTime == null || startDateTime.isBefore(nextUpdateTime))) {
+          nextUpdateTime = startDateTime;
+        }
+        if (endDateTime.isAfter(now) && 
+            (nextUpdateTime == null || endDateTime.isBefore(nextUpdateTime))) {
+          nextUpdateTime = endDateTime;
+        }
+      }
+    }
+    
+    if (nextUpdateTime != null) {
+      final delay = nextUpdateTime.difference(now);
+      print('⏰ Next class update scheduled in: ${delay.inMinutes} minutes');
+      _classScheduleTimer = Timer(delay, () {
+        if (mounted && widgetsEnabled) {
+          print('🎯 Triggering class-based widget update');
+          _updateHomeScreenWidget();
+          _scheduleNextClassUpdate(); // Schedule the next one
+        }
+      });
+    } else {
+      print('📅 No more classes today, scheduling for tomorrow');
+      // Schedule for tomorrow morning
+      final tomorrow = now.add(const Duration(days: 1));
+      final tomorrowMorning = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 6, 0);
+      final delay = tomorrowMorning.difference(now);
+      
+      _classScheduleTimer = Timer(delay, () {
+        if (mounted && widgetsEnabled) {
+          print('🌅 Morning widget update triggered');
+          _updateHomeScreenWidget();
+          _scheduleNextClassUpdate();
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print('🔄 App lifecycle state changed to: $state');
+    
+    if (state == AppLifecycleState.resumed && widgetsEnabled) {
+      print('📱 App resumed - updating widgets');
+      _updateHomeScreenWidget();
+      _scheduleNextClassUpdate(); // Reschedule class-based updates
+    }
   }
 
   Future<void> _checkConnectivity() async {
@@ -927,14 +1146,20 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 
   Future<void> _updateHomeScreenWidget() async {
-    if (!widgetsEnabled) return;
     try {
-      final userSelection = Provider.of<UserSelectionProvider>(context, listen: false);
+      print('🔄 Starting widget update');
       
-      // Get current and next class data (works with cached data)
+      final userSelection = Provider.of<UserSelectionProvider>(context, listen: false);
+      if (!userSelection.hasSelection) {
+        print('❌ No user selection found');
+        return;
+      }
+
       final now = DateTime.now();
       final currentTime = DateFormat('HH:mm').format(now);
       final currentDay = DateFormat('EEEE').format(now);
+      
+      print('📅 Current time: $currentTime, Day: $currentDay');
       
       Map<String, dynamic>? currentClass;
       Map<String, dynamic>? nextClass;
@@ -946,8 +1171,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       
       if (_scheduleCacheKey != null && _cachedSchedule.isNotEmpty) {
         scheduleData = _cachedSchedule;
+        print('📦 Using cached schedule data (${scheduleData.length} classes)');
       } else {
         try {
+          print('🌐 Fetching fresh schedule data from Firestore');
           final snapshot = await FirebaseFirestore.instance
               .collection('departments')
               .doc(userSelection.departmentId)
@@ -960,10 +1187,15 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               .get(const GetOptions(source: Source.server));
           
           scheduleData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
+          print('✅ Fetched ${scheduleData.length} classes from Firestore');
         } catch (e) {
           // Offline, use cached data if available
           if (_cachedSchedule.isNotEmpty) {
             scheduleData = _cachedSchedule;
+            print('📱 Offline mode - using cached data (${scheduleData.length} classes)');
+          } else {
+            print('❌ No cached data available and offline');
+            return;
           }
         }
       }
@@ -993,12 +1225,18 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             } else {
               timeRemaining = '${remaining.inMinutes}m';
             }
+            print('🎯 Current class found: ${classData['subject']} (${classData['room']}) - Progress: ${(progress * 100).toInt()}%');
             break;
           } else if (current.isBefore(start)) {
             nextClass = classData;
+            print('⏭️ Next class found: ${classData['subject']} (${classData['room']}) at $startTime');
             break;
           }
         }
+      }
+      
+      if (currentClass == null && nextClass == null) {
+        print('📭 No classes found for today');
       }
       
       await HomeWidget.renderFlutterWidget(
@@ -1033,8 +1271,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
         iOSName: 'RobotWidget',
       );
       
+      print('✅ Widget update completed successfully');
+      
     } catch (e) {
-      print('Error updating widget: $e');
+      print('❌ Error updating widget: $e');
     }
   }
 
