@@ -21,8 +21,9 @@ android {
 
     defaultConfig {
         applicationId = "com.example.flutter_firebase_test"
-        minSdk = flutter.minSdkVersion // flutter_local_notifications requires at least 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
+        multiDexEnabled = true
         versionCode = 1
         versionName = "1.0"
     }

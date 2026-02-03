@@ -7,7 +7,7 @@ class AppTheme {
   // --- Colors ---
   static const Color _primaryColor = Color(0xFF4A90E2);
   static const Color _accentColor = Color(0xFF50E3C2);
-  
+
   // Light Theme Colors
   static const Color _lightBackground = Color(0xFFF7F9FC);
   static const Color _lightSurface = Colors.white;
@@ -20,36 +20,87 @@ class AppTheme {
 
   // --- Text Theme ---
   static const TextTheme _textTheme = TextTheme(
-    displayLarge: TextStyle(fontSize: 57.0, fontWeight: FontWeight.bold, color: _lightText),
-    displayMedium: TextStyle(fontSize: 45.0, fontWeight: FontWeight.bold, color: _lightText),
-    displaySmall: TextStyle(fontSize: 36.0, fontWeight: FontWeight.bold, color: _lightText),
-    
-    headlineLarge: TextStyle(fontSize: 32.0, fontWeight: FontWeight.bold, color: _lightText),
-    headlineMedium: TextStyle(fontSize: 28.0, fontWeight: FontWeight.bold, color: _lightText),
-    headlineSmall: TextStyle(fontSize: 24.0, fontWeight: FontWeight.w600, color: _lightText),
-    
-    titleLarge: TextStyle(fontSize: 22.0, fontWeight: FontWeight.w600, color: _lightText),
-    titleMedium: TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500, letterSpacing: 0.15, color: _lightText),
-    titleSmall: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500, letterSpacing: 0.1, color: _lightText),
-    
+    displayLarge: TextStyle(
+      fontSize: 57.0,
+      fontWeight: FontWeight.bold,
+      color: _lightText,
+    ),
+    displayMedium: TextStyle(
+      fontSize: 45.0,
+      fontWeight: FontWeight.bold,
+      color: _lightText,
+    ),
+    displaySmall: TextStyle(
+      fontSize: 36.0,
+      fontWeight: FontWeight.bold,
+      color: _lightText,
+    ),
+
+    headlineLarge: TextStyle(
+      fontSize: 32.0,
+      fontWeight: FontWeight.bold,
+      color: _lightText,
+    ),
+    headlineMedium: TextStyle(
+      fontSize: 28.0,
+      fontWeight: FontWeight.bold,
+      color: _lightText,
+    ),
+    headlineSmall: TextStyle(
+      fontSize: 24.0,
+      fontWeight: FontWeight.w600,
+      color: _lightText,
+    ),
+
+    titleLarge: TextStyle(
+      fontSize: 22.0,
+      fontWeight: FontWeight.w600,
+      color: _lightText,
+    ),
+    titleMedium: TextStyle(
+      fontSize: 16.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.15,
+      color: _lightText,
+    ),
+    titleSmall: TextStyle(
+      fontSize: 14.0,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.1,
+      color: _lightText,
+    ),
+
     bodyLarge: TextStyle(fontSize: 16.0, color: _lightText),
     bodyMedium: TextStyle(fontSize: 14.0, color: _lightText),
     bodySmall: TextStyle(fontSize: 12.0, color: _lightText),
-    
-    labelLarge: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w600, color: _lightText),
-    labelMedium: TextStyle(fontSize: 12.0, fontWeight: FontWeight.w500, color: _lightText),
-    labelSmall: TextStyle(fontSize: 11.0, fontWeight: FontWeight.w500, color: _lightText),
+
+    labelLarge: TextStyle(
+      fontSize: 14.0,
+      fontWeight: FontWeight.w600,
+      color: _lightText,
+    ),
+    labelMedium: TextStyle(
+      fontSize: 12.0,
+      fontWeight: FontWeight.w500,
+      color: _lightText,
+    ),
+    labelSmall: TextStyle(
+      fontSize: 11.0,
+      fontWeight: FontWeight.w500,
+      color: _lightText,
+    ),
   );
-  
+
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _lightBackground,
-    colorScheme: const ColorScheme.light(
+    colorScheme: ColorScheme.light(
       primary: _primaryColor,
       secondary: _accentColor,
       surface: _lightSurface,
       background: _lightBackground,
+      surfaceVariant: Colors.grey[100]!,
       error: Colors.red,
       onPrimary: Colors.white,
       onSecondary: Colors.black,
@@ -69,9 +120,7 @@ class AppTheme {
         backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: _textTheme.labelLarge,
       ),
     ),
@@ -92,11 +141,12 @@ class AppTheme {
     brightness: Brightness.dark,
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _darkBackground,
-    colorScheme: const ColorScheme.dark(
+    colorScheme: ColorScheme.dark(
       primary: _primaryColor,
       secondary: _accentColor,
       surface: _darkSurface,
       background: _darkBackground,
+      surfaceVariant: const Color(0xFF2D3748),
       error: Colors.redAccent,
       onPrimary: Colors.white,
       onSecondary: Colors.black,
@@ -104,10 +154,7 @@ class AppTheme {
       onBackground: _darkText,
       onError: Colors.white,
     ),
-    textTheme: _textTheme.apply(
-      displayColor: _darkText,
-      bodyColor: _darkText,
-    ),
+    textTheme: _textTheme.apply(displayColor: _darkText, bodyColor: _darkText),
     appBarTheme: AppBarTheme(
       backgroundColor: _darkBackground,
       elevation: 0,
@@ -119,9 +166,7 @@ class AppTheme {
         backgroundColor: _primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: _textTheme.labelLarge,
       ),
     ),

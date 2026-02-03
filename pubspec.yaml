@@ -47,7 +47,8 @@ dependencies:
   cloud_functions: ^6.0.6
   google_fonts: ^6.2.1
   connectivity_plus: ^6.1.0
-  workmanager: ^0.5.2
+  workmanager: ^0.9.0+3
+  android_alarm_manager_plus: ^4.0.0
 
 dev_dependencies:
   flutter_test:

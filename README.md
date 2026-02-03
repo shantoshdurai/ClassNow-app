@@ -12,6 +12,11 @@
 
 ## ✨ Key Features
 
+### 🚀 Premium Experience
+- **Animated Splash Screen:** Engaging startup experience with polished icon animations and background initialization.
+- **High-End Onboarding:** A modern, animated class selection flow with gradients and real-time step discovery.
+- **Visual Consistency:** Fully themed for Light and Dark modes with specialized surface depth.
+
 ### 👨‍🏫 Dual Role Architecture
 - **Mentor Mode:** Secure **Email & Password** authentication to manage schedules, post real-time announcements, and handle class deletions.
 - **Student View:** A clean, focused interface for students to track their daily classes and receive instant updates anonymously.
@@ -24,25 +29,27 @@
 ### 🧩 Advanced Visuals & Integration
 - **Retro OLED Display:** A custom-styled dashboard element showing "Live Now" and "Coming Up Next" classes in a classic digital format.
 - **Arduino Robot Eyes:** Innovative mood-based animations (Happy, Angry, Tired, Confused) that respond dynamically, giving the app a unique personality.
-- **Home Screen Widgets:** Stay updated with **Dynamic Timetable Widgets** directly on your Android home screen.
+- **Smart Home Screen Widgets:** Stay updated with **Battery-Optimized Widgets** directly on your Android home screen, powered by Workmanager and exact alarms for precision.
 
-### 🔔 Smart Notifications
-- **Lead-Time Alerts:** Automated reminders 15 minutes (configurable) before each class.
-- **In-Class Status:** Persistent notifications that trigger automatically during class hours to keep you oriented.
+### 🔔 Custom Notification System
+- **Subject-Specific Alerts:** Choice of receiving notifications for all classes or selecting specific subjects.
+- **Lead-Time Alerts:** Automated reminders 15 minutes before each class.
+- **Test Notification:** Built-in experiment section to verify notification delivery instantly.
 
 ### 📶 Offline First Design
-- **Robust Caching:** Powered by **SharedPreferences**, the app caches your entire timetable locally.
-- **Seamless Sync:** Automatically refreshes and updates local data whenever you come back online, ensuring the timetable is always accessible.
+- **Robust Caching:** Powered by **SharedPreferences** and Firestore persistence, the app works flawlessly without internet.
+- **Seamless Sync:** Automatically refreshes and updates local data whenever you come back online.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Framework:** [Flutter](https://flutter.dev)
-- **Backend:** [Cloud Firestore](https://firebase.google.com/docs/firestore) & [Cloud Functions](https://firebase.google.com/docs/functions)
-- **State Management:** [Provider](https://pub.dev/packages/provider) & Streams
+- **Backend:** [Cloud Firestore](https://firebase.google.com/docs/firestore) & [Firebase Auth](https://firebase.google.com/docs/auth)
+- **State Management:** [Provider](https://pub.dev/packages/provider)
+- **Background Work:** [Workmanager](https://pub.dev/packages/workmanager) & [Android Alarm Manager Plus](https://pub.dev/packages/android_alarm_manager_plus)
 - **Local Storage:** [Shared Preferences](https://pub.dev/packages/shared_preferences)
-- **UI & Animations:** [Google Fonts](https://fonts.google.com/specimen/Inter), [Shimmer](https://pub.dev/packages/shimmer), and Custom Shaders.
+- **UI & Animations:** [Google Fonts](https://fonts.google.com/specimen/Inter), [Shimmer](https://pub.dev/packages/shimmer).
 
 ---
 
@@ -59,7 +66,7 @@
    ```
 3. **Firebase Configuration:**
    - Add your `google-services.json` to `android/app/`.
-   - Enable Email/Password Authentication in the Firebase Console.
+   - Enable Email/Password and Anonymous Authentication in the Firebase Console.
 4. **Run the App:**
    ```bash
    flutter run

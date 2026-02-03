@@ -2,39 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:home_widget/home_widget.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'static_widget.dart';
+
 import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:workmanager/workmanager.dart';
+
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter_firebase_test/onboarding_screen.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/settings_page.dart';
 import 'package:flutter_firebase_test/login_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
-
 import 'package:flutter_firebase_test/app_theme.dart';
-
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
-import 'package:flutter_firebase_test/timetable_widget.dart';
 import 'package:flutter_firebase_test/widgets/skeleton_loader.dart';
 import 'package:flutter_firebase_test/retro_digital_display.dart';
+import 'package:flutter_firebase_test/splash_screen.dart';
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    print("Native called background task: $task");
+    try {
+      await Firebase.initializeApp();
+      await WidgetService.updateWidget();
+    } catch (e) {
+      print("Background task failed: $e");
+    }
+    return Future.value(true);
+  });
+}
 
 // Global ValueNotifier for retro display setting
-final retroDisplayEnabledNotifier = ValueNotifier<bool>(true);
+final retroDisplayEnabledNotifier = ValueNotifier<bool>(false);
 
 // Custom text styles for consistent typography
 class AppTextStyles {
@@ -43,49 +47,49 @@ class AppTextStyles {
     fontWeight: FontWeight.w700,
     letterSpacing: -0.5,
   );
-  
+
   static TextStyle get interSubtitle => const TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.2,
   );
-  
+
   static TextStyle get interBadge => const TextStyle(
     fontSize: 11,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.3,
   );
-  
+
   static TextStyle get interLiveNow => const TextStyle(
     fontSize: 10,
     fontWeight: FontWeight.w700,
     letterSpacing: 1.2,
   );
-  
+
   static TextStyle get interSubject => const TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
   );
-  
+
   static TextStyle get interProgress => const TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
   );
-  
+
   static TextStyle get interMentor => const TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
   );
-  
+
   static TextStyle get interNext => const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
   );
-  
+
   static TextStyle get interSmall => const TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w400,
@@ -93,151 +97,13 @@ class AppTextStyles {
   );
 }
 
-// Background task dispatcher for WorkManager
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    try {
-      print('🔄 Background widget update task started: $task');
-      
-      // Initialize Firebase for background task
-      await Firebase.initializeApp();
-      
-      // Get user selection from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final departmentId = prefs.getString('departmentId');
-      final yearId = prefs.getString('yearId');
-      final sectionId = prefs.getString('sectionId');
-      
-      if (departmentId != null && yearId != null && sectionId != null) {
-        // Fetch schedule data
-        final snapshot = await FirebaseFirestore.instance
-            .collection('departments')
-            .doc(departmentId)
-            .collection('years')
-            .doc(yearId)
-            .collection('sections')
-            .doc(sectionId)
-            .collection('schedule')
-            .orderBy('startTime')
-            .get();
-        
-        final scheduleData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
-        
-        // Find current and next class
-        final now = DateTime.now();
-        final currentTime = DateFormat('HH:mm').format(now);
-        final currentDay = DateFormat('EEEE').format(now);
-        
-        Map<String, dynamic>? currentClass;
-        Map<String, dynamic>? nextClass;
-        String? timeRemaining;
-        double progress = 0.0;
-        
-        for (var i = 0; i < scheduleData.length; i++) {
-          final classData = scheduleData[i];
-          final startTime = classData['startTime'] as String;
-          final endTime = classData['endTime'] as String;
-          final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
-          if (dayOfWeek == null) continue;
-          
-          if (dayOfWeek == currentDay) {
-            final start = DateFormat('HH:mm').parse(startTime);
-            final end = DateFormat('HH:mm').parse(endTime);
-            final current = DateFormat('HH:mm').parse(currentTime);
-            
-            if (current.isAfter(start) && current.isBefore(end)) {
-              currentClass = classData;
-              final totalMinutes = end.difference(start).inMinutes;
-              final elapsedMinutes = current.difference(start).inMinutes;
-              progress = elapsedMinutes / totalMinutes;
-              
-              final remaining = end.difference(current);
-              if (remaining.inHours > 0) {
-                timeRemaining = '${remaining.inHours}h ${remaining.inMinutes % 60}m';
-              } else {
-                timeRemaining = '${remaining.inMinutes}m';
-              }
-              break;
-            } else if (current.isBefore(start)) {
-              nextClass = classData;
-              break;
-            }
-          }
-        }
-        
-        // Update widgets
-        await HomeWidget.renderFlutterWidget(
-          StaticTimetableWidget(
-            currentClass: currentClass,
-            nextClass: nextClass,
-            timeRemaining: timeRemaining,
-            progress: progress,
-          ),
-          key: 'timetable_widget',
-          logicalSize: const Size(320, 160),
-        );
-
-        await HomeWidget.renderFlutterWidget(
-          SmallRobotWidget(
-            currentClass: currentClass,
-            nextClass: nextClass,
-          ),
-          key: 'robot_widget',
-          logicalSize: const Size(160, 160),
-        );
-
-        await HomeWidget.updateWidget(
-          name: 'TimetableWidgetProvider',
-          androidName: 'com.example.flutter_firebase_test.TimetableWidgetProvider',
-          iOSName: 'TimetableWidget',
-        );
-
-        await HomeWidget.updateWidget(
-          name: 'RobotWidgetProvider',
-          androidName: 'com.example.flutter_firebase_test.RobotWidgetProvider',
-          iOSName: 'RobotWidget',
-        );
-        
-        print('✅ Background widget update completed successfully');
-      }
-      
-      return Future.value(true);
-    } catch (e) {
-      print('❌ Background widget update failed: $e');
-      return Future.value(false);
-    }
-  });
-}
-
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize WorkManager for background updates
-  await Workmanager().initialize(callbackDispatcher);
-  
-  // Schedule periodic background updates every 15 minutes (minimum on Android)
-  await Workmanager().registerPeriodicTask(
-    "widgetUpdate",
-    "widgetUpdateTask",
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(
-      networkType: NetworkType.connected,
-      requiresCharging: false,
-      requiresDeviceIdle: false,
-    ),
-  );
-  
-  await Firebase.initializeApp();
-  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
-  try {
-    if (FirebaseAuth.instance.currentUser == null) {
-      await FirebaseAuth.instance.signInAnonymously();
-    }
-  } catch (_) {
-    // Ignore: if Anonymous auth is disabled or fails, Firestore reads may be blocked by rules.
-  }
-  await NotificationService.init();
+
+  // Workmanager mostly needs the callback dispatcher registered, but we can do full init in Splash.
+  // However, for background tasks to work reliably even if app is killed,
+  // sometimes minimal init is good, but here we prioritize UI startup.
+
   runApp(
     MultiProvider(
       providers: [
@@ -262,7 +128,7 @@ class TimetableApp extends StatelessWidget {
       themeMode: themeProvider.themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const AppLauncher(),
+      home: const SplashScreen(),
     );
   }
 }
@@ -294,9 +160,8 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-
-
-class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
+class _DashboardPageState extends State<DashboardPage>
+    with WidgetsBindingObserver {
   String selectedDay = DateFormat('EEEE').format(DateTime.now());
   bool isAdmin = false;
   bool notificationsEnabled = true;
@@ -313,8 +178,17 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   List<Map<String, dynamic>> _cachedSchedule = [];
   DateTime? _cachedScheduleUpdatedAt;
 
+  // Performance tracking variables
+  int _updateCount = 0;
+  DateTime? _lastUpdate;
+  DateTime? _lastSuccessfulUpdate;
+  int _errorCount = 0;
+  final List<String> _updateHistory = [];
+
   List<_ScheduleItem> _itemsFromMaps(List<Map<String, dynamic>> all) {
-    return all.map((e) => _ScheduleItem(data: Map<String, dynamic>.from(e))).toList();
+    return all
+        .map((e) => _ScheduleItem(data: Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   final List<String> weekDays = [
@@ -331,7 +205,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     print('🚀 DashboardPage initState - Setting up timers and observers');
-    
+
     _loadSettings().then((_) {
       if (!mounted) return;
       if (widgetsEnabled) {
@@ -339,7 +213,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       }
     });
     NotificationService.scheduleTimetableNotifications();
-    
+
     // Trigger during-class notification immediately if needed
     NotificationService.triggerDuringClassNotification();
     _startConnectivityMonitoring();
@@ -362,132 +236,201 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   void dispose() {
     print('🗑️ DashboardPage dispose - Canceling all timers');
     WidgetsBinding.instance.removeObserver(this);
-    
+
     // Cancel all timers to prevent memory leaks
     _connectivityTimer?.cancel();
     _widgetUpdateTimer?.cancel();
     _notificationTimer?.cancel();
     _duringClassTimer?.cancel();
     _classScheduleTimer?.cancel();
-    
+
     super.dispose();
   }
 
   void _startConnectivityMonitoring() {
     print('🌐 Starting connectivity monitoring');
     _connectivityTimer?.cancel();
-    _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (
+      timer,
+    ) async {
       if (!mounted) {
         timer.cancel();
         return;
       }
       await _checkConnectivity();
     });
-    
+
     // Initial check
     _checkConnectivity();
   }
-  
-  void _startWidgetUpdateTimer() {
-    print('⏰ Starting widget update timer (every 1 minute)');
-    _widgetUpdateTimer?.cancel();
-    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (widgetsEnabled) {
-        print('🔄 Updating widgets (scheduled timer)');
-        await _updateHomeScreenWidget();
-      }
-    });
-  }
-  
+
   void _scheduleNextClassUpdate() {
-    print('📅 Scheduling next class update');
+    print('📅 [Schedule] Scheduling next class update...');
+
     _classScheduleTimer?.cancel();
-    
+
     final now = DateTime.now();
     DateTime? nextUpdateTime;
-    
+    String? nextUpdateReason;
+
     // Find the next class start or end time
     for (var classData in _cachedSchedule) {
-      final startTime = DateFormat('HH:mm').parse(classData['startTime']);
-      final endTime = DateFormat('HH:mm').parse(classData['endTime']);
-      final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
-      
-      if (dayOfWeek == DateFormat('EEEE', 'en_US').format(now)) {
-        final startDateTime = DateTime(now.year, now.month, now.day, 
-                                       startTime.hour, startTime.minute);
-        final endDateTime = DateTime(now.year, now.month, now.day, 
-                                     endTime.hour, endTime.minute);
-        
-        if (startDateTime.isAfter(now) && 
-            (nextUpdateTime == null || startDateTime.isBefore(nextUpdateTime))) {
-          nextUpdateTime = startDateTime;
+      try {
+        final dayOfWeek =
+            (classData['day'] ?? classData['dayOfWeek']) as String?;
+        final currentDay = DateFormat('EEEE').format(now);
+
+        // Only schedule for today's classes
+        if (dayOfWeek != currentDay) continue;
+
+        final startTime = DateFormat('HH:mm').parse(classData['startTime']);
+        final endTime = DateFormat('HH:mm').parse(classData['endTime']);
+
+        final startDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          startTime.hour,
+          startTime.minute,
+        );
+
+        final endDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          endTime.hour,
+          endTime.minute,
+        );
+
+        // Check if start time is in the future and closer than current nextUpdateTime
+        if (startDateTime.isAfter(now)) {
+          if (nextUpdateTime == null ||
+              startDateTime.isBefore(nextUpdateTime)) {
+            nextUpdateTime = startDateTime;
+            nextUpdateReason = 'Class Start: ${classData['subject']}';
+          }
         }
-        if (endDateTime.isAfter(now) && 
-            (nextUpdateTime == null || endDateTime.isBefore(nextUpdateTime))) {
-          nextUpdateTime = endDateTime;
+
+        // Check if end time is in the future and closer than current nextUpdateTime
+        if (endDateTime.isAfter(now)) {
+          if (nextUpdateTime == null || endDateTime.isBefore(nextUpdateTime)) {
+            nextUpdateTime = endDateTime;
+            nextUpdateReason = 'Class End: ${classData['subject']}';
+          }
         }
+      } catch (e) {
+        print('⚠️ [Schedule] Error processing class: $e');
       }
     }
-    
+
     if (nextUpdateTime != null) {
       final delay = nextUpdateTime.difference(now);
-      print('⏰ Next class update scheduled in: ${delay.inMinutes} minutes');
+      final delayMinutes = delay.inMinutes;
+      final delaySeconds = delay.inSeconds % 60;
+
+      print(
+        '⏰ [Schedule] Next update scheduled in ${delayMinutes}m ${delaySeconds}s',
+      );
+      print('📍 [Schedule] Reason: $nextUpdateReason');
+      print(
+        '🕐 [Schedule] Time: ${DateFormat('HH:mm').format(nextUpdateTime)}',
+      );
+
+      // Schedule the update
       _classScheduleTimer = Timer(delay, () {
-        if (mounted && widgetsEnabled) {
-          print('🎯 Triggering class-based widget update');
-          _updateHomeScreenWidget();
-          _scheduleNextClassUpdate(); // Schedule the next one
-        }
+        print('🔔 [Schedule] Scheduled update triggered: $nextUpdateReason');
+        _updateHomeScreenWidget();
+
+        // Schedule the next update after this one
+        _scheduleNextClassUpdate();
       });
     } else {
-      print('📅 No more classes today, scheduling for tomorrow');
-      // Schedule for tomorrow morning
-      final tomorrow = now.add(const Duration(days: 1));
-      final tomorrowMorning = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 6, 0);
-      final delay = tomorrowMorning.difference(now);
-      
-      _classScheduleTimer = Timer(delay, () {
-        if (mounted && widgetsEnabled) {
-          print('🌅 Morning widget update triggered');
-          _updateHomeScreenWidget();
-          _scheduleNextClassUpdate();
-        }
+      print('ℹ️ [Schedule] No more classes today, will check again tomorrow');
+
+      // Schedule a check at midnight to set up tomorrow's schedule
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final untilMidnight = tomorrow.difference(now);
+
+      _classScheduleTimer = Timer(untilMidnight, () {
+        print('🌅 [Schedule] New day - rescheduling updates');
+        _scheduleNextClassUpdate();
       });
     }
+  }
+
+  void _printDiagnosticInfo() {
+    print('🔍 [Diagnostic] Widget Update System Status');
+    print('   Total Updates: $_updateCount');
+    print('   Error Count: $_errorCount');
+    print(
+      '   Last Update: ${_lastUpdate != null ? DateFormat('HH:mm:ss').format(_lastUpdate!) : 'Never'}',
+    );
+    print(
+      '   Last Success: ${_lastSuccessfulUpdate != null ? DateFormat('HH:mm:ss').format(_lastSuccessfulUpdate!) : 'Never'}',
+    );
+    print('   Widgets Enabled: $widgetsEnabled');
+    print('   Cached Classes: ${_cachedSchedule.length}');
+
+    if (_updateHistory.isNotEmpty) {
+      print('📋 [Diagnostic] Recent Update History:');
+      for (int i = 0; i < _updateHistory.length; i++) {
+        print('   ${i + 1}. ${_updateHistory[i]}');
+      }
+    }
+
+    print('⏰ [Diagnostic] Timer Status:');
+    print('   Widget Timer Active: ${_widgetUpdateTimer?.isActive ?? false}');
+    print(
+      '   Schedule Timer Active: ${_classScheduleTimer?.isActive ?? false}',
+    );
+    print(
+      '   Connectivity Timer Active: ${_connectivityTimer?.isActive ?? false}',
+    );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    print('🔄 App lifecycle state changed to: $state');
-    
-    if (state == AppLifecycleState.resumed && widgetsEnabled) {
-      print('📱 App resumed - updating widgets');
-      _updateHomeScreenWidget();
-      _scheduleNextClassUpdate(); // Reschedule class-based updates
+    print('🔄 [Lifecycle] App state changed to: $state');
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        print('▶️ [Lifecycle] App resumed - updating widget');
+        _updateHomeScreenWidget();
+        _scheduleNextClassUpdate(); // Reschedule in case times changed
+        _printDiagnosticInfo(); // Print diagnostic info on resume
+        break;
+      case AppLifecycleState.paused:
+        print('⏸️ [Lifecycle] App paused');
+        break;
+      case AppLifecycleState.inactive:
+        print('💤 [Lifecycle] App inactive');
+        break;
+      case AppLifecycleState.detached:
+        print('🔌 [Lifecycle] App detached');
+        break;
+      case AppLifecycleState.hidden:
+        print('🙈 [Lifecycle] App hidden');
+        break;
     }
   }
 
   Future<void> _checkConnectivity() async {
     bool wasOnline = isOnline;
-    
+
     try {
       // Try to reach Firestore with server source
       await FirebaseFirestore.instance
           .collection('announcements')
           .limit(1)
           .get(const GetOptions(source: Source.server));
-      
+
       if (mounted) {
         setState(() {
           isOnline = true;
         });
       }
-      
+
       // If we just came online, refresh notifications and widgets
       if (!wasOnline && mounted) {
         await NotificationService.refreshNotificationsWhenOnline();
@@ -501,7 +444,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           ),
         );
       }
-      
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -537,30 +479,37 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
     final decoded = jsonDecode(raw);
     final list = (decoded is List)
-        ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+        ? decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
         : <Map<String, dynamic>>[];
 
     setState(() {
       _scheduleCacheKey = cacheKey;
       _cachedSchedule = list;
-      _cachedScheduleUpdatedAt = updatedRaw != null ? DateTime.tryParse(updatedRaw) : null;
+      _cachedScheduleUpdatedAt = updatedRaw != null
+          ? DateTime.tryParse(updatedRaw)
+          : null;
     });
   }
 
-  Future<void> _saveScheduleCache(String cacheKey, List<QueryDocumentSnapshot> docs, {required bool fromServer}) async {
+  Future<void> _saveScheduleCache(
+    String cacheKey,
+    List<QueryDocumentSnapshot> docs, {
+    required bool fromServer,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final payload = docs
-        .map((d) {
-          final data = d.data() as Map<String, dynamic>;
-          return {
-            'id': d.id,
-            ...data,
-          };
-        })
-        .toList();
+    final payload = docs.map((d) {
+      final data = d.data() as Map<String, dynamic>;
+      return {'id': d.id, ...data};
+    }).toList();
     await prefs.setString(cacheKey, jsonEncode(payload));
     if (fromServer) {
-      await prefs.setString('${cacheKey}_updatedAt', DateTime.now().toIso8601String());
+      await prefs.setString(
+        '${cacheKey}_updatedAt',
+        DateTime.now().toIso8601String(),
+      );
     }
   }
 
@@ -569,7 +518,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final now = DateTime.now();
     final currentDay = DateFormat('EEEE').format(now);
     final currentTime = DateFormat('HH:mm').format(now);
-    
+
     return Consumer<UserSelectionProvider>(
       builder: (context, userSelection, child) {
         if (!userSelection.hasSelection) {
@@ -638,11 +587,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 final data = doc.data() as Map<String, dynamic>;
                 final startTime = data['startTime'] as String;
                 final endTime = data['endTime'] as String;
-                
+
                 final start = DateFormat('HH:mm').parse(startTime);
                 final end = DateFormat('HH:mm').parse(endTime);
                 final current = DateFormat('HH:mm').parse(currentTime);
-                
+
                 if (current.isAfter(start) && current.isBefore(end)) {
                   currentClass = data;
                 } else if (current.isBefore(start)) {
@@ -686,7 +635,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                         nextClass: nextClass?['subject'],
                         currentEndTime: currentClass?['endTime'],
                         nextStartTime: nextClass?['startTime'],
-                        room: currentClass?['room'] ?? nextClass?['room'] ?? 'N/A',
+                        room:
+                            currentClass?['room'] ??
+                            nextClass?['room'] ??
+                            'N/A',
                       ),
                     ),
                   ),
@@ -704,14 +656,16 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final now = DateTime.now();
     final currentDay = DateFormat('EEEE').format(now);
     final currentTime = DateFormat('HH:mm').format(now);
-    
+
     return Consumer<UserSelectionProvider>(
       builder: (context, userSelection, child) {
         if (!userSelection.hasSelection) {
           return Card(
             elevation: 0,
             color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -720,13 +674,17 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   const SizedBox(height: 12),
                   Text(
                     'Welcome to Class Now',
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Select your class in Settings to get started',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.hintColor,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -756,22 +714,32 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               return Card(
                 elevation: 0,
                 color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Icon(Icons.event_available_outlined, size: 48, color: theme.hintColor),
+                      Icon(
+                        Icons.event_available_outlined,
+                        size: 48,
+                        color: theme.hintColor,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No classes today',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Enjoy your free time!',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.hintColor,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -788,11 +756,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               final data = doc.data() as Map<String, dynamic>;
               final startTime = data['startTime'] as String;
               final endTime = data['endTime'] as String;
-              
+
               final start = DateFormat('HH:mm').parse(startTime);
               final end = DateFormat('HH:mm').parse(endTime);
               final current = DateFormat('HH:mm').parse(currentTime);
-              
+
               if (current.isAfter(start) && current.isBefore(end)) {
                 currentClass = data;
               } else if (current.isBefore(start)) {
@@ -804,7 +772,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             return Card(
               elevation: 2,
               color: theme.cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -824,7 +794,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                         const Spacer(),
                         Text(
                           DateFormat('MMM dd').format(now),
-                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.hintColor,
+                          ),
                         ),
                       ],
                     ),
@@ -841,7 +813,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.play_circle_filled, color: theme.primaryColor, size: 20),
+                                Icon(
+                                  Icons.play_circle_filled,
+                                  color: theme.primaryColor,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'NOW',
@@ -855,23 +831,37 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                             const SizedBox(height: 8),
                             Text(
                               currentClass['subject'] ?? 'No Subject',
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.access_time, size: 16, color: theme.hintColor),
+                                Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: theme.hintColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "${currentClass['startTime']} - ${currentClass['endTime']}",
-                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.hintColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
-                                Icon(Icons.location_on_outlined, size: 16, color: theme.hintColor),
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: theme.hintColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "Room ${currentClass['room'] ?? 'TBD'}",
-                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.hintColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -884,7 +874,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                          color: theme.colorScheme.surfaceVariant.withOpacity(
+                            0.5,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -892,7 +884,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.schedule, color: theme.colorScheme.onSurfaceVariant, size: 20),
+                                Icon(
+                                  Icons.schedule,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'NEXT',
@@ -906,23 +902,37 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                             const SizedBox(height: 8),
                             Text(
                               nextClass['subject'] ?? 'No Subject',
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.access_time, size: 16, color: theme.hintColor),
+                                Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: theme.hintColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   nextClass['startTime'],
-                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.hintColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
-                                Icon(Icons.location_on_outlined, size: 16, color: theme.hintColor),
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: theme.hintColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "Room ${nextClass['room'] ?? 'TBD'}",
-                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.hintColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -933,7 +943,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                     if (currentClass == null && nextClass == null) ...[
                       Text(
                         'All classes completed for today!',
-                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.hintColor,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -993,7 +1005,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildInfoBanner({required String title, String? subtitle, IconData icon = Icons.info_outline}) {
+  Widget _buildInfoBanner({
+    required String title,
+    String? subtitle,
+    IconData icon = Icons.info_outline,
+  }) {
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -1011,10 +1027,20 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
-                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.hintColor,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -1046,7 +1072,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
   Future<void> _checkAdminStatus(User user) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (mounted) {
         setState(() {
           isAdmin = doc.exists && doc.data()?['role'] == 'mentor';
@@ -1064,7 +1093,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
-      final retroEnabled = prefs.getBool('retro_display_enabled') ?? true;
+      final retroEnabled = prefs.getBool('retro_display_enabled') ?? false;
       print('DEBUG: retro_display_enabled = $retroEnabled'); // Debug print
       setState(() {
         notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
@@ -1073,15 +1102,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       });
       // Update the global notifier
       retroDisplayEnabledNotifier.value = retroEnabled;
-    }
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      // Reload settings when app comes to foreground
-      _loadSettings();
     }
   }
 
@@ -1097,6 +1117,40 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     super.didUpdateWidget(oldWidget);
     // Reload settings when widget updates
     _loadSettings();
+  }
+
+  Future<void> _postAnnouncement(
+    String message, {
+    bool isSystemMessage = false,
+  }) async {
+    try {
+      final userSelection = Provider.of<UserSelectionProvider>(
+        context,
+        listen: false,
+      );
+      if (!userSelection.hasSelection) return;
+
+      await FirebaseFirestore.instance
+          .collection('departments')
+          .doc(userSelection.departmentId)
+          .collection('years')
+          .doc(userSelection.yearId)
+          .collection('sections')
+          .doc(userSelection.sectionId)
+          .collection('announcements')
+          .add({
+            'message': message,
+            'timestamp': FieldValue.serverTimestamp(),
+            'isSystemMessage': isSystemMessage,
+            'author': isAdmin
+                ? FirebaseAuth.instance.currentUser?.email
+                : 'System',
+          });
+
+      print('📢 [Announcement] Posted: $message');
+    } catch (e) {
+      print('❌ [Announcement] Error posting announcement: $e');
+    }
   }
 
   Future<void> _manualRefresh() async {
@@ -1146,140 +1200,50 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 
   Future<void> _updateHomeScreenWidget() async {
-    try {
-      print('🔄 Starting widget update');
-      
-      final userSelection = Provider.of<UserSelectionProvider>(context, listen: false);
-      if (!userSelection.hasSelection) {
-        print('❌ No user selection found');
-        return;
+    _updateCount++;
+    if (widgetsEnabled) {
+      await WidgetService.updateWidget();
+      if (mounted) {
+        setState(() {
+          _lastUpdate = DateTime.now();
+          _lastSuccessfulUpdate = DateTime.now();
+          if (_updateHistory.length > 10) _updateHistory.removeAt(0);
+          _updateHistory.add(
+            '${DateFormat('HH:mm:ss').format(_lastUpdate!)} - SUCCESS',
+          );
+        });
       }
-
-      final now = DateTime.now();
-      final currentTime = DateFormat('HH:mm').format(now);
-      final currentDay = DateFormat('EEEE').format(now);
-      
-      print('📅 Current time: $currentTime, Day: $currentDay');
-      
-      Map<String, dynamic>? currentClass;
-      Map<String, dynamic>? nextClass;
-      String? timeRemaining;
-      double progress = 0.0;
-      
-      // Use cached data if available, otherwise try online
-      List<Map<String, dynamic>> scheduleData = [];
-      
-      if (_scheduleCacheKey != null && _cachedSchedule.isNotEmpty) {
-        scheduleData = _cachedSchedule;
-        print('📦 Using cached schedule data (${scheduleData.length} classes)');
-      } else {
-        try {
-          print('🌐 Fetching fresh schedule data from Firestore');
-          final snapshot = await FirebaseFirestore.instance
-              .collection('departments')
-              .doc(userSelection.departmentId)
-              .collection('years')
-              .doc(userSelection.yearId)
-              .collection('sections')
-              .doc(userSelection.sectionId)
-              .collection('schedule')
-              .orderBy('startTime')
-              .get(const GetOptions(source: Source.server));
-          
-          scheduleData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
-          print('✅ Fetched ${scheduleData.length} classes from Firestore');
-        } catch (e) {
-          // Offline, use cached data if available
-          if (_cachedSchedule.isNotEmpty) {
-            scheduleData = _cachedSchedule;
-            print('📱 Offline mode - using cached data (${scheduleData.length} classes)');
-          } else {
-            print('❌ No cached data available and offline');
-            return;
-          }
-        }
-      }
-      
-      // Find current and next class
-      for (var i = 0; i < scheduleData.length; i++) {
-        final classData = scheduleData[i];
-        final startTime = classData['startTime'] as String;
-        final endTime = classData['endTime'] as String;
-        final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
-        if (dayOfWeek == null) continue;
-        
-        if (dayOfWeek == currentDay) {
-          final start = DateFormat('HH:mm').parse(startTime);
-          final end = DateFormat('HH:mm').parse(endTime);
-          final current = DateFormat('HH:mm').parse(currentTime);
-          
-          if (current.isAfter(start) && current.isBefore(end)) {
-            currentClass = classData;
-            final totalMinutes = end.difference(start).inMinutes;
-            final elapsedMinutes = current.difference(start).inMinutes;
-            progress = elapsedMinutes / totalMinutes;
-            
-            final remaining = end.difference(current);
-            if (remaining.inHours > 0) {
-              timeRemaining = '${remaining.inHours}h ${remaining.inMinutes % 60}m';
-            } else {
-              timeRemaining = '${remaining.inMinutes}m';
-            }
-            print('🎯 Current class found: ${classData['subject']} (${classData['room']}) - Progress: ${(progress * 100).toInt()}%');
-            break;
-          } else if (current.isBefore(start)) {
-            nextClass = classData;
-            print('⏭️ Next class found: ${classData['subject']} (${classData['room']}) at $startTime');
-            break;
-          }
-        }
-      }
-      
-      if (currentClass == null && nextClass == null) {
-        print('📭 No classes found for today');
-      }
-      
-      await HomeWidget.renderFlutterWidget(
-        StaticTimetableWidget(
-          currentClass: currentClass,
-          nextClass: nextClass,
-          timeRemaining: timeRemaining,
-          progress: progress,
-        ),
-        key: 'timetable_widget',
-        logicalSize: const Size(320, 160),
-      );
-
-      await HomeWidget.renderFlutterWidget(
-        SmallRobotWidget(
-          currentClass: currentClass,
-          nextClass: nextClass,
-        ),
-        key: 'robot_widget',
-        logicalSize: const Size(160, 160),
-      );
-
-      await HomeWidget.updateWidget(
-        name: 'TimetableWidgetProvider',
-        androidName: 'com.example.flutter_firebase_test.TimetableWidgetProvider',
-        iOSName: 'TimetableWidget',
-      );
-
-      await HomeWidget.updateWidget(
-        name: 'RobotWidgetProvider',
-        androidName: 'com.example.flutter_firebase_test.RobotWidgetProvider',
-        iOSName: 'RobotWidget',
-      );
-      
-      print('✅ Widget update completed successfully');
-      
-    } catch (e) {
-      print('❌ Error updating widget: $e');
     }
   }
 
-  Future<void> _postAnnouncement(String message, {bool isSystemMessage = false}) async {
-    // ... (omitting for brevity, no changes needed here)
+  void _startWidgetUpdateTimer() {
+    print('⏰ [Timer] Starting 1-minute periodic update timer');
+
+    // Register Background Task
+    try {
+      Workmanager().registerPeriodicTask(
+        "updateWidgetTask",
+        "updateWidgetTask",
+        frequency: const Duration(minutes: 15),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      );
+    } catch (e) {
+      print('⚠️ [Workmanager] Failed to register task: $e');
+    }
+
+    _widgetUpdateTimer?.cancel();
+    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 15), (
+      timer,
+    ) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (widgetsEnabled) {
+        await _updateHomeScreenWidget();
+      }
+    });
+    print('✅ [Timer] Periodic timer started successfully');
   }
 
   @override
@@ -1292,7 +1256,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             Text(
               'Class Now',
               style: AppTextStyles.interTitle.copyWith(
-                color: theme.colorScheme.onPrimary,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             Row(
@@ -1301,13 +1265,18 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 Text(
                   isAdmin ? "Mentor Mode" : "Student View",
                   style: AppTextStyles.interSubtitle.copyWith(
-                    color: isAdmin ? theme.colorScheme.secondary : theme.hintColor,
+                    color: isAdmin
+                        ? theme.colorScheme.secondary
+                        : theme.hintColor,
                   ),
                 ),
                 if (!isAdmin && _getCurrentClassInfo() != null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.primaryColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -1351,8 +1320,12 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           IconButton(
             tooltip: "Notifications",
             icon: Icon(
-              notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
-              color: notificationsEnabled ? theme.primaryColor : theme.hintColor,
+              notificationsEnabled
+                  ? Icons.notifications_active
+                  : Icons.notifications_off,
+              color: notificationsEnabled
+                  ? theme.primaryColor
+                  : theme.hintColor,
             ),
             onPressed: _toggleNotifications,
           ),
@@ -1386,10 +1359,14 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => AnnouncementsPage(isAdmin: isAdmin)),
+          MaterialPageRoute(
+            builder: (context) => AnnouncementsPage(isAdmin: isAdmin),
+          ),
         ),
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('announcements').snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('announcements')
+              .snapshots(),
           builder: (context, snapshot) {
             final hasNew = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
             return Stack(
@@ -1408,7 +1385,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       ),
                       child: Text(
                         '${snapshot.data!.docs.length}',
-                        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onError),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onError,
+                        ),
                       ),
                     ),
                   ),
@@ -1448,7 +1427,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
                   curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? theme.primaryColor : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
@@ -1487,7 +1469,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           );
         }
 
-        final cacheKey = 'cache_schedule_${userSelection.departmentId}_${userSelection.yearId}_${userSelection.sectionId}';
+        final cacheKey =
+            'cache_schedule_${userSelection.departmentId}_${userSelection.yearId}_${userSelection.sectionId}';
         if (_scheduleCacheKey != cacheKey) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
@@ -1506,15 +1489,19 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               .collection('schedule')
               .snapshots(includeMetadataChanges: true),
           builder: (context, snapshot) {
-            final hasCached = _scheduleCacheKey == cacheKey && _cachedSchedule.isNotEmpty;
+            final hasCached =
+                _scheduleCacheKey == cacheKey && _cachedSchedule.isNotEmpty;
             final fromCache = snapshot.data?.metadata.isFromCache == true;
 
             if (snapshot.hasData) {
-              final docs = snapshot.data!.docs.whereType<QueryDocumentSnapshot>().toList();
+              final docs = snapshot.data!.docs
+                  .whereType<QueryDocumentSnapshot>()
+                  .toList();
               _saveScheduleCache(cacheKey, docs, fromServer: !fromCache);
             }
 
-            if (snapshot.connectionState == ConnectionState.waiting && !hasCached) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !hasCached) {
               return const ClassListSkeleton();
             }
 
@@ -1529,9 +1516,14 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
             final items = snapshot.hasData
                 ? snapshot.data!.docs
-                    .whereType<QueryDocumentSnapshot>()
-                    .map((d) => _ScheduleItem(doc: d, data: Map<String, dynamic>.from(d.data() as Map)))
-                    .toList()
+                      .whereType<QueryDocumentSnapshot>()
+                      .map(
+                        (d) => _ScheduleItem(
+                          doc: d,
+                          data: Map<String, dynamic>.from(d.data() as Map),
+                        ),
+                      )
+                      .toList()
                 : _itemsFromMaps(all);
 
             if (snapshot.hasError && hasCached) {
@@ -1541,7 +1533,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 children: [
                   _buildInfoBanner(
                     title: title,
-                    subtitle: updated.isNotEmpty ? 'Last updated: $updated' : null,
+                    subtitle: updated.isNotEmpty
+                        ? 'Last updated: $updated'
+                        : null,
                     icon: Icons.wifi_off_outlined,
                   ),
                   _buildFilteredScheduleList(theme, items),
@@ -1555,7 +1549,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 children: [
                   _buildInfoBanner(
                     title: "Showing saved timetable",
-                    subtitle: updated.isNotEmpty ? 'Offline • Last updated: $updated' : 'Offline',
+                    subtitle: updated.isNotEmpty
+                        ? 'Offline • Last updated: $updated'
+                        : 'Offline',
                     icon: Icons.wifi_off_outlined,
                   ),
                   _buildFilteredScheduleList(theme, items),
@@ -1570,7 +1566,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cloud_off_outlined, size: 48, color: theme.hintColor),
+                      Icon(
+                        Icons.cloud_off_outlined,
+                        size: 48,
+                        color: theme.hintColor,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         "Can’t load timetable",
@@ -1580,7 +1580,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       const SizedBox(height: 6),
                       Text(
                         _friendlyFirestoreError(snapshot.error!),
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.hintColor,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -1597,31 +1599,47 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   }
 
   Widget _buildFilteredScheduleList(ThemeData theme, List<_ScheduleItem> all) {
-    final docs = all.where((e) => (e.data['day'] ?? '') == selectedDay).toList();
-    docs.sort((a, b) => (a.data['startTime'] ?? '00:00').compareTo((b.data['startTime'] ?? '00:00')));
+    final docs = all
+        .where((e) => (e.data['day'] ?? '') == selectedDay)
+        .toList();
+    docs.sort(
+      (a, b) => (a.data['startTime'] ?? '00:00').compareTo(
+        (b.data['startTime'] ?? '00:00'),
+      ),
+    );
 
     if (docs.isEmpty) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
         child: Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
           child: Padding(
             padding: const EdgeInsets.all(18.0),
             child: Column(
               children: [
-                Icon(Icons.event_available_outlined, size: 44, color: theme.hintColor),
+                Icon(
+                  Icons.event_available_outlined,
+                  size: 44,
+                  color: theme.hintColor,
+                ),
                 const SizedBox(height: 10),
                 Text(
                   'No classes on $selectedDay',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Enjoy your time. Pull down to refresh when you\'re online.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.hintColor,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -1634,18 +1652,20 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final now = DateTime.now();
     final currentTime = DateFormat('HH:mm').format(now);
     final currentDay = DateFormat('EEEE').format(now);
-    
+
     _ScheduleItem? currentClass;
     final List<_ScheduleItem> upcomingClasses = [];
     final List<_ScheduleItem> completedClasses = [];
-    
+
     for (var doc in docs) {
       final startTime = doc.data['startTime'] ?? '';
       final endTime = doc.data['endTime'] ?? '';
-      
-      if (_isTimeInRange(currentTime, startTime, endTime) && selectedDay == currentDay) {
+
+      if (_isTimeInRange(currentTime, startTime, endTime) &&
+          selectedDay == currentDay) {
         currentClass = doc;
-      } else if (_isTimeBefore(currentTime, startTime) && selectedDay == currentDay) {
+      } else if (_isTimeBefore(currentTime, startTime) &&
+          selectedDay == currentDay) {
         upcomingClasses.add(doc);
       } else {
         completedClasses.add(doc);
@@ -1656,14 +1676,20 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
-      itemCount: (currentClass != null ? 1 : 0) + upcomingClasses.length + completedClasses.length,
+      itemCount:
+          (currentClass != null ? 1 : 0) +
+          upcomingClasses.length +
+          completedClasses.length,
       itemBuilder: (context, index) {
         if (currentClass != null && index == 0) {
           return _buildCurrentClassCard(currentClass);
         } else {
           final adjustedIndex = currentClass != null ? index - 1 : index;
           if (adjustedIndex < upcomingClasses.length) {
-            return _buildUpcomingClassCard(upcomingClasses[adjustedIndex], adjustedIndex == 0 && currentClass == null);
+            return _buildUpcomingClassCard(
+              upcomingClasses[adjustedIndex],
+              adjustedIndex == 0 && currentClass == null,
+            );
           } else {
             final completedIndex = adjustedIndex - upcomingClasses.length;
             return _buildCompletedClassCard(completedClasses[completedIndex]);
@@ -1675,27 +1701,27 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
   String? _getCurrentClassInfo() {
     if (isAdmin) return null;
-    
+
     final now = DateTime.now();
     final currentTime = DateFormat('HH:mm').format(now);
     final currentDay = DateFormat('EEEE').format(now);
-    
+
     if (_cachedSchedule.isEmpty) return null;
-    
+
     for (var classData in _cachedSchedule) {
       final dayOfWeek = classData['dayOfWeek'] as String?;
       final startTime = classData['startTime'] as String?;
       final endTime = classData['endTime'] as String?;
       final room = classData['room'] as String?;
-      
-      if (dayOfWeek == currentDay && 
-          startTime != null && 
-          endTime != null && 
+
+      if (dayOfWeek == currentDay &&
+          startTime != null &&
+          endTime != null &&
           _isTimeInRange(currentTime, startTime, endTime)) {
         return room ?? 'TBD';
       }
     }
-    
+
     return null;
   }
 
@@ -1704,14 +1730,14 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       final current = DateFormat('HH:mm').parse(currentTime);
       final start = DateFormat('HH:mm').parse(startTime);
       final end = DateFormat('HH:mm').parse(endTime);
-      
-      return (current.isAfter(start) || current.isAtSameMomentAs(start)) && 
-             (current.isBefore(end) || current.isAtSameMomentAs(end));
+
+      return (current.isAfter(start) || current.isAtSameMomentAs(start)) &&
+          (current.isBefore(end) || current.isAtSameMomentAs(end));
     } catch (e) {
       return false;
     }
   }
-  
+
   bool _isTimeBefore(String currentTime, String startTime) {
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
@@ -1727,20 +1753,20 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
-    
+
     // Calculate progress
     final now = DateTime.now();
     final currentTime = DateFormat('HH:mm').format(now);
     double progress = 0.0;
-    
+
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
       final classStart = DateFormat('HH:mm').parse(start);
       final classEnd = DateFormat('HH:mm').parse(end);
-      
+
       final totalDuration = classEnd.difference(classStart).inMinutes;
       final elapsedDuration = current.difference(classStart).inMinutes;
-      
+
       if (totalDuration > 0) {
         progress = (elapsedDuration / totalDuration).clamp(0.0, 1.0);
       }
@@ -1786,7 +1812,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(20),
@@ -1810,10 +1839,23 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'LIVE NOW',
-                          style: AppTextStyles.interLiveNow.copyWith(
-                            color: Colors.white,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'LIVE NOW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16, // Much larger
+                              fontWeight: FontWeight.w900, // Much bolder
+                              letterSpacing: 2.0, // Much more spacing
+                            ),
                           ),
                         ),
                       ],
@@ -1821,7 +1863,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.primaryColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -1837,7 +1882,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Subject name
               Text(
                 data['subject'] ?? 'No Subject',
@@ -1846,7 +1891,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 ),
               ),
               const SizedBox(height: 12),
-              
+
               // Progress bar
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1890,7 +1935,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Mentor and Room info
               Row(
                 children: [
@@ -1900,7 +1945,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       color: theme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.person, size: 16, color: theme.primaryColor),
+                    child: Icon(
+                      Icons.person,
+                      size: 16,
+                      color: theme.primaryColor,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1914,7 +1963,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       color: theme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.location_on, size: 16, color: theme.primaryColor),
+                    child: Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: theme.primaryColor,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1935,7 +1988,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
@@ -1950,7 +2003,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             ),
           ),
           child: InkWell(
-            onLongPress: (isAdmin && item.doc != null) ? () => _showEditOptions(item.doc!) : null,
+            onLongPress: (isAdmin && item.doc != null)
+                ? () => _showEditOptions(item.doc!)
+                : null,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1961,7 +2016,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                     children: [
                       if (isFirst)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
@@ -1976,7 +2034,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                         ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(8),
@@ -1999,7 +2060,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.person_outline, size: 16, color: theme.hintColor),
+                      Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: theme.hintColor,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         data['mentor'] ?? 'Unknown',
@@ -2008,7 +2073,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                         ),
                       ),
                       const Spacer(),
-                      Icon(Icons.location_on_outlined, size: 16, color: theme.hintColor),
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: theme.hintColor,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         "Room ${data['room'] ?? 'TBD'}",
@@ -2032,7 +2101,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
-    
+
     return Opacity(
       opacity: 0.6,
       child: Container(
@@ -2040,7 +2109,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
         child: Card(
           elevation: 0,
           color: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -2049,7 +2120,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -2088,7 +2162,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.person_outline, size: 14, color: theme.hintColor),
+                    Icon(
+                      Icons.person_outline,
+                      size: 14,
+                      color: theme.hintColor,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       data['mentor'] ?? 'Unknown',
@@ -2098,7 +2176,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.location_on_outlined, size: 14, color: theme.hintColor),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: theme.hintColor,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       "Room ${data['room'] ?? 'TBD'}",
@@ -2121,7 +2203,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     if (isAdmin) {
       FirebaseAuth.instance.signOut();
     } else {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
   }
 
@@ -2197,7 +2282,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 DropdownButton<String>(
                   value: addDay,
                   isExpanded: true,
-                  items: weekDays.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                  items: weekDays
+                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                      .toList(),
                   onChanged: (v) => setDialogState(() => addDay = v!),
                 ),
                 TextField(
@@ -2217,7 +2304,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   children: [
                     TextButton(
                       onPressed: () async {
-                        final t = await showTimePicker(context: context, initialTime: startTime);
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: startTime,
+                        );
                         if (t != null) setDialogState(() => startTime = t);
                       },
                       child: Text("Start: ${startTime.format(context)}"),
@@ -2225,7 +2315,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                     const Spacer(),
                     TextButton(
                       onPressed: () async {
-                        final t = await showTimePicker(context: context, initialTime: endTime);
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: endTime,
+                        );
                         if (t != null) setDialogState(() => endTime = t);
                       },
                       child: Text("End: ${endTime.format(context)}"),
@@ -2242,8 +2335,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             ),
             ElevatedButton(
               onPressed: () {
-                final startStr = "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}";
-                final endStr = "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}";
+                final startStr =
+                    "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}";
+                final endStr =
+                    "${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}";
 
                 final payload = {
                   'subject': subjectController.text,
@@ -2255,7 +2350,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 };
 
                 if (doc == null) {
-                  if (departmentId != null && yearId != null && sectionId != null) {
+                  if (departmentId != null &&
+                      yearId != null &&
+                      sectionId != null) {
                     FirebaseFirestore.instance
                         .collection('departments')
                         .doc(departmentId)
@@ -2274,10 +2371,14 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   doc.reference.update(payload);
                   List<String> changes = [];
                   if (oldData['room'] != payload['room']) {
-                    changes.add("Room: ${oldData['room']} → ${payload['room']}");
+                    changes.add(
+                      "Room: ${oldData['room']} → ${payload['room']}",
+                    );
                   }
                   if (oldData['startTime'] != payload['startTime']) {
-                    changes.add("Time: ${oldData['startTime']} → ${payload['startTime']}");
+                    changes.add(
+                      "Time: ${oldData['startTime']} → ${payload['startTime']}",
+                    );
                   }
                   if (oldData['mentor'] != payload['mentor']) {
                     changes.add("Mentor changed");
@@ -2314,14 +2415,22 @@ class _ScheduleItem {
 
 class _MentorSaturdayControlPanel extends StatefulWidget {
   @override
-  __MentorSaturdayControlPanelState createState() => __MentorSaturdayControlPanelState();
+  __MentorSaturdayControlPanelState createState() =>
+      __MentorSaturdayControlPanelState();
 }
 
-class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPanel> {
+class __MentorSaturdayControlPanelState
+    extends State<_MentorSaturdayControlPanel> {
   String? _selectedSourceDay;
   bool _isLoading = false;
 
-  final List<String> _sourceDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  final List<String> _sourceDays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+  ];
 
   Future<void> _applySchedule() async {
     if (_selectedSourceDay == null) return;
@@ -2330,7 +2439,9 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Action'),
-        content: Text('Are you sure you want to replace the entire Saturday schedule for ALL sections with the schedule from $_selectedSourceDay? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to replace the entire Saturday schedule for ALL sections with the schedule from $_selectedSourceDay? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -2352,7 +2463,10 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
     setState(() => _isLoading = true);
 
     try {
-      final userSelection = Provider.of<UserSelectionProvider>(context, listen: false);
+      final userSelection = Provider.of<UserSelectionProvider>(
+        context,
+        listen: false,
+      );
       final db = FirebaseFirestore.instance;
       final batch = db.batch();
 
@@ -2374,20 +2488,21 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
         final scheduleRef = sectionDoc.reference.collection('schedule');
 
         // Delete existing Saturday schedule
-        final saturdaySnapshot = await scheduleRef.where('day', isEqualTo: 'Saturday').get();
+        final saturdaySnapshot = await scheduleRef
+            .where('day', isEqualTo: 'Saturday')
+            .get();
         for (final doc in saturdaySnapshot.docs) {
           batch.delete(doc.reference);
         }
 
         // Get source day schedule to copy
-        final sourceDaySnapshot = await scheduleRef.where('day', isEqualTo: _selectedSourceDay).get();
+        final sourceDaySnapshot = await scheduleRef
+            .where('day', isEqualTo: _selectedSourceDay)
+            .get();
         for (final doc in sourceDaySnapshot.docs) {
           final classData = doc.data();
           final newDocRef = scheduleRef.doc();
-          batch.set(newDocRef, {
-            ...classData,
-            'day': 'Saturday',
-          });
+          batch.set(newDocRef, {...classData, 'day': 'Saturday'});
         }
       }
 
@@ -2396,13 +2511,19 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saturday schedule updated for all sections!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Saturday schedule updated for all sections!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred: $e'), backgroundColor: Theme.of(context).colorScheme.error),
+          SnackBar(
+            content: Text('An error occurred: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     } finally {
@@ -2425,16 +2546,23 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mentor Action: Set Saturday Schedule', style: theme.textTheme.titleLarge),
+            Text(
+              'Mentor Action: Set Saturday Schedule',
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
               'This will replace the current Saturday schedule for all sections.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.hintColor,
+              ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedSourceDay,
-              decoration: const InputDecoration(labelText: 'Copy Schedule From'),
+              decoration: const InputDecoration(
+                labelText: 'Copy Schedule From',
+              ),
               items: _sourceDays
                   .map((day) => DropdownMenuItem(value: day, child: Text(day)))
                   .toList(),
@@ -2448,9 +2576,15 @@ class __MentorSaturdayControlPanelState extends State<_MentorSaturdayControlPane
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _selectedSourceDay == null || _isLoading ? null : _applySchedule,
+                onPressed: _selectedSourceDay == null || _isLoading
+                    ? null
+                    : _applySchedule,
                 child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Apply to Saturday'),
               ),
             ),
@@ -2477,9 +2611,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Announcements'),
-      ),
+      appBar: AppBar(title: const Text('Announcements')),
       body: Column(
         children: [
           Expanded(
@@ -2513,23 +2645,43 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: theme.cardTheme.elevation ?? 1,
-                      color: isSystem ? theme.primaryColor.withOpacity(0.05) : theme.cardColor,
-                      shape: theme.cardTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: isSystem
+                          ? theme.primaryColor.withOpacity(0.05)
+                          : theme.cardColor,
+                      shape:
+                          theme.cardTheme.shape ??
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                       child: ListTile(
                         leading: Icon(
-                          isSystem ? Icons.info_outline : Icons.campaign_outlined,
-                          color: isSystem ? theme.primaryColor : theme.colorScheme.secondary,
+                          isSystem
+                              ? Icons.info_outline
+                              : Icons.campaign_outlined,
+                          color: isSystem
+                              ? theme.primaryColor
+                              : theme.colorScheme.secondary,
                         ),
-                        title: Text(data['message'] ?? '', style: theme.textTheme.bodyMedium),
+                        title: Text(
+                          data['message'] ?? '',
+                          style: theme.textTheme.bodyMedium,
+                        ),
                         subtitle: timestamp != null
                             ? Text(
-                                DateFormat('MMM dd, hh:mm a').format(timestamp.toDate()),
-                                style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor),
+                                DateFormat(
+                                  'MMM dd, hh:mm a',
+                                ).format(timestamp.toDate()),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.hintColor,
+                                ),
                               )
                             : null,
                         trailing: widget.isAdmin
                             ? IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                ),
                                 onPressed: () => docs[index].reference.delete(),
                               )
                             : null,
@@ -2550,7 +2702,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                     color: theme.shadowColor.withOpacity(0.05),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
-                  )
+                  ),
                 ],
               ),
               child: Row(
@@ -2558,7 +2710,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   Expanded(
                     child: TextField(
                       controller: messageController,
-                      decoration: const InputDecoration(hintText: 'Type announcement...'),
+                      decoration: const InputDecoration(
+                        hintText: 'Type announcement...',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2566,11 +2720,13 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                     icon: Icon(Icons.send, color: theme.primaryColor),
                     onPressed: () {
                       if (messageController.text.trim().isNotEmpty) {
-                        FirebaseFirestore.instance.collection('announcements').add({
-                          'message': messageController.text.trim(),
-                          'timestamp': FieldValue.serverTimestamp(),
-                          'isSystemMessage': false,
-                        });
+                        FirebaseFirestore.instance
+                            .collection('announcements')
+                            .add({
+                              'message': messageController.text.trim(),
+                              'timestamp': FieldValue.serverTimestamp(),
+                              'isSystemMessage': false,
+                            });
                         messageController.clear();
                       }
                     },

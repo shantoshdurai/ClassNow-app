@@ -1,15 +1,13 @@
-import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_firebase_test/main.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
+import 'package:flutter_firebase_test/notification_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -71,9 +69,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -83,13 +79,19 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               SwitchListTile(
                 title: Text('Dark Mode', style: theme.textTheme.titleMedium),
-                subtitle: Text('A comfortable view for nighttime', style: theme.textTheme.bodySmall),
+                subtitle: Text(
+                  'A comfortable view for nighttime',
+                  style: theme.textTheme.bodySmall,
+                ),
                 value: themeProvider.themeMode == ThemeMode.dark,
                 onChanged: (value) {
                   themeProvider.toggleTheme(value);
                 },
                 activeColor: theme.colorScheme.secondary,
-                secondary: Icon(Icons.brightness_6_outlined, color: theme.primaryColor),
+                secondary: Icon(
+                  Icons.brightness_6_outlined,
+                  color: theme.primaryColor,
+                ),
               ),
             ],
           ),
@@ -100,13 +102,51 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               ListTile(
                 leading: Icon(Icons.school_outlined, color: theme.primaryColor),
-                title: Text('Change My Class', style: theme.textTheme.titleMedium),
-                subtitle: Text('Select a different section or year', style: theme.textTheme.bodySmall),
+                title: Text(
+                  'Change My Class',
+                  style: theme.textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  'Select a different section or year',
+                  style: theme.textTheme.bodySmall,
+                ),
                 onTap: () {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const OnboardingScreen(),
+                    ),
                     (route) => false,
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildSettingsGroup(
+            context,
+            title: 'Notifications',
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.notifications_outlined,
+                  color: theme.primaryColor,
+                ),
+                title: Text(
+                  'Manage Alerts',
+                  style: theme.textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  'Select classes and test notifications',
+                  style: theme.textTheme.bodySmall,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsPage(),
+                    ),
                   );
                 },
               ),
@@ -118,25 +158,52 @@ class _SettingsPageState extends State<SettingsPage> {
             title: 'Extras',
             children: [
               SwitchListTile(
-                title: Text('90s Retro Display', style: theme.textTheme.titleMedium),
-                subtitle: Text('Show pixel-style class tracker display', style: theme.textTheme.bodySmall),
+                title: Text(
+                  '90s Retro Display',
+                  style: theme.textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  'Show pixel-style class tracker display',
+                  style: theme.textTheme.bodySmall,
+                ),
                 value: _retroDisplayEnabled,
                 onChanged: _setRetroDisplayEnabled,
                 activeColor: theme.colorScheme.secondary,
-                secondary: Icon(Icons.computer_outlined, color: theme.primaryColor),
+                secondary: Icon(
+                  Icons.computer_outlined,
+                  color: theme.primaryColor,
+                ),
               ),
               SwitchListTile(
-                title: Text('Widgets Auto-Update', style: theme.textTheme.titleMedium),
-                subtitle: Text('Keep home screen widgets updated automatically', style: theme.textTheme.bodySmall),
+                title: Text(
+                  'Widgets Auto-Update',
+                  style: theme.textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  'Keep home screen widgets updated automatically',
+                  style: theme.textTheme.bodySmall,
+                ),
                 value: _widgetsEnabled,
                 onChanged: _setWidgetsEnabled,
                 activeColor: theme.colorScheme.secondary,
-                secondary: Icon(Icons.autorenew_rounded, color: theme.primaryColor),
+                secondary: Icon(
+                  Icons.autorenew_rounded,
+                  color: theme.primaryColor,
+                ),
               ),
               ListTile(
-                leading: Icon(Icons.widgets_outlined, color: theme.primaryColor),
-                title: Text('Home Screen Widgets', style: theme.textTheme.titleMedium),
-                subtitle: Text('Learn how to add widgets', style: theme.textTheme.bodySmall),
+                leading: Icon(
+                  Icons.widgets_outlined,
+                  color: theme.primaryColor,
+                ),
+                title: Text(
+                  'Home Screen Widgets',
+                  style: theme.textTheme.titleMedium,
+                ),
+                subtitle: Text(
+                  'Learn how to add widgets',
+                  style: theme.textTheme.bodySmall,
+                ),
                 onTap: () => _showWidgetInfoDialog(context),
               ),
             ],
@@ -146,7 +213,11 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSettingsGroup(BuildContext context, {required String title, required List<Widget> children}) {
+  Widget _buildSettingsGroup(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,17 +226,20 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
           child: Text(
             title.toUpperCase(),
-            style: theme.textTheme.labelLarge?.copyWith(color: theme.primaryColor, fontWeight: FontWeight.bold),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Card(
           elevation: theme.cardTheme.elevation ?? 1,
           color: theme.cardColor,
-          shape: theme.cardTheme.shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              theme.cardTheme.shape ??
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -181,10 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'On Android:',
-                style: theme.textTheme.titleMedium,
-              ),
+              Text('On Android:', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 '1. Long-press on a blank space on your home screen.\n'
@@ -194,10 +265,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
-              Text(
-                'On iOS:',
-                style: theme.textTheme.titleMedium,
-              ),
+              Text('On iOS:', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 '1. Long-press on a blank space on your home screen until the apps jiggle.\n'

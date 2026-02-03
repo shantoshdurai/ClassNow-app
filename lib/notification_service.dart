@@ -36,6 +36,10 @@ class NotificationService {
     }
 
     final bool enabled = prefs.getBool('notifications_enabled') ?? true;
+    final bool allSubjects =
+        prefs.getBool('notifications_all_subjects') ?? true;
+    final List<String> selectedSubjects =
+        prefs.getStringList('notification_selected_subjects') ?? [];
     final int minutesBefore = prefs.getInt('notifications_lead_time') ?? 15;
 
     await _notifications.cancelAll();
@@ -43,7 +47,8 @@ class NotificationService {
     if (!enabled) return;
 
     // Try to get schedule data with offline fallback
-    List<Map<String, dynamic>> scheduleData = await _getScheduleDataWithOffline();
+    List<Map<String, dynamic>> scheduleData =
+        await _getScheduleDataWithOffline();
 
     for (var data in scheduleData) {
       final dayOfWeek = data['dayOfWeek'] as String;
@@ -51,6 +56,11 @@ class NotificationService {
       final endTimeStr = data['endTime'] as String?;
       final subject = data['subject'] as String;
       final room = data['room'] as String;
+
+      // Filter based on user preferences
+      if (!allSubjects && !selectedSubjects.contains(subject)) {
+        continue;
+      }
 
       final dayIndex = _getDayIndex(dayOfWeek);
       if (dayIndex == -1) continue;
@@ -69,7 +79,7 @@ class NotificationService {
         minute: minute,
         leadMinutes: minutesBefore,
       );
-      
+
       // Schedule during-class notification (5 minutes after class starts)
       if (endTimeStr != null) {
         await _scheduleWeekly(
@@ -85,42 +95,88 @@ class NotificationService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> _getScheduleDataWithOffline() async {
+  static Future<void> showTestNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'classnow_test',
+          'Test Notifications',
+          channelDescription: 'Channel for testing notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'ticker',
+        );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    await _notifications.show(
+      88888,
+      'Test Notification',
+      'This is a test notification from Class Now!',
+      platformChannelSpecifics,
+      payload: 'test_payload',
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>>
+  _getScheduleDataWithOffline() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
+    final deptId = prefs.getString('departmentId');
+    final yearId = prefs.getString('yearId');
+    final sectionId = prefs.getString('sectionId');
+
+    if (deptId == null || yearId == null || sectionId == null) {
+      return await _getCachedScheduleData();
+    }
+
     try {
       // Try online first
       final snapshot = await FirebaseFirestore.instance
+          .collection('departments')
+          .doc(deptId)
+          .collection('years')
+          .doc(yearId)
+          .collection('sections')
+          .doc(sectionId)
           .collection('schedule')
           .get(const GetOptions(source: Source.server));
-      
+
       final scheduleData = snapshot.docs.map((doc) {
         final data = Map<String, dynamic>.from(doc.data());
         data['id'] = doc.id;
+        // Make sure dayOfWeek field is present (mapping from 'day' if needed)
+        if (data['dayOfWeek'] == null && data['day'] != null) {
+          data['dayOfWeek'] = data['day'];
+        }
         return data;
       }).toList();
-      
+
       // Cache the data for offline use
       await _cacheScheduleData(scheduleData);
       return scheduleData;
-      
     } catch (e) {
+      print('Error fetching schedule online: $e');
       // Fallback to cached data
       return await _getCachedScheduleData();
     }
   }
 
-  static Future<void> _cacheScheduleData(List<Map<String, dynamic>> scheduleData) async {
+  static Future<void> _cacheScheduleData(
+    List<Map<String, dynamic>> scheduleData,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(scheduleData);
     await prefs.setString('cached_schedule_data', jsonString);
-    await prefs.setString('schedule_cache_updated', DateTime.now().toIso8601String());
+    await prefs.setString(
+      'schedule_cache_updated',
+      DateTime.now().toIso8601String(),
+    );
   }
 
   static Future<List<Map<String, dynamic>>> _getCachedScheduleData() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString('cached_schedule_data');
-    
+
     if (jsonString != null) {
       try {
         final List<dynamic> jsonList = jsonDecode(jsonString);
@@ -192,23 +248,35 @@ class NotificationService {
   static Future<void> triggerDuringClassNotification() async {
     final prefs = await SharedPreferences.getInstance();
     final bool enabled = prefs.getBool('notifications_enabled') ?? true;
-    
+
+    // Check subject filtering
+    final bool allSubjects =
+        prefs.getBool('notifications_all_subjects') ?? true;
+    final List<String> selectedSubjects =
+        prefs.getStringList('notification_selected_subjects') ?? [];
+
     if (!enabled) return;
-    
+
     try {
       final scheduleData = await _getScheduleDataWithOffline();
       final now = DateTime.now();
       final currentTime = DateFormat('HH:mm').format(now);
       final currentDay = DateFormat('EEEE').format(now);
-      
+
       for (var data in scheduleData) {
         final dayOfWeek = data['dayOfWeek'] as String;
         final startTime = data['startTime'] as String;
         final endTime = data['endTime'] as String?;
         final subject = data['subject'] as String;
         final room = data['room'] as String;
-        
-        if (dayOfWeek == currentDay && _isTimeInRange(currentTime, startTime, endTime)) {
+
+        // Filter based on user preferences
+        if (!allSubjects && !selectedSubjects.contains(subject)) {
+          continue;
+        }
+
+        if (dayOfWeek == currentDay &&
+            _isTimeInRange(currentTime, startTime, endTime)) {
           await _notifications.show(
             data.hashCode + 20000,
             'Class in Progress: $subject',
@@ -231,19 +299,23 @@ class NotificationService {
       print('Error triggering during-class notification: $e');
     }
   }
-  
-  static bool _isTimeInRange(String currentTime, String startTime, String? endTime) {
+
+  static bool _isTimeInRange(
+    String currentTime,
+    String startTime,
+    String? endTime,
+  ) {
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
       final start = DateFormat('HH:mm').parse(startTime);
-      
+
       if (endTime == null) {
         return current.isAfter(start) || current.isAtSameMomentAs(start);
       }
-      
+
       final end = DateFormat('HH:mm').parse(endTime);
-      return (current.isAfter(start) || current.isAtSameMomentAs(start)) && 
-             (current.isBefore(end) || current.isAtSameMomentAs(end));
+      return (current.isAfter(start) || current.isAtSameMomentAs(start)) &&
+          (current.isBefore(end) || current.isAtSameMomentAs(end));
     } catch (e) {
       return false;
     }
@@ -251,10 +323,11 @@ class NotificationService {
 
   static Future<void> refreshNotificationsWhenOnline() async {
     try {
-      // Check if we can reach Firestore
-      await FirebaseFirestore.instance.collection('schedule').limit(1).get(const GetOptions(source: Source.server));
-      
-      // If successful, refresh notifications with latest data
+      // Just check if we can reach Firestore in general
+      await FirebaseFirestore.instance.disableNetwork();
+      await FirebaseFirestore.instance.enableNetwork();
+
+      // If successful (no exception), refresh notifications with latest data
       await scheduleTimetableNotifications();
     } catch (e) {
       // Still offline, keep using cached data
@@ -265,12 +338,12 @@ class NotificationService {
   static Future<String> getCacheStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final cachedTime = prefs.getString('schedule_cache_updated');
-    
+
     if (cachedTime != null) {
       final cacheTime = DateTime.parse(cachedTime);
       final now = DateTime.now();
       final difference = now.difference(cacheTime);
-      
+
       if (difference.inHours < 1) {
         return 'Cached: ${difference.inMinutes} min ago';
       } else if (difference.inDays < 1) {
@@ -279,7 +352,7 @@ class NotificationService {
         return 'Cached: ${difference.inDays} days ago';
       }
     }
-    
+
     return 'No cache';
   }
 
@@ -302,5 +375,15 @@ class NotificationService {
       default:
         return -1;
     }
+  }
+
+  static Future<List<String>> getUniqueSubjects() async {
+    final scheduleData = await _getScheduleDataWithOffline();
+    final subjects = scheduleData
+        .map((e) => e['subject'] as String)
+        .toSet()
+        .toList();
+    subjects.sort();
+    return subjects;
   }
 }
