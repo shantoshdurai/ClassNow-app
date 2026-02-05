@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
 import 'main.dart';
+import 'dart:ui';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -192,195 +195,220 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text(""),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.primaryColor.withOpacity(0.05),
-              theme.scaffoldBackgroundColor,
-              theme.colorScheme.secondary.withOpacity(0.05),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 16.0,
+      backgroundColor: isDark
+          ? const Color(0xFF000000)
+          : const Color(0xFFF2F2F7),
+      body: Stack(
+        children: [
+          // Animated Background Blobs
+          if (isDark) ...[
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primaryBlue.withOpacity(0.15),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-                    // Logo/Icon Section
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.school_rounded,
-                        size: 64,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Welcome to Class Now',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Let\'s get you set up with your timetable.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.hintColor,
-                      ),
-                    ),
-                    const SizedBox(height: 48),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -50,
+              left: -50,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.accentPurple.withOpacity(0.15),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
+          ],
 
-                    // Selection Card
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      // Logo/Icon Section
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.primaryColor.withOpacity(0.2),
+                            width: 2,
                           ),
-                        ],
+                        ),
+                        child: Icon(
+                          Icons.school_rounded,
+                          size: 64,
+                          color: theme.primaryColor,
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildDropdownSection(
-                            title: 'Department',
-                            icon: Icons.business_rounded,
-                            value: selectedDepartmentId,
-                            items: departmentItems,
-                            isLoading: isInitialLoading,
-                            hint: 'Choose your department',
-                            onChanged: (value) {
-                              if (value != null) {
-                                _fetchYears(value);
-                                setState(() => selectedDepartmentId = value);
-                              }
-                            },
-                          ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'Welcome to Class Now',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.interTitle.copyWith(
+                          fontSize: 28,
+                          color: theme.colorScheme.onSurface,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Let\'s get you set up with your timetable.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.hintColor.withOpacity(0.8),
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
 
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            child: selectedDepartmentId != null
-                                ? Padding(
-                                    padding: const EdgeInsets.only(top: 24),
-                                    child: _buildDropdownSection(
-                                      title: 'Academic Year',
-                                      icon: Icons.calendar_today_rounded,
-                                      value: selectedYearId,
-                                      items: yearItems,
-                                      isLoading: areYearsLoading,
-                                      hint: 'Select your year',
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          _fetchSections(
-                                            selectedDepartmentId!,
-                                            value,
-                                          );
+                      // Selection Card
+                      GlassCard(
+                        blur: 20,
+                        opacity: 0.1,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildDropdownSection(
+                              title: 'Department',
+                              icon: Icons.business_rounded,
+                              value: selectedDepartmentId,
+                              items: departmentItems,
+                              isLoading: isInitialLoading,
+                              hint: 'Choose your department',
+                              onChanged: (value) {
+                                if (value != null) {
+                                  _fetchYears(value);
+                                  setState(() => selectedDepartmentId = value);
+                                }
+                              },
+                            ),
+
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: selectedDepartmentId != null
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(top: 24),
+                                      child: _buildDropdownSection(
+                                        title: 'Academic Year',
+                                        icon: Icons.calendar_today_rounded,
+                                        value: selectedYearId,
+                                        items: yearItems,
+                                        isLoading: areYearsLoading,
+                                        hint: 'Select your year',
+                                        onChanged: (value) {
+                                          if (value != null) {
+                                            _fetchSections(
+                                              selectedDepartmentId!,
+                                              value,
+                                            );
+                                            setState(
+                                              () => selectedYearId = value,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: selectedYearId != null
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(top: 24),
+                                      child: _buildDropdownSection(
+                                        title: 'Section',
+                                        icon: Icons.group_rounded,
+                                        value: selectedSectionId,
+                                        items: sectionItems,
+                                        isLoading: areSectionsLoading,
+                                        hint: 'Find your section',
+                                        onChanged: (value) {
                                           setState(
-                                            () => selectedYearId = value,
+                                            () => selectedSectionId = value,
                                           );
-                                        }
-                                      },
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            child: selectedYearId != null
-                                ? Padding(
-                                    padding: const EdgeInsets.only(top: 24),
-                                    child: _buildDropdownSection(
-                                      title: 'Section',
-                                      icon: Icons.group_rounded,
-                                      value: selectedSectionId,
-                                      items: sectionItems,
-                                      isLoading: areSectionsLoading,
-                                      hint: 'Find your section',
-                                      onChanged: (value) {
-                                        setState(
-                                          () => selectedSectionId = value,
-                                        );
-                                      },
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    // Continue Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed:
-                            (selectedDepartmentId == null ||
-                                selectedYearId == null ||
-                                selectedSectionId == null)
-                            ? null
-                            : _saveAndContinue,
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 4,
-                          shadowColor: theme.primaryColor.withOpacity(0.4),
+                                        },
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
                         ),
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      ),
+
+                      const SizedBox(height: 48),
+
+                      // Continue Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed:
+                              (selectedDepartmentId == null ||
+                                  selectedYearId == null ||
+                                  selectedSectionId == null)
+                              ? null
+                              : _saveAndContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: theme.primaryColor
+                                .withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 8,
+                            shadowColor: theme.primaryColor.withOpacity(0.5),
+                          ),
+                          child: const Text(
+                            "Continue",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -408,15 +436,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.primaryColor,
+                height: 1.0,
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         if (isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LinearProgressIndicator(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(
+              backgroundColor: theme.primaryColor.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+            ),
           )
         else
           DropdownButtonFormField<String>(
@@ -431,25 +463,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: theme.dividerColor),
+                borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: theme.dividerColor.withOpacity(0.1),
-                ),
+                borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: theme.primaryColor, width: 2),
+                borderSide: BorderSide(
+                  color: theme.primaryColor.withOpacity(0.5),
+                  width: 1.5,
+                ),
               ),
               filled: true,
-              fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.2),
+              fillColor: theme.colorScheme.onSurface.withOpacity(0.05),
             ),
             icon: const Icon(Icons.keyboard_arrow_down_rounded),
             dropdownColor: theme.cardColor,
             isExpanded: true,
-            style: theme.textTheme.bodyLarge,
+            style: theme.textTheme.bodyLarge?.copyWith(height: 1.0),
           ),
       ],
     );

@@ -29,9 +29,13 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Improved colors for visibility
     final defaultColor = isDark
         ? Colors.white.withOpacity(opacity)
-        : Colors.white.withOpacity(opacity + 0.3);
+        : Colors.white.withOpacity(
+            opacity + 0.5,
+          ); // Increased opacity for Light Mode
 
     return Container(
       margin: margin,
@@ -41,10 +45,12 @@ class GlassCard extends StatelessWidget {
             shadows ??
             [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-                spreadRadius: 0,
+                color: Colors.black.withOpacity(
+                  isDark ? 0.3 : 0.12,
+                ), // Stronger shadow for Light Mode
+                blurRadius: 25,
+                offset: const Offset(0, 10),
+                spreadRadius: -2,
               ),
             ],
       ),
@@ -60,15 +66,23 @@ class GlassCard extends StatelessWidget {
               border:
                   border ??
                   Border.all(
-                    color: Colors.white.withOpacity(isDark ? 0.1 : 0.3),
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12) // Subtle glow for dark
+                        : Colors.black.withOpacity(
+                            0.08,
+                          ), // Subtle dark border for light
                     width: 1.5,
                   ),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(isDark ? 0.05 : 0.2),
-                  Colors.white.withOpacity(isDark ? 0.02 : 0.05),
+                  isDark
+                      ? Colors.white.withOpacity(0.08)
+                      : Colors.white.withOpacity(0.4),
+                  isDark
+                      ? Colors.white.withOpacity(0.02)
+                      : Colors.white.withOpacity(0.1),
                 ],
               ),
             ),

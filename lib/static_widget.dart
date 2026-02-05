@@ -8,26 +8,32 @@ class StaticTimetableWidget extends StatelessWidget {
   final String? timeRemaining;
   final double progress;
 
+  final double refreshAngle;
+
   const StaticTimetableWidget({
     super.key,
     this.currentClass,
     this.nextClass,
     this.timeRemaining,
     this.progress = 0.0,
+    this.refreshAngle = 0.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 320,
-      height: 160,
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F0F0F),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white24, width: 0.5),
+        color: const Color(0xFF0F0F0F).withOpacity(0.6), // Glass transparency
+        borderRadius: BorderRadius.circular(40),
+        border: Border.all(color: Colors.white24, width: 2.0),
       ),
-      child: Material(color: Colors.transparent, child: _buildContent()),
+      child: Material(
+        color: Colors.transparent,
+        child: Center(child: _buildContent()),
+      ),
     );
   }
 
@@ -63,9 +69,9 @@ class StaticTimetableWidget extends StatelessWidget {
                 color: isCurrent
                     ? const Color(0xFFA7F3D0)
                     : const Color(0xFFBAE6FD),
-                fontSize: 10,
+                fontSize: 24, // Optimized for 800px
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+                letterSpacing: 2.5,
               ),
             ),
             if (isCurrent && timeRemaining != null)
@@ -76,16 +82,30 @@ class StaticTimetableWidget extends StatelessWidget {
                     timeRemaining!,
                     style: const TextStyle(
                       color: Color(0xFF6EE7B7),
-                      fontSize: 10,
+                      fontSize: 24, // Optimized
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.refresh, color: Colors.white54, size: 12),
+                  const SizedBox(width: 20),
+                  Transform.rotate(
+                    angle: refreshAngle,
+                    child: const Icon(
+                      Icons.refresh,
+                      color: Colors.white54,
+                      size: 45,
+                    ),
+                  ),
                 ],
               )
             else
-              const Icon(Icons.refresh, color: Colors.white54, size: 12),
+              Transform.rotate(
+                angle: refreshAngle,
+                child: const Icon(
+                  Icons.refresh,
+                  color: Colors.white54,
+                  size: 45,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -169,93 +189,87 @@ enum RobotMood { happy, focused, waiting }
 class SmallRobotWidget extends StatelessWidget {
   final Map<String, dynamic>? currentClass;
   final Map<String, dynamic>? nextClass;
+  final double refreshAngle;
 
-  const SmallRobotWidget({super.key, this.currentClass, this.nextClass});
+  const SmallRobotWidget({
+    super.key,
+    this.currentClass,
+    this.nextClass,
+    this.refreshAngle = 0.0,
+  });
 
   @override
   Widget build(BuildContext context) {
     RobotMood mood = RobotMood.happy;
     String status = "FREE";
     String info = "Enjoy!";
-    Color themeColor = const Color(0xFF6EE7B7); // Happy Green
+    Color themeColor = const Color(0xFF6EE7B7);
 
     if (currentClass != null) {
       mood = RobotMood.focused;
       status = "CLASS";
       info = currentClass!['subject'] ?? "Busy";
-      themeColor = const Color(0xFFFCA5A5); // Focused Red/Soft Pink
+      themeColor = const Color(0xFFFCA5A5);
     } else if (nextClass != null) {
       mood = RobotMood.waiting;
       status = "NEXT";
       info = nextClass!['startTime'] ?? "Soon";
-      themeColor = const Color(0xFF38BDF8); // Waiting Blue
+      themeColor = const Color(0xFF38BDF8);
     }
 
     return Container(
-      width: 160,
-      height: 160,
+      width: double.infinity,
+      height: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.black, // True OLED Black
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(80), // Rounder edges for high-res
       ),
       child: Stack(
         children: [
-          // Background Glow
-          Center(
-            child: Container(
-              width: 120,
-              height: 60,
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: themeColor.withAlpha(26),
-                    blurRadius: 40,
-                    spreadRadius: 10,
-                  ),
-                ],
-              ),
+          // Refresh Icon with rotation feedback
+          Positioned(
+            top: 45,
+            right: 45,
+            child: Transform.rotate(
+              angle: refreshAngle,
+              child: const Icon(Icons.refresh, color: Colors.white24, size: 40),
             ),
-          ),
-          // Refresh Icon
-          const Positioned(
-            top: 20,
-            right: 20,
-            child: Icon(Icons.refresh, color: Colors.white24, size: 12),
           ),
           // Face Content
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // OLED Eyes
+                // OLED Eyes (Large for 400x400)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     _buildOledEye(mood, themeColor, isLeft: true),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 40),
                     _buildOledEye(mood, themeColor, isLeft: false),
                   ],
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 30),
                 // Status Text
                 Text(
                   status,
                   style: TextStyle(
                     color: themeColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                    letterSpacing: 2,
+                    fontSize: 24, // Scaled up
+                    letterSpacing: 4,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 5),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
                   child: Text(
                     info,
                     style: TextStyle(
-                      color: Colors.white.withAlpha(102),
-                      fontSize: 11,
+                      color: Colors.white.withAlpha(180),
+                      fontSize: 26, // Scaled up
+                      fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -272,7 +286,7 @@ class SmallRobotWidget extends StatelessWidget {
 
   Widget _buildOledEye(RobotMood mood, Color color, {required bool isLeft}) {
     return CustomPaint(
-      size: const Size(45, 45),
+      size: const Size(100, 100), // Large eyes for high-res
       painter: RobotEyePainter(mood: mood, color: color, isLeft: isLeft),
     );
   }
@@ -363,4 +377,54 @@ class RobotEyePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant RobotEyePainter oldDelegate) =>
       oldDelegate.mood != mood || oldDelegate.color != color;
+}
+
+class ErrorWidgetDisplay extends StatelessWidget {
+  final bool small;
+  const ErrorWidgetDisplay({super.key, this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        width: small ? 160 : 320,
+        height: 160,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.redAccent.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: Colors.redAccent.withOpacity(0.8),
+                size: small ? 24 : 32,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                small
+                    ? 'TAP TO RELOAD'
+                    : 'Widget Sync Error\nTap to Reload App',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: small ? 10 : 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

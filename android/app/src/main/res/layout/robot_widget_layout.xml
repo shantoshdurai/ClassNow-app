@@ -20,6 +20,6 @@
         android:layout_gravity="top|right"
         android:clickable="true"
         android:focusable="true"
-        android:background="?attr/selectableItemBackgroundBorderless" />
+        android:background="@android:color/transparent" />
 
 </FrameLayout>

@@ -235,3 +235,60 @@ class AppTheme {
   static Color get accentPurple => _accentPurple;
   static Color get accentPink => _accentPink;
 }
+
+// Custom text styles for consistent typography
+class AppTextStyles {
+  static TextStyle get interTitle => const TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.5,
+  );
+
+  static TextStyle get interSubtitle => const TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.2,
+  );
+
+  static TextStyle get interBadge => const TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w900,
+    letterSpacing: 0.3,
+  );
+
+  static TextStyle get interLiveNow => const TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.2,
+  );
+
+  static TextStyle get interSubject => const TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.3,
+  );
+
+  static TextStyle get interProgress => const TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.1,
+  );
+
+  static TextStyle get interMentor => const TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.1,
+  );
+
+  static TextStyle get interNext => const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
+  );
+
+  static TextStyle get interSmall => const TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    letterSpacing: 0.1,
+  );
+}

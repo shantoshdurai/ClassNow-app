@@ -1,8 +1,10 @@
+import 'dart:ui'; // Add for Blur
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +26,7 @@ import 'package:flutter_firebase_test/widgets/skeleton_loader.dart';
 import 'package:flutter_firebase_test/retro_digital_display.dart';
 import 'package:flutter_firebase_test/splash_screen.dart';
 import 'package:flutter_firebase_test/subject_utils.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -57,70 +60,9 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
 // Global ValueNotifier for retro display setting
 final retroDisplayEnabledNotifier = ValueNotifier<bool>(false);
 
-// Custom text styles for consistent typography
-class AppTextStyles {
-  static TextStyle get interTitle => const TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.5,
-  );
-
-  static TextStyle get interSubtitle => const TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.2,
-  );
-
-  static TextStyle get interBadge => const TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w600,
-    letterSpacing: 0.3,
-  );
-
-  static TextStyle get interLiveNow => const TextStyle(
-    fontSize: 10,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 1.2,
-  );
-
-  static TextStyle get interSubject => const TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
-  );
-
-  static TextStyle get interProgress => const TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.1,
-  );
-
-  static TextStyle get interMentor => const TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    letterSpacing: 0.1,
-  );
-
-  static TextStyle get interNext => const TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    letterSpacing: -0.2,
-  );
-
-  static TextStyle get interSmall => const TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.1,
-  );
-}
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   HomeWidget.registerBackgroundCallback(homeWidgetBackgroundCallback);
-
-  // Workmanager mostly needs the callback dispatcher registered, but we can do full init in Splash.
-  // However, for background tasks to work reliably even if app is killed,
-  // sometimes minimal init is good, but here we prioritize UI startup.
 
   runApp(
     MultiProvider(
@@ -268,7 +210,7 @@ class _DashboardPageState extends State<DashboardPage>
   void _startConnectivityMonitoring() {
     print('🌐 Starting connectivity monitoring');
     _connectivityTimer?.cancel();
-    _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (
+    _connectivityTimer = Timer.periodic(const Duration(minutes: 5), (
       timer,
     ) async {
       if (!mounted) {
@@ -441,7 +383,8 @@ class _DashboardPageState extends State<DashboardPage>
       await FirebaseFirestore.instance
           .collection('announcements')
           .limit(1)
-          .get(const GetOptions(source: Source.server));
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 5));
 
       if (mounted) {
         setState(() {
@@ -1172,7 +1115,13 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Future<void> _manualRefresh() async {
-    await _checkConnectivity();
+    print('🔄 [Dashboard] Manual refresh triggered');
+    try {
+      await _checkConnectivity().timeout(const Duration(seconds: 7));
+    } catch (_) {
+      isOnline = false;
+    }
+
     if (!mounted) return;
 
     if (isOnline) {
@@ -1183,38 +1132,18 @@ class _DashboardPageState extends State<DashboardPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Updated.'),
+          content: Text('Timetable updated successfully'),
           duration: Duration(seconds: 1),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Offline. Showing saved timetable.'),
-          duration: Duration(seconds: 1),
+          content: Text('Offline: Displaying cached timetable'),
+          duration: Duration(seconds: 2),
         ),
       );
     }
-  }
-
-  Future<void> _toggleNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final newValue = !notificationsEnabled;
-    await prefs.setBool('notifications_enabled', newValue);
-    if (mounted) {
-      setState(() {
-        notificationsEnabled = newValue;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newValue ? "Notifications Enabled" : "Notifications Disabled",
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-    NotificationService.scheduleTimetableNotifications();
   }
 
   Future<void> _updateHomeScreenWidget() async {
@@ -1235,22 +1164,16 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   void _startWidgetUpdateTimer() {
-    print('⏰ [Timer] Starting 1-minute periodic update timer');
+    print('⏰ [Timer] Starting foreground update timer (30 mins)');
 
-    // Register Background Task
+    // We rely on AndroidAlarmManager for precise background updates
+    // Removing periodic Workmanager task to save battery
     try {
-      Workmanager().registerPeriodicTask(
-        "updateWidgetTask",
-        "updateWidgetTask",
-        frequency: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-      );
-    } catch (e) {
-      print('⚠️ [Workmanager] Failed to register task: $e');
-    }
+      Workmanager().cancelByUniqueName("updateWidgetTask");
+    } catch (_) {}
 
     _widgetUpdateTimer?.cancel();
-    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 15), (
+    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 30), (
       timer,
     ) async {
       if (!mounted) {
@@ -1261,178 +1184,275 @@ class _DashboardPageState extends State<DashboardPage>
         await _updateHomeScreenWidget();
       }
     });
-    print('✅ [Timer] Periodic timer started successfully');
+    print('✅ [Timer] Foreground timer set to 30 mins');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          children: [
-            Text(
-              'Class Now',
-              style: AppTextStyles.interTitle.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  isAdmin ? "Mentor Mode" : "Student View",
-                  style: AppTextStyles.interSubtitle.copyWith(
-                    color: isAdmin
-                        ? theme.colorScheme.secondary
-                        : theme.hintColor,
-                  ),
-                ),
-                if (!isAdmin && _getCurrentClassInfo() != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      _getCurrentClassInfo()!,
-                      style: AppTextStyles.interBadge.copyWith(
-                        color: theme.primaryColor,
+      extendBodyBehindAppBar: true,
+      backgroundColor: isDark
+          ? const Color(0xFF000000)
+          : const Color(0xFFF2F2F7),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(100), // Increased height
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
+          child: GlassCard(
+            blur: 25,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: SizedBox(
+              height: 70,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Perfectly Centered Title
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Class Now',
+                        style: AppTextStyles.interTitle.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontSize: 20,
+                          height: 1.0,
+                        ),
                       ),
+                      Text(
+                        isAdmin ? "Mentor Mode" : "Student View",
+                        style: AppTextStyles.interSubtitle.copyWith(
+                          color: isAdmin
+                              ? AppTheme.accentPurple
+                              : theme.hintColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10,
+                          height: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Left Action
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        isAdmin
+                            ? Icons.lock_open_rounded
+                            : Icons.lock_outline_rounded,
+                        color: isAdmin
+                            ? AppTheme.accentPurple
+                            : theme.hintColor,
+                      ),
+                      onPressed: _showLoginDialog,
+                    ),
+                  ),
+                  // Right Actions
+                  Positioned(
+                    right: 0,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isAdmin)
+                          IconButton(
+                            icon: Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: theme.primaryColor,
+                            ),
+                            onPressed: () => _showClassDialog(context),
+                          ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: theme.primaryColor,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          ],
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            isAdmin ? Icons.lock_open : Icons.lock_outline,
-            color: isAdmin ? theme.colorScheme.secondary : theme.hintColor,
           ),
-          onPressed: _showLoginDialog,
         ),
-        actions: [
-          if (isAdmin)
-            IconButton(
-              icon: Icon(Icons.add_circle, color: theme.primaryColor),
-              onPressed: () => _showClassDialog(context),
+      ),
+      body: Stack(
+        children: [
+          if (theme.brightness == Brightness.dark)
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primaryBlue.withOpacity(0.15),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
             ),
-          IconButton(
-            tooltip: "Settings",
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.accentPurple.withOpacity(0.15),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
           ),
-          IconButton(
-            tooltip: "Notifications",
-            icon: Icon(
-              notificationsEnabled
-                  ? Icons.notifications_active
-                  : Icons.notifications_off,
-              color: notificationsEnabled
-                  ? theme.primaryColor
-                  : theme.hintColor,
+
+          // Main Content
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _manualRefresh,
+              displacement: 80,
+              backgroundColor: theme.primaryColor,
+              color: Colors.white,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.only(top: 20, bottom: 100),
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: MediaQuery.of(context).size.height - 100,
+                        ),
+                        child: Column(
+                          children: [
+                            ValueListenableBuilder<bool>(
+                              valueListenable: retroDisplayEnabledNotifier,
+                              builder: (context, retroEnabled, child) {
+                                if (retroEnabled) {
+                                  return Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      0,
+                                      16,
+                                      20,
+                                    ),
+                                    child: _buildRetroDisplayCard(),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            _buildDaySelector(),
+                            const SizedBox(height: 10),
+                            _buildClassList(),
+                            if (isAdmin) ...[
+                              const SizedBox(height: 20),
+                              _MentorSaturdayControlPanel(),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            onPressed: _toggleNotifications,
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _manualRefresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            ValueListenableBuilder<bool>(
-              valueListenable: retroDisplayEnabledNotifier,
-              builder: (context, retroEnabled, child) {
-                if (retroEnabled) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: _buildRetroDisplayCard(),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        child: GlassCard(
+          blur: 15,
+          opacity: 0.15,
+          borderRadius: BorderRadius.circular(30),
+          padding: EdgeInsets.zero,
+          child: FloatingActionButton(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AnnouncementsPage(isAdmin: isAdmin),
+              ),
             ),
-            if (isAdmin && selectedDay == 'Saturday')
-              _MentorSaturdayControlPanel(),
-            _buildDaySelector(),
-            _buildClassList(),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AnnouncementsPage(isAdmin: isAdmin),
-          ),
-        ),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('announcements')
-              .snapshots(),
-          builder: (context, snapshot) {
-            final hasNew = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.campaign_outlined),
-                if (hasNew)
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${snapshot.data!.docs.length}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onError,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('announcements')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final hasNew =
+                    snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.campaign_rounded,
+                      color: theme.primaryColor,
+                      size: 28,
+                    ),
+                    if (hasNew)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: GlowingCard(
+                          glowColor: theme.colorScheme.error,
+                          glowRadius: 4,
+                          padding: const EdgeInsets.all(4),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Text(
+                            '${snapshot.data!.docs.length}',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
-            );
-          },
+                  ],
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
 
-  // ... (_buildDaySelector, _buildClassList, etc. are here)
-
   Widget _buildDaySelector() {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.40),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.55)),
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 54,
+      child: GlassCard(
+        blur: 15,
+        opacity: 0.08,
+        borderRadius: BorderRadius.circular(20),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
           itemCount: weekDays.length,
           itemBuilder: (context, index) {
             final day = weekDays[index];
@@ -1440,28 +1460,47 @@ class _DashboardPageState extends State<DashboardPage>
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 onTap: () => setState(() => selectedDay = day),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: isSelected ? theme.primaryColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: isSelected
+                        ? LinearGradient(
+                            colors: [
+                              AppTheme.primaryBlue,
+                              AppTheme.accentPurple,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.primaryBlue.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
                   ),
                   child: Center(
                     child: Text(
                       day.substring(0, 3).toUpperCase(),
                       style: theme.textTheme.labelLarge?.copyWith(
-                        letterSpacing: 0.6,
-                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w600,
                         color: isSelected
-                            ? theme.colorScheme.onPrimary
-                            : theme.colorScheme.onSurface,
+                            ? Colors.white
+                            : theme.hintColor.withOpacity(0.8),
+                        fontSize: 13,
+                        height: 1.0, // Force centering
                       ),
                     ),
                   ),
@@ -1714,32 +1753,6 @@ class _DashboardPageState extends State<DashboardPage>
     );
   }
 
-  String? _getCurrentClassInfo() {
-    if (isAdmin) return null;
-
-    final now = DateTime.now();
-    final currentTime = DateFormat('HH:mm').format(now);
-    final currentDay = DateFormat('EEEE').format(now);
-
-    if (_cachedSchedule.isEmpty) return null;
-
-    for (var classData in _cachedSchedule) {
-      final dayOfWeek = classData['dayOfWeek'] as String?;
-      final startTime = classData['startTime'] as String?;
-      final endTime = classData['endTime'] as String?;
-      final room = classData['room'] as String?;
-
-      if (dayOfWeek == currentDay &&
-          startTime != null &&
-          endTime != null &&
-          _isTimeInRange(currentTime, startTime, endTime)) {
-        return room ?? 'TBD';
-      }
-    }
-
-    return null;
-  }
-
   bool _isTimeInRange(String currentTime, String startTime, String endTime) {
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
@@ -1765,6 +1778,7 @@ class _DashboardPageState extends State<DashboardPage>
 
   Widget _buildCurrentClassCard(_ScheduleItem item) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
@@ -1789,211 +1803,306 @@ class _DashboardPageState extends State<DashboardPage>
       progress = 0.0;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.primaryColor.withOpacity(0.08),
-            theme.primaryColor.withOpacity(0.03),
-          ],
-        ),
-        border: Border.all(
-          color: theme.primaryColor.withOpacity(0.25),
-          width: 1.5,
-        ),
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      blur: 20,
+      opacity: 0.12,
+      borderRadius: BorderRadius.circular(24),
+      padding: EdgeInsets.zero,
+      border: Border.all(
+        color: theme.primaryColor.withOpacity(0.3),
+        width: 1.5,
       ),
-      child: Card(
-        margin: EdgeInsets.zero,
-        elevation: 0,
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Shimmering header for current class
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor.withOpacity(0.15),
+                  theme.primaryColor.withOpacity(0.05),
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.5),
+                            blurRadius: 4,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    )
+                    .animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    )
+                    .scale(
+                      begin: const Offset(1, 1),
+                      end: const Offset(1.3, 1.3),
+                      duration: const Duration(seconds: 1),
+                    ),
+                const SizedBox(width: 8),
+                Text(
+                  'LIVE NOW',
+                  style: AppTextStyles.interLiveNow.copyWith(
+                    color: Colors.red,
+                    fontSize: 11,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  "$start - $end",
+                  style: AppTextStyles.interProgress.copyWith(
+                    color: isDark
+                        ? Colors.white70
+                        : theme.colorScheme.onSurface.withOpacity(0.7),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        SubjectUtils.getSubjectIcon(data['subject']),
+                        color: theme.primaryColor,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['subject'] ?? 'No Subject',
+                            style: AppTextStyles.interSubject.copyWith(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            data['mentor'] ?? 'Unknown Mentor',
+                            style: AppTextStyles.interMentor.copyWith(
+                              color: isDark
+                                  ? Colors.white60
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.6,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Session Progress',
+                      style: AppTextStyles.interProgress.copyWith(
+                        color: isDark
+                            ? Colors.white70
+                            : theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: AppTextStyles.interProgress.copyWith(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: theme.primaryColor.withOpacity(0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.primaryColor,
+                    ),
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_rounded,
+                      size: 16,
+                      color: theme.primaryColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Room ${data['room'] ?? 'TBD'}",
+                      style: AppTextStyles.interSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (isAdmin)
+                      IconButton(
+                        icon: const Icon(Icons.edit_note_rounded),
+                        onPressed: () => _showEditOptions(item.doc!),
+                        color: theme.primaryColor,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingClassCard(_ScheduleItem item, bool isFirst) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final data = item.data;
+    final start = data['startTime'] ?? '--:--';
+    final end = data['endTime'] ?? '--:--';
+
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      blur: 10,
+      opacity: 0.05,
+      borderRadius: BorderRadius.circular(18),
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onLongPress: (isAdmin && item.doc != null)
+            ? () => _showEditOptions(item.doc!)
+            : null,
+        borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with LIVE indicator
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'LIVE NOW',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      "$start - $end",
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.primaryColor,
-                        fontWeight: FontWeight.w600,
+                  if (isFirst)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'UP NEXT',
+                        style: AppTextStyles.interLiveNow.copyWith(
+                          color: theme.primaryColor,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  Text(
+                    "$start - $end",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDark
+                          ? Colors.white70
+                          : theme.colorScheme.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Subject name with dynamic icon
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      SubjectUtils.getSubjectIcon(data['subject']),
-                      color: theme.primaryColor,
-                      size: 22,
-                    ),
+                  Icon(
+                    SubjectUtils.getSubjectIcon(data['subject']),
+                    size: 20,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       data['subject'] ?? 'No Subject',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.primaryColor,
-                        fontWeight: FontWeight.bold,
+                      style: AppTextStyles.interNext.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 18,
                       ),
                     ),
                   ),
+                  if (isAdmin)
+                    IconButton(
+                      icon: const Icon(Icons.edit_note_rounded),
+                      onPressed: () => _showEditOptions(item.doc!),
+                      color: theme.primaryColor,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              // Progress bar
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Class Progress',
-                        style: AppTextStyles.interProgress.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      Text(
-                        '${(progress * 100).toInt()}%',
-                        style: AppTextStyles.interProgress.copyWith(
-                          color: theme.primaryColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: progress,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Mentor and Room info
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      size: 16,
-                      color: theme.primaryColor,
-                    ),
+                  Icon(
+                    Icons.person_outline_rounded,
+                    size: 14,
+                    color: isDark
+                        ? Colors.white60
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Text(
                     data['mentor'] ?? 'Unknown',
-                    style: AppTextStyles.interMentor,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark
+                          ? Colors.white60
+                          : theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: theme.primaryColor,
-                    ),
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: isDark
+                        ? Colors.white60
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Text(
                     "Room ${data['room'] ?? 'TBD'}",
-                    style: AppTextStyles.interMentor,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isDark
+                          ? Colors.white60
+                          : theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
                   ),
                 ],
               ),
@@ -2004,242 +2113,80 @@ class _DashboardPageState extends State<DashboardPage>
     );
   }
 
-  Widget _buildUpcomingClassCard(_ScheduleItem item, bool isFirst) {
+  Widget _buildCompletedClassCard(_ScheduleItem item) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.15),
-              width: 1,
-            ),
-          ),
-          child: InkWell(
-            onLongPress: (isAdmin && item.doc != null)
-                ? () => _showEditOptions(item.doc!)
-                : null,
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final Color mutedColor = isDark ? Colors.white24 : Colors.black26;
+
+    return GlassCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      blur: 5,
+      opacity: 0.02,
+      borderRadius: BorderRadius.circular(12),
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onLongPress: (isAdmin && item.doc != null)
+            ? () => _showEditOptions(item.doc!)
+            : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      if (isFirst)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'NEXT',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.orange,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceVariant,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          "$start - $end",
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'FINISHED',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: mutedColor,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 9,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        SubjectUtils.getSubjectIcon(data['subject']),
-                        size: 18,
-                        color: theme.primaryColor.withOpacity(0.7),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          data['subject'] ?? 'No Subject',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        data['mentor'] ?? 'Unknown',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "Room ${data['room'] ?? 'TBD'}",
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                    ],
+                  const Spacer(),
+                  Text(
+                    "$start - $end",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: mutedColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompletedClassCard(_ScheduleItem item) {
-    final theme = Theme.of(context);
-    final data = item.data;
-    final start = data['startTime'] ?? '--:--';
-    final end = data['endTime'] ?? '--:--';
-
-    return Opacity(
-      opacity: 0.5,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        child: Card(
-          elevation: 0,
-          color: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'COMPLETED',
-                        style: AppTextStyles.interLiveNow.copyWith(
-                          color: Colors.grey,
-                          fontSize: 9,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      "$start - $end",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.hintColor,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: mutedColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      data['subject'] ?? 'No Subject',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        decoration: TextDecoration.lineThrough,
+                        decorationColor: mutedColor.withOpacity(0.5),
+                        decorationThickness: 2,
+                        color: mutedColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(
-                      SubjectUtils.getSubjectIcon(data['subject']),
-                      size: 18,
-                      color: theme.hintColor,
+                  ),
+                  if (isAdmin)
+                    IconButton(
+                      icon: const Icon(Icons.edit_note_rounded),
+                      onPressed: () => _showEditOptions(item.doc!),
+                      color: theme.primaryColor.withOpacity(0.5),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        data['subject'] ?? 'No Subject',
-                        style: AppTextStyles.interNext.copyWith(
-                          decoration: TextDecoration.lineThrough,
-                          decorationColor: theme.hintColor,
-                          color: theme.hintColor,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 14,
-                      color: theme.hintColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      data['mentor'] ?? 'Unknown',
-                      style: AppTextStyles.interSmall.copyWith(
-                        color: theme.hintColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: theme.hintColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Room ${data['room'] ?? 'TBD'}",
-                      style: AppTextStyles.interSmall.copyWith(
-                        color: theme.hintColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -2317,70 +2264,156 @@ class _DashboardPageState extends State<DashboardPage>
       endTime = TimeOfDay(hour: int.parse(e[0]), minute: int.parse(e[1]));
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(doc == null ? 'Add Class' : 'Edit Class'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          surfaceTintColor: Colors.transparent,
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          title: Text(
+            doc == null ? 'Add Class' : 'Edit Class',
+            style: AppTextStyles.interTitle.copyWith(fontSize: 22),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DropdownButton<String>(
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
                   value: addDay,
-                  isExpanded: true,
+                  dropdownColor: isDark
+                      ? const Color(0xFF2C2C2E)
+                      : Colors.white,
+                  decoration: InputDecoration(
+                    labelText: 'Day',
+                    filled: true,
+                    fillColor: theme.colorScheme.onSurface.withOpacity(0.05),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                   items: weekDays
                       .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                       .toList(),
                   onChanged: (v) => setDialogState(() => addDay = v!),
                 ),
-                TextField(
-                  controller: subjectController,
-                  decoration: const InputDecoration(labelText: 'Subject'),
-                ),
-                TextField(
-                  controller: mentorController,
-                  decoration: const InputDecoration(labelText: 'Mentor Name'),
-                ),
-                TextField(
-                  controller: roomController,
-                  decoration: const InputDecoration(labelText: 'Room No'),
+                const SizedBox(height: 16),
+                _buildDialogField(
+                  subjectController,
+                  'Subject',
+                  Icons.book_rounded,
+                  isDark,
                 ),
                 const SizedBox(height: 16),
+                _buildDialogField(
+                  mentorController,
+                  'Staff Name',
+                  Icons.person_rounded,
+                  isDark,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogField(
+                  roomController,
+                  'Room No',
+                  Icons.room_rounded,
+                  isDark,
+                ),
+                const SizedBox(height: 24),
                 Row(
                   children: [
-                    TextButton(
-                      onPressed: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime: startTime,
-                        );
-                        if (t != null) setDialogState(() => startTime = t);
-                      },
-                      child: Text("Start: ${startTime.format(context)}"),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: startTime,
+                          );
+                          if (t != null) setDialogState(() => startTime = t);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text('Start', style: theme.textTheme.labelSmall),
+                              Text(
+                                startTime.format(context),
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime: endTime,
-                        );
-                        if (t != null) setDialogState(() => endTime = t);
-                      },
-                      child: Text("End: ${endTime.format(context)}"),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          final t = await showTimePicker(
+                            context: context,
+                            initialTime: endTime,
+                          );
+                          if (t != null) setDialogState(() => endTime = t);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text('End', style: theme.textTheme.labelSmall),
+                              Text(
+                                endTime.format(context),
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
               onPressed: () {
                 final startStr =
                     "${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}";
@@ -2428,7 +2461,7 @@ class _DashboardPageState extends State<DashboardPage>
                     );
                   }
                   if (oldData['mentor'] != payload['mentor']) {
-                    changes.add("Mentor changed");
+                    changes.add("Staff changed");
                   }
 
                   if (changes.isNotEmpty) {
@@ -2447,6 +2480,40 @@ class _DashboardPageState extends State<DashboardPage>
               child: const Text('Save'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    bool isDark,
+  ) {
+    final theme = Theme.of(context);
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(
+          icon,
+          size: 20,
+          color: theme.primaryColor.withOpacity(0.7),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.onSurface.withOpacity(0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.primaryColor),
         ),
       ),
     );
@@ -2472,6 +2539,7 @@ class __MentorSaturdayControlPanelState
   bool _isLoading = false;
 
   final List<String> _sourceDays = [
+    'None',
     'Monday',
     'Tuesday',
     'Wednesday',
@@ -2542,14 +2610,17 @@ class __MentorSaturdayControlPanelState
           batch.delete(doc.reference);
         }
 
-        // Get source day schedule to copy
-        final sourceDaySnapshot = await scheduleRef
-            .where('day', isEqualTo: _selectedSourceDay)
-            .get();
-        for (final doc in sourceDaySnapshot.docs) {
-          final classData = doc.data();
-          final newDocRef = scheduleRef.doc();
-          batch.set(newDocRef, {...classData, 'day': 'Saturday'});
+        // Only clone if not "None"
+        if (_selectedSourceDay != 'None') {
+          // Get source day schedule to copy
+          final sourceDaySnapshot = await scheduleRef
+              .where('day', isEqualTo: _selectedSourceDay)
+              .get();
+          for (final doc in sourceDaySnapshot.docs) {
+            final classData = doc.data();
+            final newDocRef = scheduleRef.doc();
+            batch.set(newDocRef, {...classData, 'day': 'Saturday'});
+          }
         }
       }
 
@@ -2583,60 +2654,116 @@ class __MentorSaturdayControlPanelState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    final isDark = theme.brightness == Brightness.dark;
+    return GlassCard(
       margin: const EdgeInsets.all(16),
-      elevation: 2,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mentor Action: Set Saturday Schedule',
-              style: theme.textTheme.titleLarge,
+      blur: 20,
+      opacity: 0.1,
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_motion_rounded,
+                  color: Colors.orange,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Saturday Setup',
+                style: AppTextStyles.interTitle.copyWith(
+                  fontSize: 18,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Clone a weekday timetable to Saturday for all sections.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark
+                  ? Colors.white60
+                  : theme.colorScheme.onSurface.withOpacity(0.6),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'This will replace the current Saturday schedule for all sections.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.hintColor,
+          ),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<String>(
+            value: _selectedSourceDay,
+            dropdownColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            decoration: InputDecoration(
+              labelText: 'Select Source Day',
+              labelStyle: TextStyle(color: theme.primaryColor),
+              filled: true,
+              fillColor: theme.colorScheme.onSurface.withOpacity(0.05),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
               ),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedSourceDay,
-              decoration: const InputDecoration(
-                labelText: 'Copy Schedule From',
+            items: _sourceDays
+                .map(
+                  (day) => DropdownMenuItem(
+                    value: day,
+                    child: Text(
+                      day,
+                      style: TextStyle(color: theme.colorScheme.onSurface),
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedSourceDay = value;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
               ),
-              items: _sourceDays
-                  .map((day) => DropdownMenuItem(value: day, child: Text(day)))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedSourceDay = value;
-                });
-              },
+              onPressed: _selectedSourceDay == null || _isLoading
+                  ? null
+                  : _applySchedule,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Apply to Saturday',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _selectedSourceDay == null || _isLoading
-                    ? null
-                    : _applySchedule,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Apply to Saturday'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -2657,130 +2784,236 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Announcements')),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('announcements')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-                if (docs.isEmpty) {
-                  return const Center(child: Text('No announcements yet'));
-                }
-
-                return ListView.builder(
-                  reverse: false,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final isSystem = data['isSystemMessage'] ?? false;
-                    final timestamp = data['timestamp'] as Timestamp?;
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: theme.cardTheme.elevation ?? 1,
-                      color: isSystem
-                          ? theme.primaryColor.withOpacity(0.05)
-                          : theme.cardColor,
-                      shape:
-                          theme.cardTheme.shape ??
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                      child: ListTile(
-                        leading: Icon(
-                          isSystem
-                              ? Icons.info_outline
-                              : Icons.campaign_outlined,
-                          color: isSystem
-                              ? theme.primaryColor
-                              : theme.colorScheme.secondary,
-                        ),
-                        title: Text(
-                          data['message'] ?? '',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        subtitle: timestamp != null
-                            ? Text(
-                                DateFormat(
-                                  'MMM dd, hh:mm a',
-                                ).format(timestamp.toDate()),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.hintColor,
-                                ),
-                              )
-                            : null,
-                        trailing: widget.isAdmin
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                ),
-                                onPressed: () => docs[index].reference.delete(),
-                              )
-                            : null,
+      extendBodyBehindAppBar: true,
+      backgroundColor: isDark
+          ? const Color(0xFF000000)
+          : const Color(0xFFF2F2F7),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(100),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
+          child: GlassCard(
+            blur: 25,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: SizedBox(
+              height: 70,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    'Announcements',
+                    style: AppTextStyles.interTitle.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 18,
+                      height: 1.0,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: theme.primaryColor,
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          if (widget.isAdmin)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.shadowColor.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Type announcement...',
+            ),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          if (isDark)
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primaryBlue.withOpacity(0.15),
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('announcements')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final docs = snapshot.data!.docs;
+                      if (docs.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.campaign_outlined,
+                                size: 64,
+                                color: theme.hintColor.withOpacity(0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No announcements yet',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: theme.hintColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final data =
+                              docs[index].data() as Map<String, dynamic>;
+                          final isSystem = data['isSystemMessage'] ?? false;
+                          final timestamp = data['timestamp'] as Timestamp?;
+
+                          return GlassCard(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            blur: 15,
+                            opacity: 0.08,
+                            padding: EdgeInsets.zero,
+                            child: ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      (isSystem
+                                              ? theme.primaryColor
+                                              : theme.colorScheme.secondary)
+                                          .withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isSystem
+                                      ? Icons.info_outline
+                                      : Icons.campaign_outlined,
+                                  color: isSystem
+                                      ? theme.primaryColor
+                                      : theme.colorScheme.secondary,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                data['message'] ?? '',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              subtitle: timestamp != null
+                                  ? Text(
+                                      DateFormat(
+                                        'MMM dd, hh:mm a',
+                                      ).format(timestamp.toDate()),
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: theme.hintColor.withOpacity(
+                                              0.7,
+                                            ),
+                                          ),
+                                    )
+                                  : null,
+                              trailing: widget.isAdmin
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 18,
+                                        color: theme.colorScheme.error
+                                            .withOpacity(0.7),
+                                      ),
+                                      onPressed: () =>
+                                          docs[index].reference.delete(),
+                                    )
+                                  : null,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                if (widget.isAdmin)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    child: GlassCard(
+                      blur: 20,
+                      opacity: 0.1,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: messageController,
+                              style: theme.textTheme.bodyMedium,
+                              decoration: InputDecoration(
+                                hintText: 'Type announcement...',
+                                hintStyle: TextStyle(
+                                  color: theme.hintColor.withOpacity(0.5),
+                                ),
+                                border: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.send_rounded,
+                              color: theme.primaryColor,
+                            ),
+                            onPressed: () {
+                              if (messageController.text.trim().isNotEmpty) {
+                                FirebaseFirestore.instance
+                                    .collection('announcements')
+                                    .add({
+                                      'message': messageController.text.trim(),
+                                      'timestamp': FieldValue.serverTimestamp(),
+                                      'isSystemMessage': false,
+                                    });
+                                messageController.clear();
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.send, color: theme.primaryColor),
-                    onPressed: () {
-                      if (messageController.text.trim().isNotEmpty) {
-                        FirebaseFirestore.instance
-                            .collection('announcements')
-                            .add({
-                              'message': messageController.text.trim(),
-                              'timestamp': FieldValue.serverTimestamp(),
-                              'isSystemMessage': false,
-                            });
-                        messageController.clear();
-                      }
-                    },
-                  ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

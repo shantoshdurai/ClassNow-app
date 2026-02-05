@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
 import 'package:flutter_firebase_test/notification_settings_page.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -66,147 +67,296 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(100),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
+          child: GlassCard(
+            blur: 25,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: SizedBox(
+              height: 70,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    'Settings',
+                    style: AppTextStyles.interTitle.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 20,
+                      height: 1.0,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: theme.primaryColor,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: Stack(
         children: [
-          _buildSettingsGroup(
-            context,
-            title: 'Display',
-            children: [
-              SwitchListTile(
-                title: Text('Dark Mode', style: theme.textTheme.titleMedium),
-                subtitle: Text(
-                  'A comfortable view for nighttime',
-                  style: theme.textTheme.bodySmall,
+          // Background Layer
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF000000)
+                    : const Color(0xFFF2F2F7),
+              ),
+            ),
+          ),
+          if (isDark)
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primaryBlue.withOpacity(0.15),
                 ),
-                value: themeProvider.themeMode == ThemeMode.dark,
-                onChanged: (value) {
-                  themeProvider.toggleTheme(value);
-                },
-                activeColor: theme.colorScheme.secondary,
-                secondary: Icon(
-                  Icons.brightness_6_outlined,
-                  color: theme.primaryColor,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                  child: Container(color: Colors.transparent),
                 ),
               ),
-            ],
+            ),
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.accentPurple.withOpacity(0.15),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildSettingsGroup(
-            context,
-            title: 'Account',
-            children: [
-              ListTile(
-                leading: Icon(Icons.school_outlined, color: theme.primaryColor),
-                title: Text(
-                  'Change My Class',
-                  style: theme.textTheme.titleMedium,
-                ),
-                subtitle: Text(
-                  'Select a different section or year',
-                  style: theme.textTheme.bodySmall,
-                ),
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OnboardingScreen(),
+
+          // Content
+          SafeArea(
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+              children: [
+                _buildSettingsGroup(
+                  context,
+                  title: 'Display',
+                  children: [
+                    SwitchListTile(
+                      title: Text(
+                        'Dark Mode',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'A comfortable view for nighttime',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      value: themeProvider.themeMode == ThemeMode.dark,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme(value);
+                      },
+                      activeColor: theme.colorScheme.primary,
+                      secondary: Icon(
+                        Icons.brightness_6_outlined,
+                        color: theme.primaryColor,
+                      ),
                     ),
-                    (route) => false,
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsGroup(
-            context,
-            title: 'Notifications',
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.notifications_outlined,
-                  color: theme.primaryColor,
+                  ],
                 ),
-                title: Text(
-                  'Manage Alerts',
-                  style: theme.textTheme.titleMedium,
-                ),
-                subtitle: Text(
-                  'Select classes and test notifications',
-                  style: theme.textTheme.bodySmall,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationSettingsPage(),
+                const SizedBox(height: 24),
+                _buildSettingsGroup(
+                  context,
+                  title: 'Account',
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.school_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        'Change My Class',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Select a different section or year',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: theme.hintColor,
+                      ),
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OnboardingScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsGroup(
-            context,
-            title: 'Extras',
-            children: [
-              SwitchListTile(
-                title: Text(
-                  '90s Retro Display',
-                  style: theme.textTheme.titleMedium,
+                  ],
                 ),
-                subtitle: Text(
-                  'Show pixel-style class tracker display',
-                  style: theme.textTheme.bodySmall,
+                const SizedBox(height: 24),
+                _buildSettingsGroup(
+                  context,
+                  title: 'Notifications',
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.notifications_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        'Manage Alerts',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Select classes and test notifications',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: theme.hintColor,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const NotificationSettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                value: _retroDisplayEnabled,
-                onChanged: _setRetroDisplayEnabled,
-                activeColor: theme.colorScheme.secondary,
-                secondary: Icon(
-                  Icons.computer_outlined,
-                  color: theme.primaryColor,
+                const SizedBox(height: 24),
+                _buildSettingsGroup(
+                  context,
+                  title: 'Extras',
+                  children: [
+                    SwitchListTile(
+                      title: Text(
+                        '90s Retro Display',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Show pixel-style class tracker display',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      value: _retroDisplayEnabled,
+                      onChanged: _setRetroDisplayEnabled,
+                      activeColor: theme.colorScheme.primary,
+                      secondary: Icon(
+                        Icons.computer_outlined,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                    const Divider(
+                      height: 1,
+                      indent: 56,
+                      endIndent: 16,
+                      color: Colors.white10,
+                    ),
+                    SwitchListTile(
+                      title: Text(
+                        'Widgets Auto-Update',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Keep home screen widgets updated automatically',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      value: _widgetsEnabled,
+                      onChanged: _setWidgetsEnabled,
+                      activeColor: theme.colorScheme.primary,
+                      secondary: Icon(
+                        Icons.autorenew_rounded,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                    const Divider(
+                      height: 1,
+                      indent: 56,
+                      endIndent: 16,
+                      color: Colors.white10,
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        Icons.widgets_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        'Home Screen Widgets',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Learn how to add widgets',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: theme.hintColor,
+                      ),
+                      onTap: () => _showWidgetInfoDialog(context),
+                    ),
+                  ],
                 ),
-              ),
-              SwitchListTile(
-                title: Text(
-                  'Widgets Auto-Update',
-                  style: theme.textTheme.titleMedium,
-                ),
-                subtitle: Text(
-                  'Keep home screen widgets updated automatically',
-                  style: theme.textTheme.bodySmall,
-                ),
-                value: _widgetsEnabled,
-                onChanged: _setWidgetsEnabled,
-                activeColor: theme.colorScheme.secondary,
-                secondary: Icon(
-                  Icons.autorenew_rounded,
-                  color: theme.primaryColor,
-                ),
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.widgets_outlined,
-                  color: theme.primaryColor,
-                ),
-                title: Text(
-                  'Home Screen Widgets',
-                  style: theme.textTheme.titleMedium,
-                ),
-                subtitle: Text(
-                  'Learn how to add widgets',
-                  style: theme.textTheme.bodySmall,
-                ),
-                onTap: () => _showWidgetInfoDialog(context),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -223,22 +373,19 @@ class _SettingsPageState extends State<SettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
+          padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
           child: Text(
             title.toUpperCase(),
-            style: theme.textTheme.labelLarge?.copyWith(
+            style: AppTextStyles.interBadge.copyWith(
               color: theme.primaryColor,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
-        Card(
-          elevation: theme.cardTheme.elevation ?? 1,
-          color: theme.cardColor,
-          shape:
-              theme.cardTheme.shape ??
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          clipBehavior: Clip.antiAlias,
+        GlassCard(
+          padding: EdgeInsets.zero,
+          opacity: 0.05,
+          borderRadius: BorderRadius.circular(24),
           child: Column(children: children),
         ),
       ],

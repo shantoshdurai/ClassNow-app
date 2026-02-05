@@ -7,7 +7,7 @@
 ![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Material Design](https://img.shields.io/badge/Material%20Design-757575?style=for-the-badge&logo=material-design&logoColor=white)
 
-**A luxury timetable management app with Apple-inspired glassmorphism UI**
+**A high-performance timetable management app with advanced glassmorphism aesthetics**
 
 [Features](#-features) • [Screenshots](#-screenshots) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [Usage](#-usage)
 
@@ -17,97 +17,60 @@
 
 ## ✨ Features
 
-### 🎨 **Premium Apple-Inspired UI**
-- **Glassmorphism Effects** - Frosted glass cards with blur and depth
-- **Vibrant iOS Colors** - Official Apple design system colors (#007AFF, #5E5CE6, #FF2D55)
-- **True OLED Black Theme** - Perfect contrast, saves battery
-- **Smooth Animations** - Micro-interactions and gradient effects
-- **Premium Typography** - San Francisco-style fonts, perfect spacing
+### 🎨 **Modern Glassmorphism UI**
+- **Frosted Glass Effects** - High-fidelity blur and depth-based UI components.
+- **Dynamic Color System** - Curated vibrant palette designed for maximum legibility in both light and dark modes.
+- **True OLED Black Theme** - Optimized for power saving and high contrast.
+- **Interactive Micro-animations** - Fluid transitions and real-time visual feedback for all user actions.
+- **High-Density Layouts** - Precise spacing and modern typography for a premium feel.
 
-### 📅 **Smart Timetable Management**
-- **Live Class Tracking** - See current, upcoming, and completed classes
-- **Progress Indicators** - Visual progress bars for ongoing classes
-- **Day Navigation** - Quick switch between days of the week
-- **Offline First** - Works perfectly without internet
-- **Real-time Sync** - Instant updates when online
+### 📅 **Intelligent Scheduling**
+- **Live Tracking** - Real-time categorization into current, upcoming, and completed sessions.
+- **Progress Monitoring** - High-resolution visual progress indicators for active classes.
+- **Universal Pull-to-Refresh** - Seamless synchronization gesture that works across all schedule states, including empty lists.
+- **Offline Reliability** - Persistent local caching ensures access to timetable data even without connectivity.
 
-### 🔔 **Advanced Notifications**
-- **Customizable Timing** - Get notified 5, 10, 15, or 30 minutes before class
-- **Subject Filtering** - Choose which subjects to get alerts for
-- **Smart Scheduling** - Notifications sent BEFORE class starts (not during!)
-- **Test Mode** - Built-in notification tester
+### 🏠 **High-Fidelity Home Screen Widgets**
+- **High-Resolution Rendering** - Widgets are drawn at double logical resolution (up to 800x400) for edge-to-edge sharpness.
+- **Ambient Glass Design** - Transparent frosted backgrounds that blend natively with any device wallpaper.
+- **Visual Sync Confirmation** - Interactive refresh logic where the sync icon rotates 90° on every successful update.
+- **Silent Background Logic** - Fail-safe background updates that maintain data integrity without surface-level error disruptions.
 
-### 🏠 **Home Screen Widgets**
-- **Live Timetable Widget** - See your schedule without opening the app
-- **Manual Refresh** - Tap to update instantly
-- **Battery Optimized** - Efficient background updates
-- **Multiple Sizes** - Small and large widget options
+### 🔔 **Precision Notification System**
+- **Predictive Alerts** - Get notified exactly 5, 10, 15, or 30 minutes before class starts.
+- **Smart Filtering** - Granular control over notification triggers based on subject or availability.
+- **Lead-Time Optimization** - Notifications are intelligently scheduled to ensure reminders arrive before the session begins.
+- **Notification Diagnostics** - Integrated testing suite to verify system-level notification permissions.
 
-### 👨‍🏫 **Dual Role System**
-- **Student Mode** - Clean, focused class view
-- **Mentor Mode** - Schedule management, announcements, and admin controls
-- **Email/Password Auth** - Secure mentor authentication
-- **Anonymous Access** - Frictionless student experience
+### 👨‍🏫 **Multi-Role Infrastructure**
+- **Student Ecosystem** - Streamlined, distraction-free view for quick schedule checks.
+- **Mentor Control Panel** - Complete administration suite for managing schedules, Saturday setups, and announcements.
+- **Anonymous Authentication** - Frictionless onboarding for students using Firebase Anonymous Auth.
+- **Secure Mentor Portal** - Robust email/password authentication for administrative operations.
 
 ### 🤖 **Robot Eyes Integration**
-- **Arduino-Powered Animations** - Happy, Angry, Tired, Confused moods
-- **Real-time Updates** - Responds to app state
-- **Cloud Functions** - Firebase integration for remote control
-
-### 📢 **Announcement System**
-- **Real-time Updates** - Instant notifications from mentors
-- **Rich Content** - Formatted announcements with timestamps
-- **Persistent Storage** - Cached locally for offline viewing
-
----
-
-## 📱 Screenshots
-
-<div align="center">
-
-| Premium Glassmorphism UI | Notification Settings |
-|:---:|:---:|
-| ![Premium UI](screenshots/glassmorphism.png) | ![Notifications](screenshots/notifications.png) |
-
-| Dashboard | Announcement Hub |
-|:---:|:---:|
-| ![Dashboard](screenshots/dashboard.jpeg) | ![Announcements](screenshots/announcements.png) |
-
-</div>
+- **Emotional AI Rendering** - Dynamic mood system (Happy, Focused, Waiting) reflected in both the app and widgets.
+- **Hardware Sync** - Integration capabilities with Arduino-powered displays via Firebase Cloud Functions.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### **Core**
-- **Flutter 3.x** - Cross-platform framework
-- **Dart 3.x** - Modern, type-safe language
-- **Material Design 3** - Latest design system
+### **Core Framework**
+- **Flutter 3.x** - High-performance cross-platform development.
+- **Dart 3.x** - Optimized, type-safe application logic.
+- **Material Design 3** - Implementing the latest design language standards.
 
-### **Backend & Database**
-- **Firebase Firestore** - Real-time NoSQL database
-- **Firebase Auth** - Email/password & anonymous authentication
-- **Cloud Functions** - Serverless backend for Robot Eyes
+### **Backend Architecture**
+- **Firebase Firestore** - Real-time NoSQL data synchronization.
+- **Firebase Auth** - Multi-provider authentication management.
+- **Cloud Functions** - Serverless logic for hardware integration and background processing.
 
-### **State Management**
-- **Provider** - Simple, efficient state management
-- **SharedPreferences** - Local persistent storage
-
-### **Background Processing**
-- **Workmanager** - Reliable background tasks
-- **Android Alarm Manager Plus** - Precise scheduling
-- **Flutter Local Notifications** - Rich notification system
-
-### **UI Components**
-- **Custom Glassmorphism Widgets** - Premium UI components library
-- **Google Fonts** - Beautiful typography
-- **Shimmer** - Skeleton loading states
-- **Home Widget** - Native home screen widgets
-
-### **Development Tools**
-- **Git** - Version control
-- **Android Studio** - IDE and debugging
-- **Firebase Console** - Backend management
+### **Advanced Functionality**
+- **android_alarm_manager_plus** - Precise background task scheduling using system-level alarms.
+- **Home Widget** - Native Android/iOS widget bridge with custom Flutter rendering.
+- **Workmanager** - Reliable background synchronization and cache maintenance.
+- **Flutter Local Notifications** - High-priority scheduling for time-sensitive alerts.
 
 ---
 
@@ -115,9 +78,8 @@
 
 ### Prerequisites
 - Flutter SDK (3.0.0 or higher)
-- Dart SDK (3.0.0 or higher)
-- Android Studio or VS Code
-- Firebase account
+- Android Studio / VS Code
+- Firebase Project Reference
 - Git
 
 ### Setup Instructions
@@ -134,201 +96,42 @@
    ```
 
 3. **Firebase Configuration**
-   
-   Create a Firebase project at [firebase.google.com](https://firebase.google.com)
-   
-   **Android:**
-   - Download `google-services.json`
-   - Place it in `android/app/`
-   
-   **Enable Authentication:**
-   - Go to Firebase Console → Authentication
-   - Enable Email/Password provider
-   - Enable Anonymous provider
+   - Place your `google-services.json` in `android/app/`.
+   - Enable **Anonymous** and **Email/Password** providers in Firebase Console.
+   - Deploy Firestore rules for `departments`, `years`, and `sections`.
 
-   **Setup Firestore:**
-   - Create a Firestore database
-   - Use the following structure:
-     ```
-     departments/
-       ├── {deptId}/
-           ├── years/
-               ├── {yearId}/
-                   ├── sections/
-                       ├── {sectionId}/
-                           ├── schedule/
-                               ├── {classId}
-     ```
-
-4. **Run the app**
+4. **Run Development Mode**
    ```bash
    flutter run
    ```
 
 ---
 
-## 📖 Usage
-
-### For Students
-
-1. **Launch the app** - Automatic anonymous sign-in
-2. **Select your department, year, and section** during onboarding
-3. **View your timetable** - See live, upcoming, and completed classes
-4. **Enable notifications** - Go to Settings → Notification Preferences
-5. **Customize timing** - Choose when to get reminders (5-30 min before)
-6. **Add home widget** - Long-press home screen → Widgets → Timewise
-
-### For Mentors
-
-1. **Login with email/password** - Use mentor credentials
-2. **Manage schedules** - Add, edit, or delete classes
-3. **Post announcements** - Share important updates with students
-4. **View analytics** - Track class attendance and engagement
-
-### Notification Settings
-
-1. Open **Settings** → **Notification Preferences**
-2. Toggle **Enable Notifications**
-3. Adjust **Notification Timing** (5, 10, 15, or 30 minutes before)
-4. Choose **All Classes** or **Select Specific Subjects**
-5. Tap **Send Test Notification** to verify
-
----
-
-## 🎨 Premium UI Components
-
-### Glassmorphism Cards
-```dart
-import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
-
-GlassCard(
-  blur: 15,
-  opacity: 0.08,
-  child: YourContent(),
-)
-```
-
-### Glowing Effects
-```dart
-GlowingCard(
-  glowColor: AppTheme.primaryBlue,
-  glowRadius: 12,
-  child: Badge(),
-)
-```
-
-### Gradient Cards
-```dart
-GradientCard(
-  gradientColors: [AppTheme.primaryBlue, AppTheme.accentPurple],
-  animated: true,
-  child: Content(),
-)
-```
-
----
-
-## 🏗️ Project Structure
+## 🏗️ Project Architecture
 
 ```
 lib/
-├── main.dart                      # App entry point
-├── app_theme.dart                 # Premium Apple-inspired theme
-├── splash_screen.dart             # Animated splash screen
-├── onboarding_screen.dart         # Class selection flow
-├── notification_service.dart      # Smart notification system
-├── notification_settings_page.dart # Premium settings UI
-├── widget_service.dart            # Home widget management
-├── subject_utils.dart             # Subject icon mapping
-└── widgets/
-    └── glass_widgets.dart         # Glassmorphism components
-
-android/
-├── app/
-    ├── src/main/
-        ├── kotlin/                # Widget providers
-        └── res/layout/            # Widget layouts
+├── main.dart                      # Core app initialization
+├── app_theme.dart                 # Design system & color tokens
+├── notification_service.dart      # Precision scheduling engine
+├── widget_service.dart            # High-res widget rendering logic
+├── static_widget.dart             # Widget UI components
+├── onboarding_screen.dart         # Dynamic selection workflows
+└── subject_utils.dart             # Semantic icon mapping engine
 ```
 
 ---
 
-## 🔧 Configuration
-
-### Customize Colors
-Edit `lib/app_theme.dart`:
-```dart
-static const Color _primaryBlue = Color(0xFF007AFF);
-static const Color _accentPurple = Color(0xFF5E5CE6);
-```
-
-### Adjust Notification Lead Time
-Default options: 5, 10, 15, 30 minutes
-Edit in `notification_service.dart`
-
-### Widget Update Frequency
-Configure in `widget_service.dart`
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. **Push to your fork**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
-
-### Contribution Guidelines
-- Follow Flutter best practices
-- Maintain the Apple-inspired design language
-- Add tests for new features
-- Update documentation
-- Keep commits atomic and well-described
-
----
-
-## 🐛 Known Issues & Roadmap
-
-### Known Issues
-- Widget may not appear immediately on some Android launchers (workaround: restart device)
-- Glassmorphism may lag on very old devices (optimization in progress)
-
-### Roadmap
-- [ ] iOS support
-- [ ] Multi-language support
-- [ ] Calendar integration
-- [ ] Attendance tracking
-- [ ] Push notifications via FCM
-- [ ] Desktop support (Windows, macOS, Linux)
-- [ ] Web version
-- [ ] Biometric authentication
+## 🎨 Design Principles
+- **Clarity over Complexity**: Using depth and blur to prioritize information.
+- **Feedback Loops**: Constant visual confirmation for every background and foreground process.
+- **Performance First**: Efficient rendering of glassmorphism effects and background sync logic.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **Flutter Team** - Amazing framework
-- **Firebase** - Powerful backend
-- **Apple** - Design inspiration
-- **Material Design** - Component guidelines
-- **Open Source Community** - Invaluable packages
+Licensed under the MIT License - see the [LICENSE](LICENSE) for details.
 
 ---
 
@@ -338,17 +141,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **GitHub:** [@shantoshdurai](https://github.com/shantoshdurai)
 - **Repository:** [Timewise-app](https://github.com/shantoshdurai/Timewise-app)
 
-### Support
-- 🐛 Found a bug? [Open an issue](https://github.com/shantoshdurai/Timewise-app/issues)
-- 💡 Have an idea? [Start a discussion](https://github.com/shantoshdurai/Timewise-app/discussions)
-- ⭐ Like the project? Give it a star!
-
----
-
 <div align="center">
 
-### Made with ❤️ and ☕ for students and educators
+### Built for performance. Designed for students.
 
-**Star ⭐ this repo if you find it helpful!**
+**Star ⭐ this repo if you support modern open-source education tools!**
 
 </div>
