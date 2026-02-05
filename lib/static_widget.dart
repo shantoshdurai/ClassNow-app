@@ -21,18 +21,17 @@ class StaticTimetableWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F0F0F).withOpacity(0.6), // Glass transparency
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.white24, width: 2.0),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Center(child: _buildContent()),
+    return SizedBox(
+      width: 800,
+      height: 400,
+      child: Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F0F0F).withOpacity(0.7),
+          borderRadius: BorderRadius.circular(40),
+          border: Border.all(color: Colors.white24, width: 2.0),
+        ),
+        child: Material(color: Colors.transparent, child: _buildContent()),
       ),
     );
   }
@@ -56,90 +55,89 @@ class StaticTimetableWidget extends StatelessWidget {
 
     final displayData = currentClass ?? nextClass!;
     final isCurrent = currentClass != null;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              isCurrent ? 'NOW' : 'NEXT UP',
-              style: TextStyle(
-                color: isCurrent
-                    ? const Color(0xFFA7F3D0)
-                    : const Color(0xFFBAE6FD),
-                fontSize: 24, // Optimized for 800px
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2.5,
-              ),
-            ),
-            if (isCurrent && timeRemaining != null)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isCurrent ? 'NOW' : 'NEXT UP',
+                  style: TextStyle(
+                    color: isCurrent
+                        ? const Color(0xFFA7F3D0)
+                        : const Color(0xFFBAE6FD),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.5,
+                  ),
+                ),
+                if (isCurrent && timeRemaining != null)
                   Text(
                     timeRemaining!,
                     style: const TextStyle(
                       color: Color(0xFF6EE7B7),
-                      fontSize: 24, // Optimized
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 20),
-                  Transform.rotate(
-                    angle: refreshAngle,
-                    child: const Icon(
-                      Icons.refresh,
-                      color: Colors.white54,
-                      size: 45,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Transform.rotate(
-                angle: refreshAngle,
-                child: const Icon(
-                  Icons.refresh,
-                  color: Colors.white54,
-                  size: 45,
-                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white12),
               ),
+              child: Transform.rotate(
+                angle: refreshAngle,
+                child: const Icon(Icons.refresh, color: Colors.white, size: 40),
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 15),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isCurrent
                     ? const Color(0xFF10B981).withOpacity(0.2)
                     : const Color(0xFF0EA5E9).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 SubjectUtils.getSubjectIcon(displayData['subject']),
                 color: isCurrent
                     ? const Color(0xFF6EE7B7)
                     : const Color(0xFF7DD3FC),
-                size: 20,
+                size: 32,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 15),
             Expanded(
-              child: Text(
-                displayData['subject'] ?? 'Unknown',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayData['subject'] ?? 'Unknown',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      height: 1.1,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
@@ -217,69 +215,80 @@ class SmallRobotWidget extends StatelessWidget {
       themeColor = const Color(0xFF38BDF8);
     }
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(80), // Rounder edges for high-res
-      ),
-      child: Stack(
-        children: [
-          // Refresh Icon with rotation feedback
-          Positioned(
-            top: 45,
-            right: 45,
-            child: Transform.rotate(
-              angle: refreshAngle,
-              child: const Icon(Icons.refresh, color: Colors.white24, size: 40),
-            ),
-          ),
-          // Face Content
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // OLED Eyes (Large for 400x400)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildOledEye(mood, themeColor, isLeft: true),
-                    const SizedBox(width: 40),
-                    _buildOledEye(mood, themeColor, isLeft: false),
-                  ],
+    return SizedBox(
+      width: 400,
+      height: 400,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(80),
+        ),
+        child: Stack(
+          children: [
+            // Prominent Refresh Button
+            Positioned(
+              top: 30,
+              right: 30,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 30),
-                // Status Text
-                Text(
-                  status,
-                  style: TextStyle(
-                    color: themeColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24, // Scaled up
-                    letterSpacing: 4,
+                child: Transform.rotate(
+                  angle: refreshAngle,
+                  child: const Icon(
+                    Icons.refresh,
+                    color: Colors.white,
+                    size: 30,
                   ),
                 ),
-                const SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: Text(
-                    info,
+              ),
+            ),
+            // Face Content
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildOledEye(mood, themeColor, isLeft: true),
+                      const SizedBox(width: 40),
+                      _buildOledEye(mood, themeColor, isLeft: false),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  Text(
+                    status,
                     style: TextStyle(
-                      color: Colors.white.withAlpha(180),
-                      fontSize: 26, // Scaled up
-                      fontWeight: FontWeight.w500,
+                      color: themeColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 32,
+                      letterSpacing: 4,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    child: Text(
+                      info,
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(200),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
