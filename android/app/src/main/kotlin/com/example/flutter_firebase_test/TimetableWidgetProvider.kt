@@ -30,6 +30,7 @@ class TimetableWidgetProvider : HomeWidgetProvider() {
                     android.net.Uri.parse("timewise://update")
                 )
                 setOnClickPendingIntent(R.id.btn_refresh, pendingIntent)
+                setOnClickPendingIntent(R.id.widget_image, pendingIntent) // Tap Anywhere to Refresh
             }
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

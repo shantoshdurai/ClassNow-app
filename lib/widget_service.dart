@@ -15,7 +15,7 @@ class WidgetService {
   static const int _alarmId = 777;
 
   /// entrypoint for background work
-  static Future<void> updateWidget() async {
+  static Future<void> updateWidget({bool forceRefresh = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
       if (Firebase.apps.isEmpty) await Firebase.initializeApp();
@@ -23,7 +23,9 @@ class WidgetService {
       print('⚠️ [WidgetService] Firebase init error: $e');
     }
 
-    print('🔄 [WidgetService] Starting widget update...');
+    print(
+      '🔄 [WidgetService] Starting widget update (Force: $forceRefresh)...',
+    );
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -49,7 +51,11 @@ class WidgetService {
             .collection('sections')
             .doc(sectionId)
             .collection('schedule')
-            .get(const GetOptions(source: Source.serverAndCache));
+            .get(
+              GetOptions(
+                source: forceRefresh ? Source.server : Source.serverAndCache,
+              ),
+            );
 
         scheduleData = snapshot.docs.map((doc) {
           final data = Map<String, dynamic>.from(doc.data());

@@ -14,12 +14,20 @@ class TimetableWidget extends StatefulWidget {
   State<TimetableWidget> createState() => _TimetableWidgetState();
 }
 
-class _TimetableWidgetState extends State<TimetableWidget> {
+class _TimetableWidgetState extends State<TimetableWidget>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
+  late AnimationController _refreshController;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize rotation animation controller
+    _refreshController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     // Update every minute
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) setState(() {});
@@ -29,6 +37,7 @@ class _TimetableWidgetState extends State<TimetableWidget> {
   @override
   void dispose() {
     _timer?.cancel();
+    _refreshController.dispose();
     super.dispose();
   }
 
@@ -242,21 +251,41 @@ class _TimetableWidgetState extends State<TimetableWidget> {
                             letterSpacing: 1.5,
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.refresh,
-                            size: 18,
-                            color: theme.hintColor,
+                        GestureDetector(
+                          onTap: _isRefreshing
+                              ? null
+                              : () async {
+                                  if (_isRefreshing) return;
+
+                                  setState(() {
+                                    _isRefreshing = true;
+                                  });
+
+                                  // Start the smooth rotation animation
+                                  _refreshController.reset();
+                                  await _refreshController.forward();
+
+                                  // Trigger a manual update of the home screen widget
+                                  WidgetService.updateFromForeground();
+                                  if (mounted) {
+                                    setState(() {
+                                      _isRefreshing = false;
+                                    });
+                                  }
+                                },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: RotationTransition(
+                              turns: _refreshController,
+                              child: Icon(
+                                Icons.sync_rounded,
+                                size: 22,
+                                color: _isRefreshing
+                                    ? theme.primaryColor
+                                    : theme.hintColor.withOpacity(0.7),
+                              ),
+                            ),
                           ),
-                          onPressed: () {
-                            // Trigger a manual update of the home screen widget as well
-                            WidgetService.updateFromForeground();
-                            if (mounted) setState(() {});
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                          tooltip: "Refresh current status",
                         ),
                       ],
                     ),

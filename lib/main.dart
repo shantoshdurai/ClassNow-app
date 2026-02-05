@@ -36,7 +36,7 @@ void callbackDispatcher() {
     print("Native called background task: $task");
     try {
       await Firebase.initializeApp();
-      await WidgetService.updateWidget();
+      await WidgetService.updateWidget(forceRefresh: true);
     } catch (e) {
       print("Background task failed: $e");
     }
@@ -51,7 +51,9 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
   if (uri?.host == 'update' || uri?.path == '/update') {
     try {
       await Firebase.initializeApp();
-      await WidgetService.updateWidget();
+      await WidgetService.updateWidget(
+        forceRefresh: true,
+      ); // Added forceRefresh: true
     } catch (e) {
       print("HomeWidget background update failed: $e");
     }
@@ -145,6 +147,7 @@ class _DashboardPageState extends State<DashboardPage>
   DateTime? _lastSuccessfulUpdate;
   int _errorCount = 0;
   final List<String> _updateHistory = [];
+  StreamSubscription<QuerySnapshot>? _announcementSubscription;
 
   List<_ScheduleItem> _itemsFromMaps(List<Map<String, dynamic>> all) {
     return all
@@ -170,7 +173,7 @@ class _DashboardPageState extends State<DashboardPage>
     _loadSettings().then((_) {
       if (!mounted) return;
       if (widgetsEnabled) {
-        _updateHomeScreenWidget();
+        WidgetService.updateWidget(forceRefresh: true);
       }
     });
     NotificationService.scheduleTimetableNotifications();
@@ -179,7 +182,9 @@ class _DashboardPageState extends State<DashboardPage>
     NotificationService.triggerDuringClassNotification();
     _startConnectivityMonitoring();
     _startWidgetUpdateTimer();
+    _startWidgetUpdateTimer();
     _scheduleNextClassUpdate();
+    _listenForAnnouncements();
 
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (!mounted) return;
@@ -203,9 +208,43 @@ class _DashboardPageState extends State<DashboardPage>
     _widgetUpdateTimer?.cancel();
     _notificationTimer?.cancel();
     _duringClassTimer?.cancel();
+    _duringClassTimer?.cancel();
     _classScheduleTimer?.cancel();
+    _announcementSubscription?.cancel();
 
     super.dispose();
+  }
+
+  void _listenForAnnouncements() {
+    print('📢 Starting announcement listener');
+    final appStartTime = DateTime.now();
+
+    _announcementSubscription?.cancel();
+    _announcementSubscription = FirebaseFirestore.instance
+        .collection('announcements')
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+          if (snapshot.docs.isEmpty) return;
+
+          final doc = snapshot.docs.first;
+          final data = doc.data();
+          final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+
+          // Only show if the announcement is NEW (created after app listener started)
+          if (timestamp != null &&
+              timestamp.isAfter(appStartTime.add(const Duration(seconds: 2)))) {
+            final message = data['message'] ?? 'New Announcement';
+            final author = data['author'] ?? 'Mentor';
+
+            print('🔔 New Announcement detected! Triggering notification.');
+            NotificationService.showAnnouncementNotification(
+              '$author',
+              '"$message"',
+            );
+          }
+        });
   }
 
   void _startConnectivityMonitoring() {
@@ -357,7 +396,7 @@ class _DashboardPageState extends State<DashboardPage>
     switch (state) {
       case AppLifecycleState.resumed:
         print('▶️ [Lifecycle] App resumed - updating widget');
-        _updateHomeScreenWidget();
+        WidgetService.updateWidget(forceRefresh: true);
         _scheduleNextClassUpdate(); // Reschedule in case times changed
         _printDiagnosticInfo(); // Print diagnostic info on resume
         break;
@@ -1331,8 +1370,12 @@ class _DashboardPageState extends State<DashboardPage>
               if (hasCustomBg) return const SizedBox.shrink();
 
               return Stack(
+                fit: StackFit.expand,
                 children: [
                   if (isDark)
+                    Image.asset('assets/dark_mode_bg.jpeg', fit: BoxFit.cover)
+                  else ...[
+                    // Light mode - subtle accent
                     Positioned(
                       top: -100,
                       right: -50,
@@ -1341,7 +1384,7 @@ class _DashboardPageState extends State<DashboardPage>
                         height: 300,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTheme.primaryBlue.withOpacity(0.15),
+                          color: AppTheme.primaryBlue.withOpacity(0.08),
                         ),
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -1349,22 +1392,7 @@ class _DashboardPageState extends State<DashboardPage>
                         ),
                       ),
                     ),
-                  Positioned(
-                    bottom: -50,
-                    left: -50,
-                    child: Container(
-                      width: 250,
-                      height: 250,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppTheme.accentPurple.withOpacity(0.15),
-                      ),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-                        child: Container(color: Colors.transparent),
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
               );
             },
@@ -1411,7 +1439,7 @@ class _DashboardPageState extends State<DashboardPage>
                             _buildDaySelector(),
                             const SizedBox(height: 10),
                             _buildClassList(),
-                            if (isAdmin) ...[
+                            if (isAdmin && selectedDay == 'Saturday') ...[
                               const SizedBox(height: 20),
                               _MentorSaturdayControlPanel(),
                             ],
@@ -2999,11 +3027,26 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                   size: 20,
                                 ),
                               ),
-                              title: Text(
-                                data['message'] ?? '',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurface,
+                              title: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: '${data['author'] ?? 'Mentor'} - ',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
+                                    ),
+                                    TextSpan(
+                                      text: '"${data['message'] ?? ''}"',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontStyle: FontStyle.italic,
+                                            color: theme.colorScheme.onSurface,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               subtitle: timestamp != null
@@ -3075,6 +3118,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                     .collection('announcements')
                                     .add({
                                       'message': messageController.text.trim(),
+                                      'author': 'Mentor', // Added Author
                                       'timestamp': FieldValue.serverTimestamp(),
                                       'isSystemMessage': false,
                                     });

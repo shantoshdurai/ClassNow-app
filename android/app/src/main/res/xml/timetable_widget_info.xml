@@ -8,5 +8,5 @@
     android:initialLayout="@layout/timetable_widget_layout"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:previewImage="@drawable/launch_background">
+    android:previewImage="@drawable/timetable_widget_preview">
 </appwidget-provider>

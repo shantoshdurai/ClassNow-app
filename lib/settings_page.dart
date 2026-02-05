@@ -313,277 +313,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // ⚙️ PRIORITY 3: Advanced - Detailed Customization
-                _buildSettingsGroup(
-                  context,
-                  title: 'Advanced',
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.image_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'Custom Background',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        themeProvider.customBackgroundPath != null
-                            ? 'Tap to change image'
-                            : 'Personalize your dashboard',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (themeProvider.customBackgroundPath != null)
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.redAccent,
-                                size: 20,
-                              ),
-                              onPressed: _clearBackgroundImage,
-                              tooltip: 'Reset to default',
-                            ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: theme.hintColor,
-                          ),
-                        ],
-                      ),
-                      onTap: _pickBackgroundImage,
-                    ),
-                    const Divider(
-                      height: 1,
-                      indent: 56,
-                      endIndent: 16,
-                      color: Colors.white10,
-                    ),
-                    // UI Glass Blur Control
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 8),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.blur_on,
-                                  color: theme.primaryColor,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'UI Glass Blur',
-                                        style: AppTextStyles.interMentor
-                                            .copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      Text(
-                                        'Control the frostiness of cards and UI elements',
-                                        style: AppTextStyles.interSmall
-                                            .copyWith(color: theme.hintColor),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: theme.primaryColor,
-                              inactiveTrackColor: theme.primaryColor
-                                  .withOpacity(0.2),
-                              thumbColor: Colors.white,
-                              overlayColor: theme.primaryColor.withOpacity(0.2),
-                              trackHeight: 4.0,
-                            ),
-                            child: Slider(
-                              value: themeProvider.glassBlur,
-                              min: 0.0,
-                              max: 50.0,
-                              divisions: 50,
-                              label: themeProvider.glassBlur.round().toString(),
-                              onChanged: (value) {
-                                themeProvider.setGlassBlur(value);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(
-                      height: 1,
-                      indent: 56,
-                      endIndent: 16,
-                      color: Colors.white10,
-                    ),
-                    // Background Blur Control
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 8),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.blur_circular,
-                                  color: theme.primaryColor,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Background Blur',
-                                        style: AppTextStyles.interMentor
-                                            .copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      Text(
-                                        'Blur the background image for better readability',
-                                        style: AppTextStyles.interSmall
-                                            .copyWith(color: theme.hintColor),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: theme.primaryColor,
-                              inactiveTrackColor: theme.primaryColor
-                                  .withOpacity(0.2),
-                              thumbColor: Colors.white,
-                              overlayColor: theme.primaryColor.withOpacity(0.2),
-                              trackHeight: 4.0,
-                            ),
-                            child: Slider(
-                              value: themeProvider.backgroundBlur,
-                              min: 0.0,
-                              max: 20.0,
-                              divisions: 40,
-                              label: themeProvider.backgroundBlur
-                                  .toStringAsFixed(1),
-                              onChanged: (value) {
-                                themeProvider.setBackgroundBlur(value);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                _buildSettingsGroup(
-                  context,
-                  title: 'Academic',
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.school_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'My Class',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Change section or year',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OnboardingScreen(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
-                    const Divider(
-                      height: 1,
-                      indent: 56,
-                      endIndent: 16,
-                      color: Colors.white10,
-                    ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.notifications_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'Class Alerts',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Manage notification preferences',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const NotificationSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
                 // ADVANCED SETTINGS - Collapsible
                 GlassCard(
                   padding: EdgeInsets.zero,
@@ -623,6 +352,212 @@ class _SettingsPageState extends State<SettingsPage> {
                         const Divider(
                           height: 1,
                           indent: 16,
+                          endIndent: 16,
+                          color: Colors.white10,
+                        ),
+                        ListTile(
+                          leading: Icon(
+                            Icons.image_outlined,
+                            color: theme.primaryColor,
+                          ),
+                          title: Text(
+                            'Custom Background',
+                            style: AppTextStyles.interMentor.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            themeProvider.customBackgroundPath != null
+                                ? 'Tap to change image'
+                                : 'Personalize your dashboard',
+                            style: AppTextStyles.interSmall.copyWith(
+                              color: theme.hintColor,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (themeProvider.customBackgroundPath != null)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
+                                  onPressed: _clearBackgroundImage,
+                                  tooltip: 'Reset to default',
+                                ),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14,
+                                color: theme.hintColor,
+                              ),
+                            ],
+                          ),
+                          onTap: _pickBackgroundImage,
+                        ),
+                        const Divider(
+                          height: 1,
+                          indent: 56,
+                          endIndent: 16,
+                          color: Colors.white10,
+                        ),
+                        // UI Glass Blur Control
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 4,
+                                  bottom: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.blur_on,
+                                      color: theme.primaryColor,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'UI Glass Blur',
+                                            style: AppTextStyles.interMentor
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          Text(
+                                            'Control the frostiness of cards and UI elements',
+                                            style: AppTextStyles.interSmall
+                                                .copyWith(
+                                                  color: theme.hintColor,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: theme.primaryColor,
+                                  inactiveTrackColor: theme.primaryColor
+                                      .withOpacity(0.2),
+                                  thumbColor: Colors.white,
+                                  overlayColor: theme.primaryColor.withOpacity(
+                                    0.2,
+                                  ),
+                                  trackHeight: 4.0,
+                                ),
+                                child: Slider(
+                                  value: themeProvider.glassBlur,
+                                  min: 0.0,
+                                  max: 50.0,
+                                  divisions: 50,
+                                  label: themeProvider.glassBlur
+                                      .round()
+                                      .toString(),
+                                  onChanged: (value) {
+                                    themeProvider.setGlassBlur(value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          height: 1,
+                          indent: 56,
+                          endIndent: 16,
+                          color: Colors.white10,
+                        ),
+                        // Background Blur Control
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 4,
+                                  bottom: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.blur_circular,
+                                      color: theme.primaryColor,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Background Blur',
+                                            style: AppTextStyles.interMentor
+                                                .copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          Text(
+                                            'Blur the background image for better readability',
+                                            style: AppTextStyles.interSmall
+                                                .copyWith(
+                                                  color: theme.hintColor,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: theme.primaryColor,
+                                  inactiveTrackColor: theme.primaryColor
+                                      .withOpacity(0.2),
+                                  thumbColor: Colors.white,
+                                  overlayColor: theme.primaryColor.withOpacity(
+                                    0.2,
+                                  ),
+                                  trackHeight: 4.0,
+                                ),
+                                child: Slider(
+                                  value: themeProvider.backgroundBlur,
+                                  min: 0.0,
+                                  max: 20.0,
+                                  divisions: 40,
+                                  label: themeProvider.backgroundBlur
+                                      .toStringAsFixed(1),
+                                  onChanged: (value) {
+                                    themeProvider.setBackgroundBlur(value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          height: 1,
+                          indent: 56,
                           endIndent: 16,
                           color: Colors.white10,
                         ),

@@ -103,6 +103,32 @@ class NotificationService {
     );
   }
 
+  static Future<void> showAnnouncementNotification(
+    String title,
+    String body,
+  ) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'classnow_announcements', // Separate channel
+          'Announcements',
+          channelDescription: 'Important announcements from mentors',
+          importance: Importance.max, // Popup
+          priority: Priority.high,
+          ticker: 'announcement',
+          styleInformation: BigTextStyleInformation(''), // For long text
+        );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    await _notifications.show(
+      DateTime.now().millisecond, // Unique ID
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: 'announcement_payload',
+    );
+  }
+
   static Future<List<Map<String, dynamic>>>
   _getScheduleDataWithOffline() async {
     final prefs = await SharedPreferences.getInstance();

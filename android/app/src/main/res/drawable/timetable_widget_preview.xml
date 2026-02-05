@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#0F0F0F"/>
+            <corners android:radius="24dp"/>
+        </shape>
+    </item>
+    
+    <!-- NEXT UP label -->
+    <item android:top="16dp" android:left="20dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#38BDF8"/>
+            <corners android:radius="4dp"/>
+            <size android:width="60dp" android:height="16dp"/>
+        </shape>
+    </item>
+    
+    <!-- Subject placeholder bar -->
+    <item android:top="44dp" android:left="20dp" android:right="20dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF"/>
+            <corners android:radius="6dp"/>
+            <size android:height="24dp"/>
+        </shape>
+    </item>
+    
+    <!-- Time info bar -->
+    <item android:top="80dp" android:left="20dp" android:right="100dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#4B5563"/>
+            <corners android:radius="4dp"/>
+            <size android:height="12dp"/>
+        </shape>
+    </item>
+    
+    <!-- Refresh icon circle (top right) -->
+    <item android:top="12dp" android:right="12dp" android:gravity="top|end">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF"/>
+            <size android:width="20dp" android:height="20dp"/>
+        </shape>
+    </item>
+</layer-list>

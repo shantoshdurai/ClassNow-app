@@ -45,7 +45,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         _allSubjects = all;
         _selectedSubjects = selected;
         _subjects = uniqueSubjects;
-        _leadTimeMinutes = leadTime;
+        // Snap to nearest 5 minutes to avoid weird numbers like 13 or 21
+        _leadTimeMinutes = (leadTime / 5).round() * 5;
+        if (_leadTimeMinutes < 5) _leadTimeMinutes = 5;
+        if (_leadTimeMinutes > 30) _leadTimeMinutes = 30;
+
         _isLoading = false;
       });
     }
@@ -295,7 +299,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                         value: _leadTimeMinutes.toDouble(),
                                         min: 5,
                                         max: 30,
-                                        divisions: 3,
+                                        divisions:
+                                            5, // (30-5)/5 = 5 steps: 5, 10, 15, 20, 25, 30
+                                        label: '$_leadTimeMinutes min',
                                         onChanged: (value) {
                                           setState(() {
                                             _leadTimeMinutes = value.toInt();
