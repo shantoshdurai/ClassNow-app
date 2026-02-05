@@ -40,46 +40,48 @@ class StaticTimetableWidget extends StatelessWidget {
     final displayData = currentClass ?? nextClass;
     final isCurrent = currentClass != null;
 
-    return Stack(
-      children: [
-        // Subtle Refresh Icon (Top Right)
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Transform.rotate(
-            angle: refreshAngle,
-            child: Icon(
-              Icons.refresh,
-              color: Colors.white.withOpacity(0.3),
-              size: 40,
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          // Subtle Refresh Icon (Top Right) - Increased size to match visual scale
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Transform.rotate(
+              angle: refreshAngle,
+              child: Icon(
+                Icons.refresh,
+                color: Colors.white.withOpacity(0.35),
+                size: 45,
+              ),
             ),
           ),
-        ),
-        // Central Content
-        Center(
-          child: currentClass == null && nextClass == null
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      color: Colors.white24,
-                      size: 100, // Large for high-res
-                    ),
-                    const SizedBox(height: 25),
-                    const Text(
-                      'No classes scheduled',
-                      style: TextStyle(
-                        color: Colors.white38,
-                        fontSize: 32, // Large font for 800x400
-                        fontWeight: FontWeight.w500,
+          // Central Content
+          Center(
+            child: currentClass == null && nextClass == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        color: Colors.white12,
+                        size: 110, // Even larger
                       ),
-                    ),
-                  ],
-                )
-              : _buildMainContent(isCurrent, displayData!),
-        ),
-      ],
+                      const SizedBox(height: 30),
+                      const Text(
+                        'No classes scheduled',
+                        style: TextStyle(
+                          color: Colors.white24,
+                          fontSize: 36, // Large
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : _buildMainContent(isCurrent, displayData!),
+          ),
+        ],
+      ),
     );
   }
 
@@ -241,64 +243,68 @@ class SmallRobotWidget extends StatelessWidget {
           color: Colors.black.withOpacity(0.6),
           borderRadius: BorderRadius.circular(80),
         ),
-        child: Stack(
-          children: [
-            // Subtle Refresh Icon (Transparent like Calendar)
-            Positioned(
-              top: 25,
-              right: 25,
-              child: Transform.rotate(
-                angle: refreshAngle,
-                child: Icon(
-                  Icons.refresh,
-                  color: Colors.white.withOpacity(0.3),
-                  size: 30,
+        child: SizedBox.expand(
+          child: Stack(
+            children: [
+              // Subtle Refresh Icon (Transparent like Calendar) - Increased size
+              Positioned(
+                top: 15, // Closer to corner
+                right: 15,
+                child: Transform.rotate(
+                  angle: refreshAngle,
+                  child: Icon(
+                    Icons.refresh,
+                    color: Colors.white.withOpacity(0.35),
+                    size: 45, // Much larger
+                  ),
                 ),
               ),
-            ),
-            // Face Content
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
+              // Face Content
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildOledEye(mood, themeColor, isLeft: true),
-                      const SizedBox(width: 40),
-                      _buildOledEye(mood, themeColor, isLeft: false),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildOledEye(mood, themeColor, isLeft: true),
+                          const SizedBox(width: 40),
+                          _buildOledEye(mood, themeColor, isLeft: false),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: themeColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 32,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 25),
+                        child: Text(
+                          info,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  Text(
-                    status,
-                    style: TextStyle(
-                      color: themeColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 32,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 25),
-                    child: Text(
-                      info,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
