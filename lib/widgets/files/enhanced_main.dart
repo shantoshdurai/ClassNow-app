@@ -405,8 +405,6 @@ class _DashboardPageState extends State<DashboardPage>
       }
     });
     NotificationService.scheduleTimetableNotifications();
-    
-    NotificationService.triggerDuringClassNotification();
     _startConnectivityMonitoring();
     _startWidgetUpdateTimer();
     _scheduleNextClassUpdate();

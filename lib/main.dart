@@ -28,6 +28,8 @@ import 'package:flutter_firebase_test/retro_digital_display.dart';
 import 'package:flutter_firebase_test/splash_screen.dart';
 import 'package:flutter_firebase_test/subject_utils.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
+import 'package:flutter_firebase_test/widgets/chatbot_interface.dart';
+import 'package:flutter_firebase_test/services/gemini_service.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -63,8 +65,12 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
 // Global ValueNotifier for retro display setting
 final retroDisplayEnabledNotifier = ValueNotifier<bool>(false);
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Gemini AI chatbot
+  await GeminiService.saveApiKey('AIzaSyCyPtZlTNVzBU30moJHVeRsRu9SUAH2CJg');
+
   HomeWidget.registerBackgroundCallback(homeWidgetBackgroundCallback);
 
   runApp(
@@ -177,9 +183,6 @@ class _DashboardPageState extends State<DashboardPage>
       }
     });
     NotificationService.scheduleTimetableNotifications();
-
-    // Trigger during-class notification immediately if needed
-    NotificationService.triggerDuringClassNotification();
     _startConnectivityMonitoring();
     _startWidgetUpdateTimer();
     _startWidgetUpdateTimer();
@@ -2924,6 +2927,24 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                         color: theme.primaryColor,
                       ),
                       onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.smart_toy_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      tooltip: 'AI Assistant',
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => const ChatbotInterface(),
+                        );
+                      },
                     ),
                   ),
                 ],

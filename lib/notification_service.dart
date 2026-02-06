@@ -1,18 +1,18 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
-  static Future<void> init() async {
-    tz.initializeTimeZones();
+  static const MethodChannel _methodChannel = MethodChannel(
+    'com.example.flutter_firebase_test/notifications',
+  );
 
+  static Future<void> init() async {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -36,48 +36,30 @@ class NotificationService {
     }
 
     final bool enabled = prefs.getBool('notifications_enabled') ?? true;
-    final bool allSubjects =
-        prefs.getBool('notifications_all_subjects') ?? true;
-    final List<String> selectedSubjects =
-        prefs.getStringList('notification_selected_subjects') ?? [];
-    final int minutesBefore = prefs.getInt('notifications_lead_time') ?? 15;
 
-    await _notifications.cancelAll();
+    if (!enabled) {
+      // Cancel all notifications if disabled
+      try {
+        await _methodChannel.invokeMethod('cancelNotifications');
+      } catch (e) {
+        print('Error cancelling notifications: $e');
+      }
+      return;
+    }
 
-    if (!enabled) return;
-
-    // Try to get schedule data with offline fallback
+    // Get schedule data with offline fallback
     List<Map<String, dynamic>> scheduleData =
         await _getScheduleDataWithOffline();
 
-    for (var data in scheduleData) {
-      final dayOfWeek = data['dayOfWeek'] as String;
-      final startTimeStr = data['startTime'] as String;
-      final subject = data['subject'] as String;
-      final room = data['room'] as String;
+    // Cache the schedule data for the native service to use
+    await _cacheScheduleData(scheduleData);
 
-      // Filter based on user preferences
-      if (!allSubjects && !selectedSubjects.contains(subject)) {
-        continue;
-      }
-
-      final dayIndex = _getDayIndex(dayOfWeek);
-      if (dayIndex == -1) continue;
-
-      // Schedule before-class notification
-      final timeParts = startTimeStr.split(':');
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-
-      await _scheduleWeekly(
-        id: data['id']?.hashCode ?? data.toString().hashCode,
-        title: 'Class Starting Soon: $subject',
-        body: 'Room: $room starts in $minutesBefore minutes.',
-        dayIndex: dayIndex,
-        hour: hour,
-        minute: minute,
-        leadMinutes: minutesBefore,
-      );
+    // Call native service to schedule notifications
+    try {
+      await _methodChannel.invokeMethod('scheduleNotifications');
+      print('Successfully scheduled notifications via native service');
+    } catch (e) {
+      print('Error scheduling notifications via native service: $e');
     }
   }
 
@@ -200,136 +182,25 @@ class NotificationService {
     return [];
   }
 
-  static Future<void> _scheduleWeekly({
-    required int id,
-    required String title,
-    required String body,
-    required int dayIndex,
-    required int hour,
-    required int minute,
-    required int leadMinutes,
-  }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    // Handle negative lead minutes (after class starts)
-    if (leadMinutes < 0) {
-      scheduledDate = scheduledDate.add(Duration(minutes: -leadMinutes));
-    } else {
-      scheduledDate = scheduledDate.subtract(Duration(minutes: leadMinutes));
-    }
-
-    while (scheduledDate.weekday != dayIndex) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 7));
-    }
-
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledDate,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'classnow_classes',
-          'Class Reminders',
-          channelDescription: 'Notifications for upcoming classes',
-          importance: Importance.max,
-          priority: Priority.high,
-          styleInformation: BigTextStyleInformation(''),
-        ),
-      ),
-      payload: 'schedule_notification',
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
-  }
-
-  static Future<void> triggerDuringClassNotification() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool enabled = prefs.getBool('notifications_enabled') ?? true;
-
-    // Check subject filtering
-    final bool allSubjects =
-        prefs.getBool('notifications_all_subjects') ?? true;
-    final List<String> selectedSubjects =
-        prefs.getStringList('notification_selected_subjects') ?? [];
-
-    if (!enabled) return;
-
+  /// Check if the app can schedule exact alarms (Android 12+)
+  static Future<bool> canScheduleExactAlarms() async {
     try {
-      final scheduleData = await _getScheduleDataWithOffline();
-      final now = DateTime.now();
-      final currentTime = DateFormat('HH:mm').format(now);
-      final currentDay = DateFormat('EEEE').format(now);
-
-      for (var data in scheduleData) {
-        final dayOfWeek = data['dayOfWeek'] as String;
-        final startTime = data['startTime'] as String;
-        final endTime = data['endTime'] as String?;
-        final subject = data['subject'] as String;
-        final room = data['room'] as String;
-
-        // Filter based on user preferences
-        if (!allSubjects && !selectedSubjects.contains(subject)) {
-          continue;
-        }
-
-        if (dayOfWeek == currentDay &&
-            _isTimeInRange(currentTime, startTime, endTime)) {
-          await _notifications.show(
-            data.hashCode + 20000,
-            'Class in Progress: $subject',
-            'Currently in Room: $room',
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'classnow_classes',
-                'Class Reminders',
-                channelDescription: 'Notifications for upcoming classes',
-                importance: Importance.max,
-                priority: Priority.high,
-                styleInformation: BigTextStyleInformation(''),
-              ),
-            ),
-          );
-          break; // Only show one during-class notification
-        }
-      }
+      final result = await _methodChannel.invokeMethod<bool>(
+        'canScheduleExactAlarms',
+      );
+      return result ?? true;
     } catch (e) {
-      print('Error triggering during-class notification: $e');
+      print('Error checking exact alarm permission: $e');
+      return true; // Assume permission granted on error
     }
   }
 
-  static bool _isTimeInRange(
-    String currentTime,
-    String startTime,
-    String? endTime,
-  ) {
+  /// Request exact alarm permission (Android 12+)
+  static Future<void> requestExactAlarmPermission() async {
     try {
-      final current = DateFormat('HH:mm').parse(currentTime);
-      final start = DateFormat('HH:mm').parse(startTime);
-
-      if (endTime == null) {
-        return current.isAfter(start) || current.isAtSameMomentAs(start);
-      }
-
-      final end = DateFormat('HH:mm').parse(endTime);
-      return (current.isAfter(start) || current.isAtSameMomentAs(start)) &&
-          (current.isBefore(end) || current.isAtSameMomentAs(end));
+      await _methodChannel.invokeMethod('requestExactAlarmPermission');
     } catch (e) {
-      return false;
+      print('Error requesting exact alarm permission: $e');
     }
   }
 
@@ -366,27 +237,6 @@ class NotificationService {
     }
 
     return 'No cache';
-  }
-
-  static int _getDayIndex(String day) {
-    switch (day.toLowerCase()) {
-      case 'monday':
-        return DateTime.monday;
-      case 'tuesday':
-        return DateTime.tuesday;
-      case 'wednesday':
-        return DateTime.wednesday;
-      case 'thursday':
-        return DateTime.thursday;
-      case 'friday':
-        return DateTime.friday;
-      case 'saturday':
-        return DateTime.saturday;
-      case 'sunday':
-        return DateTime.sunday;
-      default:
-        return -1;
-    }
   }
 
   static Future<List<String>> getUniqueSubjects() async {
