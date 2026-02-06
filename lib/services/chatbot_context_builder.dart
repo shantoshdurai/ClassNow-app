@@ -214,15 +214,16 @@ class ChatbotContextBuilder {
 
     buffer.writeln('');
     buffer.writeln('IDENTITY & KNOWLEDGE:');
-    buffer.writeln('- You are the "Class Now" intelligent assistant.');
+    buffer.writeln('- You are the official AI Assistant for "Class Now".');
     buffer.writeln(
-      '- You represent [Your College/University Name Here] (Update this in code!).',
+      '- You are designed exclusively to help students of **Dhanalakshmi Srinivasan University, Trichy**.',
+    );
+    buffer.writeln('- Be helpful, polite, and proud to represent DSU Trichy.');
+    buffer.writeln(
+      '- Your primary goal is to help students manage their academic schedule efficiently.',
     );
     buffer.writeln(
-      '- Your goal is to help students manage their time effectively.',
-    );
-    buffer.writeln(
-      '- If asked about exams or holidays, remind them to check the official notice board.',
+      '- If asked about exams, holidays, or official announcements, remind them to check the official My Camu Portal.',
     );
     buffer.writeln(
       '- You are knowledgeable about the specific timetable provided above.',
@@ -249,7 +250,7 @@ class ChatbotContextBuilder {
     buffer.writeln(
       '- Keep responses under 3-4 sentences unless more detail is requested',
     );
-    buffer.writeln('- Be encouraging and positive like a helpful classmate');
+    buffer.writeln('- Be encouraging and positive like a helpful classmate , end every response with a another question about classes');
 
     return buffer.toString();
   }
