@@ -1,25 +1,134 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="0dp">
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
 
-    <ImageView
-        android:id="@+id/widget_image"
+    <!-- Header: Time & Status -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/status_label"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="NOW"
+            android:textSize="10sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:letterSpacing="0.15"
+            android:alpha="0.9" />
+
+        <TextView
+            android:id="@+id/current_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12:00"
+            android:textSize="10sp"
+            android:textColor="#FFFFFF"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+    <!-- Subject Name -->
+    <TextView
+        android:id="@+id/subject_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/header"
+        android:layout_marginTop="6dp"
+        android:text="Mathematics"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- Time Info -->
+    <LinearLayout
+        android:id="@+id/time_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/subject_name"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/time_range"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="09:00 - 10:00"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:alpha="0.7" />
+
+        <TextView
+            android:id="@+id/room_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="• Room 101"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+    <!-- Progress Bar (for current class) -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_below="@id/time_info"
+        android:layout_marginTop="8dp"
+        android:progress="50"
+        android:max="100"
+        android:progressTint="#4CAF50"
+        android:progressBackgroundTint="#33FFFFFF" />
+
+    <!-- Time Remaining -->
+    <TextView
+        android:id="@+id/time_remaining"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/progress_bar"
+        android:layout_marginTop="4dp"
+        android:text="25m left"
+        android:textSize="13sp"
+        android:textColor="#4CAF50"
+        android:textStyle="bold" />
+
+    <!-- Empty State (when no classes) -->
+    <LinearLayout
+        android:id="@+id/empty_state"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:adjustViewBounds="true"
-        android:scaleType="fitXY"
-        android:contentDescription="Timetable Widget" />
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
 
-    <!-- Transparent clickable area for refresh button -->
-    <LinearLayout
-        android:id="@+id/btn_refresh"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:layout_gravity="top|right"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="@android:color/transparent" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textSize="32sp"
+            android:textColor="#FFFFFF"
+            android:alpha="0.5" />
 
-</FrameLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="No Classes"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+</RelativeLayout>

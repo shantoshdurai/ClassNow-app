@@ -1,6 +1,7 @@
 import 'dart:ui'; // Add for Blur
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_firebase_test/widgets/class_selection_widget.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_firebase_test/onboarding_screen.dart';
+import 'package:flutter_firebase_test/screens/onboarding_screen.dart';
+
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/settings_page.dart';
@@ -123,7 +125,9 @@ class AppLauncher extends StatelessWidget {
 }
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final bool forceSelectionMode;
+
+  const DashboardPage({super.key, this.forceSelectionMode = false});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -144,6 +148,7 @@ class _DashboardPageState extends State<DashboardPage>
   Timer? _classScheduleTimer;
 
   String? _scheduleCacheKey;
+  bool? _showSelectionOverlay;
   List<Map<String, dynamic>> _cachedSchedule = [];
   DateTime? _cachedScheduleUpdatedAt;
 
@@ -1234,6 +1239,48 @@ class _DashboardPageState extends State<DashboardPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Check if user has selected a class or forced mode is on
+    final userSelection = Provider.of<UserSelectionProvider>(context);
+
+    // Initialize overlay state if not set (first build)
+    _showSelectionOverlay ??= widget.forceSelectionMode;
+
+    if (_showSelectionOverlay == true || !userSelection.hasSelection) {
+      return Scaffold(
+        backgroundColor: isDark
+            ? const Color(0xFF000000)
+            : const Color(0xFFF2F2F7),
+        body: Stack(
+          children: [
+            // Background
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return Container(
+                  color: isDark
+                      ? const Color(0xFF000000)
+                      : const Color(0xFFF2F2F7),
+                );
+              },
+            ),
+            SafeArea(
+              child: Center(
+                child: ClassSelectionWidget(
+                  onSelectionComplete: () {
+                    if (mounted) {
+                      setState(() {
+                        _showSelectionOverlay = false;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: isDark
@@ -1403,55 +1450,77 @@ class _DashboardPageState extends State<DashboardPage>
 
           // Main Content
           SafeArea(
-            child: RefreshIndicator(
-              onRefresh: _manualRefresh,
-              displacement: 80,
-              backgroundColor: theme.primaryColor,
-              color: Colors.white,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding: const EdgeInsets.only(top: 20, bottom: 100),
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: MediaQuery.of(context).size.height - 100,
-                        ),
-                        child: Column(
-                          children: [
-                            ValueListenableBuilder<bool>(
-                              valueListenable: retroDisplayEnabledNotifier,
-                              builder: (context, retroEnabled, child) {
-                                if (retroEnabled) {
-                                  return Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      0,
-                                      16,
-                                      20,
-                                    ),
-                                    child: _buildRetroDisplayCard(),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                            _buildDaySelector(),
-                            const SizedBox(height: 10),
-                            _buildClassList(),
-                            if (isAdmin && selectedDay == 'Saturday') ...[
-                              const SizedBox(height: 20),
-                              _MentorSaturdayControlPanel(),
-                            ],
-                          ],
-                        ),
-                      );
-                    },
+            child: GestureDetector(
+              onHorizontalDragEnd: (details) {
+                // Detect swipe direction based on velocity
+                if (details.primaryVelocity! > 500) {
+                  // Swiped right -> go to PREVIOUS day
+                  final currentIndex = weekDays.indexOf(selectedDay);
+                  if (currentIndex > 0) {
+                    setState(() {
+                      selectedDay = weekDays[currentIndex - 1];
+                    });
+                  }
+                } else if (details.primaryVelocity! < -500) {
+                  // Swiped left -> go to NEXT day
+                  final currentIndex = weekDays.indexOf(selectedDay);
+                  if (currentIndex < weekDays.length - 1) {
+                    setState(() {
+                      selectedDay = weekDays[currentIndex + 1];
+                    });
+                  }
+                }
+              },
+              child: RefreshIndicator(
+                onRefresh: _manualRefresh,
+                displacement: 80,
+                backgroundColor: theme.primaryColor,
+                color: Colors.white,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
                   ),
-                ],
+                  padding: const EdgeInsets.only(top: 20, bottom: 100),
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: MediaQuery.of(context).size.height - 100,
+                          ),
+                          child: Column(
+                            children: [
+                              ValueListenableBuilder<bool>(
+                                valueListenable: retroDisplayEnabledNotifier,
+                                builder: (context, retroEnabled, child) {
+                                  if (retroEnabled) {
+                                    return Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        0,
+                                        16,
+                                        20,
+                                      ),
+                                      child: _buildRetroDisplayCard(),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                              _buildDaySelector(),
+                              const SizedBox(height: 10),
+                              _buildClassList(),
+                              if (isAdmin && selectedDay == 'Saturday') ...[
+                                const SizedBox(height: 20),
+                                _MentorSaturdayControlPanel(),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1459,64 +1528,102 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       floatingActionButton: Container(
         margin: const EdgeInsets.only(bottom: 20),
-        child: Consumer<ThemeProvider>(
-          builder: (context, themeProvider, child) {
-            return GlassCard(
-              blur: themeProvider.glassBlur,
-              opacity: 0.25,
-              borderRadius: BorderRadius.circular(30),
-              padding: EdgeInsets.zero,
-              child: FloatingActionButton(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AnnouncementsPage(isAdmin: isAdmin),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // AI Assistant Button (Primary - Most Important)
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return GlassCard(
+                  blur: themeProvider.glassBlur,
+                  opacity: 0.25,
+                  borderRadius: BorderRadius.circular(30),
+                  padding: EdgeInsets.zero,
+                  child: FloatingActionButton(
+                    heroTag: 'ai_assistant',
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const ChatbotInterface(),
+                      );
+                    },
+                    child: Icon(
+                      Icons.psychology_rounded, // AI brain icon
+                      color: theme.primaryColor,
+                      size: 28,
+                    ),
                   ),
-                ),
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('announcements')
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    final hasNew =
-                        snapshot.hasData && snapshot.data!.docs.isNotEmpty;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          Icons.campaign_rounded,
-                          color: theme.primaryColor,
-                          size: 28,
-                        ),
-                        if (hasNew)
-                          Positioned(
-                            right: -2,
-                            top: -2,
-                            child: GlowingCard(
-                              glowColor: theme.colorScheme.error,
-                              glowRadius: 4,
-                              padding: const EdgeInsets.all(4),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Text(
-                                '${snapshot.data!.docs.length}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            // Announcements Button (Secondary)
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return GlassCard(
+                  blur: themeProvider.glassBlur,
+                  opacity: 0.25,
+                  borderRadius: BorderRadius.circular(30),
+                  padding: EdgeInsets.zero,
+                  child: FloatingActionButton(
+                    heroTag: 'announcements',
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AnnouncementsPage(isAdmin: isAdmin),
+                      ),
+                    ),
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('announcements')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        final hasNew =
+                            snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(
+                              Icons.campaign_rounded,
+                              color: theme.primaryColor,
+                              size: 28,
+                            ),
+                            if (hasNew)
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: GlowingCard(
+                                  glowColor: theme.colorScheme.error,
+                                  glowRadius: 4,
+                                  padding: const EdgeInsets.all(4),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Text(
+                                    '${snapshot.data!.docs.length}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            );
-          },
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -1546,7 +1653,11 @@ class _DashboardPageState extends State<DashboardPage>
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => setState(() => selectedDay = day),
+                onTap: () {
+                  setState(() {
+                    selectedDay = day;
+                  });
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
@@ -1603,11 +1714,9 @@ class _DashboardPageState extends State<DashboardPage>
     return Consumer<UserSelectionProvider>(
       builder: (context, userSelection, child) {
         if (!userSelection.hasSelection) {
-          return Center(
-            child: Text(
-              "Please select your class from the settings.",
-              style: theme.textTheme.bodyLarge,
-            ),
+          return const Padding(
+            padding: EdgeInsets.only(top: 20.0),
+            child: ClassSelectionWidget(),
           );
         }
 
@@ -1643,7 +1752,8 @@ class _DashboardPageState extends State<DashboardPage>
             }
 
             if (snapshot.connectionState == ConnectionState.waiting &&
-                !hasCached) {
+                !hasCached &&
+                !snapshot.hasData) {
               return const ClassListSkeleton();
             }
 

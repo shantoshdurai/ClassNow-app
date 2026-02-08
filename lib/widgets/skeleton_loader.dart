@@ -34,8 +34,12 @@ class TimetableCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Shimmer.fromColors(
-      baseColor: theme.brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: theme.brightness == Brightness.dark ? Colors.grey[700]! : Colors.grey[100]!,
+      baseColor: theme.brightness == Brightness.dark
+          ? Colors.grey[800]!
+          : Colors.grey[300]!,
+      highlightColor: theme.brightness == Brightness.dark
+          ? Colors.grey[700]!
+          : Colors.grey[100]!,
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16.0),
         elevation: 1,
@@ -68,35 +72,40 @@ class ClassListSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Shimmer.fromColors(
-      baseColor: theme.brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: theme.brightness == Brightness.dark ? Colors.grey[700]! : Colors.grey[100]!,
-      child: ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 5,
-        padding: const EdgeInsets.all(16),
-        itemBuilder: (context, index) => Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          elevation: 1,
-          color: theme.cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SkeletonLoader(width: 120, height: 20),
-                    SkeletonLoader(width: 20, height: 20),
-                  ],
-                ),
-                SizedBox(height: 12),
-                SkeletonLoader(width: 220, height: 24),
-                SizedBox(height: 8),
-                SkeletonLoader(width: double.infinity, height: 16),
-              ],
+      baseColor: theme.brightness == Brightness.dark
+          ? Colors.grey[800]!
+          : Colors.grey[300]!,
+      highlightColor: theme.brightness == Brightness.dark
+          ? Colors.grey[700]!
+          : Colors.grey[100]!,
+      child: Column(
+        children: List.generate(
+          5,
+          (index) => Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            elevation: 1,
+            color: theme.cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SkeletonLoader(width: 120, height: 20),
+                      SkeletonLoader(width: 20, height: 20),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  SkeletonLoader(width: 220, height: 24),
+                  SizedBox(height: 8),
+                  SkeletonLoader(width: double.infinity, height: 16),
+                ],
+              ),
             ),
           ),
         ),

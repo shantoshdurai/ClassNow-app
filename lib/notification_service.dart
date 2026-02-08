@@ -12,6 +12,11 @@ class NotificationService {
     'com.example.flutter_firebase_test/notifications',
   );
 
+  // Getter to access notification plugin
+  static FlutterLocalNotificationsPlugin? getNotificationPlugin() {
+    return _notifications;
+  }
+
   static Future<void> init() async {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');

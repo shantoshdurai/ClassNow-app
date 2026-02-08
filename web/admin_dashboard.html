@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Now - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card .icon {
+            float: right;
+            font-size: 40px;
+            opacity: 0.3;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            font-weight: 600;
+            color: #495057;
+            font-size:14px;
+        }
+
+        td {
+            color: #666;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .activity-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item .time {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .activity-item .text {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎓 Class Now - Admin Dashboard</h1>
+            <p>Real-time overview of schedule management system</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="icon">👥</span>
+                <h3>Total Students</h3>
+                <div class="value" id="totalStudents">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📚</span>
+                <h3>Active Classes</h3>
+                <div class="value" id="activeClasses">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🏫</span>
+                <h3>Departments</h3>
+                <div class="value" id="totalDepartments">-</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📱</span>
+                <h3>App Installations</h3>
+                <div class="value" id="appInstalls">-</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Schedule Overview -->
+            <div class="card">
+                <h2>📅 Today's Schedule Overview</h2>
+                <table id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Subject</th>
+                            <th>Department</th>
+                            <th>Room</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <h2>⚡ Recent Activity</h2>
+                <div id="activityLog">
+                    <div class="activity-item">
+                        <div class="time">2 minutes ago</div>
+                        <div class="text">System initialized successfully</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="time">5 minutes ago</div>
+                        <div class="text">Database connection established</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="time">10 minutes ago</div>
+                        <div class="text">Notifications sent for upcoming classes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card" style="margin-top: 30px;">
+            <h2>⚙️ Quick Actions</h2>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
+                <button class="btn" onclick="viewFullSchedule()">📋 View Full Schedule</button>
+                <button class="btn" onclick="exportReport()">📊 Export Report</button>
+                <button class="btn" onclick="manageNotifications()">🔔 Manage Notifications</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Demo data - Replace with actual Firebase integration
+        function loadDemoData() {
+            // Statistics
+            document.getElementById('totalStudents').textContent = '1,247';
+            document.getElementById('activeClasses').textContent = '8';
+            document.getElementById('totalDepartments').textContent = '12';
+            document.getElementById('appInstalls').textContent = '856';
+
+            // Schedule data
+            const scheduleData = [
+                {time: '09:00 - 10:00', subject: 'Data Structures', dept: 'CSE', room: '101', status: 'completed'},
+                {time: '10:15 - 11:15', subject: 'Mathematics', dept: 'CSE', room: '205', status: 'in-progress'},
+                {time: '11:30 - 12:30', subject: 'Physics', dept: 'ECE', room: '301', status: 'upcoming'},
+                {time: '13:00 - 14:00', subject: 'Chemistry Lab', dept: 'CHE', room: 'L1', status: 'upcoming'},
+                {time: '14:15 - 15:15', subject: 'DBMS', dept: 'ISE', room: '402', status: 'upcoming'},
+            ];
+
+            const tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = scheduleData.map(item => `
+                <tr>
+                    <td>${item.time}</td>
+                    <td><strong>${item.subject}</strong></td>
+                    <td>${item.dept}</td>
+                    <td>${item.room}</td>
+                    <td><span class="badge badge-${
+                        item.status === 'completed' ? 'success' : 
+                        item.status === 'in-progress' ? 'warning' : 'info'
+                    }">${item.status.toUpperCase()}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // Actions
+        window.refreshData = () => {
+            alert('Refreshing data from Firebase...');
+            loadDemoData();
+        };
+
+        window.viewFullSchedule = () => {
+            alert('Opening full schedule view...');
+        };
+
+        window.exportReport = () => {
+            alert('Generating CSV export...');
+        };
+
+        window.manageNotifications = () => {
+            alert('Opening notification management...');
+        };
+
+        // Initialize
+        loadDemoData();
+    </script>
+</body>
+</html>

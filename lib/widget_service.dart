@@ -4,10 +4,8 @@ import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_firebase_test/static_widget.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'dart:ui' as ui;
 
 class WidgetService {
   static const String _scheduleCacheKey = 'widget_schedule_cache';
@@ -168,49 +166,62 @@ class WidgetService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('widget_error');
 
-    final timetableWidget = Directionality(
-      textDirection: ui.TextDirection.ltr,
-      child: Theme(
-        data: ThemeData.dark(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: StaticTimetableWidget(
-            currentClass: currentClass,
-            nextClass: nextClass,
-            timeRemaining: timeRemaining,
-            progress: progress,
-            refreshAngle: rotationAngle,
-          ),
-        ),
-      ),
-    );
+    // Determine which class to display
+    final displayClass = currentClass ?? nextClass;
+    final isCurrent = currentClass != null;
+    final hasClass = displayClass != null;
 
-    final robotWidget = Directionality(
-      textDirection: ui.TextDirection.ltr,
-      child: Theme(
-        data: ThemeData.dark(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: SmallRobotWidget(
-            currentClass: currentClass,
-            nextClass: nextClass,
-            refreshAngle: rotationAngle,
-          ),
-        ),
-      ),
-    );
+    // Save data to SharedPreferences for native widget
+    await HomeWidget.saveWidgetData<bool>('has_class', hasClass);
+    await HomeWidget.saveWidgetData<bool>('is_current', isCurrent);
 
-    await HomeWidget.renderFlutterWidget(
-      timetableWidget,
-      key: 'timetable_widget',
-      logicalSize: const Size(800, 400), // High-res 2:1
-    );
+    if (hasClass) {
+      await HomeWidget.saveWidgetData<String>(
+        'subject',
+        displayClass['subject'] ?? 'Unknown',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'start_time',
+        displayClass['startTime'] ?? '',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'end_time',
+        displayClass['endTime'] ?? '',
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'room',
+        displayClass['room']?.toString() ?? '',
+      );
 
-    await HomeWidget.renderFlutterWidget(
-      robotWidget,
-      key: 'robot_widget',
-      logicalSize: const Size(400, 400), // High-res 1:1
-    );
+      if (isCurrent && timeRemaining != null) {
+        await HomeWidget.saveWidgetData<String>(
+          'time_remaining',
+          timeRemaining,
+        );
+        await HomeWidget.saveWidgetData<int>(
+          'progress',
+          (progress * 100).toInt(),
+        );
+      } else if (!isCurrent && nextClass != null) {
+        // Calculate time until start
+        final now = DateTime.now();
+        final start = _parseTime(nextClass['startTime']);
+        final diff = start.difference(now);
+        final remaining = diff.inHours > 0
+            ? '${diff.inHours}h ${diff.inMinutes % 60}m'
+            : '${diff.inMinutes}m';
+        await HomeWidget.saveWidgetData<String>('time_remaining', remaining);
+        await HomeWidget.saveWidgetData<int>('progress', 0);
+      }
+    } else {
+      // Clear data when no class
+      await HomeWidget.saveWidgetData<String>('subject', 'No Classes');
+      await HomeWidget.saveWidgetData<String>('start_time', '');
+      await HomeWidget.saveWidgetData<String>('end_time', '');
+      await HomeWidget.saveWidgetData<String>('room', '');
+      await HomeWidget.saveWidgetData<String>('time_remaining', '');
+      await HomeWidget.saveWidgetData<int>('progress', 0);
+    }
 
     await _updateProvider();
   }

@@ -23,6 +23,9 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(() {
+      setState(() {}); // Rebuild to update send button state
+    });
     _initializeContext();
     _addWelcomeMessage();
   }
@@ -169,99 +172,187 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
+    return Padding(
+      // Pushes modal up when keyboard appears
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.dividerColor,
-                  borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
-              ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Drag handle
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
 
-              // Header
-              _buildHeader(theme),
+                // Minimal header - just title and close
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.psychology_rounded,
+                            color: theme.primaryColor,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'AI Assistant',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, size: 24),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
 
-              const Divider(height: 1),
+                const Divider(height: 1),
 
-              // Messages
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _messages.length + (_isStreaming ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index < _messages.length) {
-                      return ChatBubble(message: _messages[index]);
-                    } else {
-                      // Streaming message
-                      return ChatBubble(
-                        message: ChatMessage(
-                          text: _streamingText.isEmpty
-                              ? 'Thinking...'
-                              : _streamingText,
-                          isUser: false,
+                // Messages - scrollable content
+                Expanded(
+                  child: _messages.isEmpty
+                      ? _buildEmptyState(theme)
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          reverse: false,
+                          itemCount: _messages.length + (_isStreaming ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index < _messages.length) {
+                              return ChatBubble(message: _messages[index]);
+                            } else {
+                              // Streaming message
+                              return ChatBubble(
+                                message: ChatMessage(
+                                  text: _streamingText.isEmpty
+                                      ? 'Thinking...'
+                                      : _streamingText,
+                                  isUser: false,
+                                ),
+                              );
+                            }
+                          },
                         ),
-                      );
-                    }
-                  },
                 ),
+
+                // Quick actions (only show when no messages)
+                if (_messages.length <= 2 && !_isLoading) _buildQuickActions(),
+
+                // Loading indicator
+                if (_isLoading && !_isStreaming)
+                  const LinearProgressIndicator(minHeight: 2),
+
+                // Input field at BOTTOM (sticky)
+                _buildInputField(theme, isDark),
+              ],
+            ),
+          );
+        },
+      ), // Close Padding
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor.withOpacity(0.15),
+                  theme.primaryColor.withOpacity(0.05),
+                ],
               ),
-
-              // Quick action buttons (only show at start)
-              if (_messages.length <= 2 && !_isLoading) _buildQuickActions(),
-
-              // Loading indicator
-              if (_isLoading && !_isStreaming)
-                const LinearProgressIndicator(minHeight: 2),
-
-              // Input field
-              _buildInputField(theme, isDark),
-            ],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.psychology_rounded,
+              size: 64,
+              color: theme.primaryColor,
+            ),
           ),
-        );
-      },
+          const SizedBox(height: 24),
+          Text(
+            'What can I help with?',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ask me about your schedule and classes',
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildHeader(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor.withOpacity(0.15),
+                  theme.primaryColor.withOpacity(0.08),
+                ],
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              Icons.smart_toy_rounded,
+              Icons.psychology_rounded,
               color: theme.primaryColor,
-              size: 24,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,21 +360,39 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
                 Text(
                   'AI Assistant',
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    letterSpacing: -0.2,
                   ),
                 ),
-                Text(
-                  'Powered by Gemini',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.hintColor,
-                  ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Online • Powered by Gemini',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.hintColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close_rounded, size: 24),
             onPressed: () => Navigator.pop(context),
+            style: IconButton.styleFrom(backgroundColor: Colors.transparent),
           ),
         ],
       ),
@@ -307,62 +416,135 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
 
   Widget _quickActionChip(String text, IconData icon) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        avatar: Icon(icon, size: 18),
-        label: Text(text),
-        backgroundColor: theme.primaryColor.withOpacity(0.1),
-        labelStyle: TextStyle(color: theme.primaryColor, fontSize: 13),
-        onPressed: () => _sendMessage(text),
+      padding: const EdgeInsets.only(right: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _sendMessage(text),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[850] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: theme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: theme.textTheme.bodyLarge?.color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildInputField(ThemeData theme, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.grey[100],
-        border: Border(top: BorderSide(color: theme.dividerColor)),
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: 'Ask me anything about your schedule...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: theme.scaffoldBackgroundColor,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                ),
-                maxLines: null,
-                textCapitalization: TextCapitalization.sentences,
-                onSubmitted: _isLoading ? null : _sendMessage,
-              ),
-            ),
-            const SizedBox(width: 8),
-            FloatingActionButton(
-              onPressed: _isLoading
-                  ? null
-                  : () => _sendMessage(_controller.text),
-              mini: true,
-              child: Icon(
-                _isLoading ? Icons.hourglass_bottom : Icons.send,
-                size: 20,
-              ),
-            ),
-          ],
+        color: theme.scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+            width: 1,
+          ),
         ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[850] : Colors.grey[100],
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: 'Ask me anything...',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.grey[500] : Colors.grey[600],
+                          fontSize: 15,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.4,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                      maxLines: 5,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      onSubmitted: _isLoading ? null : _sendMessage,
+                    ),
+                  ),
+                  // Send button integrated into input field
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isLoading || _controller.text.trim().isEmpty
+                            ? null
+                            : () => _sendMessage(_controller.text),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(
+                            _isLoading
+                                ? Icons.stop_circle_outlined
+                                : Icons.arrow_upward_rounded,
+                            color: _isLoading || _controller.text.trim().isEmpty
+                                ? (isDark ? Colors.grey[700] : Colors.grey[400])
+                                : theme.primaryColor,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

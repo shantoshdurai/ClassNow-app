@@ -44,7 +44,14 @@ class NotificationSchedulerService(private val context: Context) {
         val allSubjects = prefs.getBoolean(ALL_SUBJECTS_KEY, true)
         val selectedSubjectsJson = prefs.getString(SELECTED_SUBJECTS_KEY, "[]") ?: "[]"
         val selectedSubjects = parseStringList(selectedSubjectsJson)
-        val leadTimeMinutes = prefs.getInt(LEAD_TIME_KEY, 15)
+        
+        // Safely get lead time - Flutter might store as Long instead of Int
+        val leadTimeMinutes = try {
+            prefs.getInt(LEAD_TIME_KEY, 15)
+        } catch (e: ClassCastException) {
+            // If stored as Long, convert to Int
+            prefs.getLong(LEAD_TIME_KEY, 15L).toInt()
+        }
         
         // Get schedule data
         val scheduleJson = prefs.getString(SCHEDULE_DATA_KEY, null)
