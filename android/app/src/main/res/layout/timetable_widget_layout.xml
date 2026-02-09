@@ -15,24 +15,27 @@
 
         <TextView
             android:id="@+id/status_label"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="NOW"
+            android:text="NEXT UP"
             android:textSize="9sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
-            android:letterSpacing="0.1"
-            android:alpha="0.9" />
+            android:letterSpacing="0.05"
+            android:alpha="0.9"
+            android:maxLines="1"
+            android:layout_marginEnd="6dp" />
 
         <TextView
             android:id="@+id/current_time"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="12:00"
             android:textSize="9sp"
             android:textColor="#FFFFFF"
-            android:alpha="0.7" />
+            android:alpha="0.7"
+            android:gravity="end" />
 
         <!-- Refresh Button -->
         <ImageButton
@@ -57,21 +60,20 @@
         android:layout_below="@id/header"
         android:layout_marginTop="2dp"
         android:text="Mathematics"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:textColor="#FFFFFF"
         android:textStyle="bold"
-        android:maxLines="2"
+        android:maxLines="3"
         android:ellipsize="end" />
 
-    <!-- Time Info -->
+    <!-- Time Info (Stacked Vertically) -->
     <LinearLayout
         android:id="@+id/time_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/subject_name"
         android:layout_marginTop="2dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/time_range"
@@ -80,16 +82,14 @@
             android:text="09:00 - 10:00"
             android:textSize="10sp"
             android:textColor="#FFFFFF"
-            android:alpha="0.7"
+            android:alpha="0.8"
             android:singleLine="true" />
 
         <TextView
             android:id="@+id/room_number"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="• Room 101"
+            android:text="Room 101"
             android:textSize="10sp"
             android:textColor="#FFFFFF"
             android:alpha="0.7"
@@ -102,9 +102,9 @@
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="3dp"
+        android:layout_height="2dp"
         android:layout_below="@id/time_info"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="3dp"
         android:progress="50"
         android:max="100"
         android:progressTint="#4CAF50"
@@ -118,7 +118,7 @@
         android:layout_below="@id/progress_bar"
         android:layout_marginTop="2dp"
         android:text="25m left"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:textColor="#4CAF50"
         android:textStyle="bold" />
 
