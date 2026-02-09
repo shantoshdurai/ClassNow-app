@@ -7,6 +7,8 @@ Your app now has an intelligent AI chatbot powered by Google's Gemini API! The c
 ## 🎯 Features
 
 ✅ **Context-Aware** - Knows your current class, next class, and full schedule  
+✅ **Global Database Access** - Can answer questions about ANY staff member across ALL sections  
+✅ **Real-Time Staff Tracking** - Knows where every staff member is teaching right now  
 ✅ **Intelligent Responses** - Understands natural language questions  
 ✅ **Streaming Responses** - Real-time typing effect for smooth UX  
 ✅ **Quick Actions** - Pre-built buttons for common questions  
@@ -61,7 +63,14 @@ await GeminiService.saveApiKey('YOUR_API_KEY_HERE');
 - "When is my last class?"
 - "Do I have any classes tomorrow?"
 
-**About Staff:**
+**About Staff (NEW - Global Queries):**
+- "Where is Professor Smith right now?"
+- "Is Dr. Johnson teaching right now?"
+- "When is Professor Kumar free today?"
+- "What classes does Dr. Patel have today?"
+- "Which sections does Professor Singh teach?"
+
+**About Staff (Your Classes):**
 - "Who teaches Math?"
 - "Which professor takes Physics?"
 - "Show me all my teachers"
@@ -93,8 +102,10 @@ The chatbot has access to:
 - ✅ Your current class (if any)
 - ✅ Your next class
 - ✅ Your full weekly schedule
-- ✅ All staff information
-- ✅ Room numbers and timings
+- ✅ All staff information from your classes
+- ✅ **ALL schedules from the ENTIRE database** (all departments/years/sections)
+- ✅ **Real-time location of EVERY staff member**
+- ✅ Room numbers and timings across all sections
 - ✅ Your department, year, and section
 
 ### Smart Responses
@@ -106,6 +117,17 @@ The AI uses all this context to give you accurate, helpful answers:
 
 **User:** "Who teaches Math?"  
 **AI:** "Professor Smith teaches your Math class. You have it on Monday and Wednesday at 9:00 AM in Room 101."
+
+**User (NEW):** "Where is Dr. Kumar right now?"  
+**AI:** "Dr. Kumar is currently teaching CSE-2-A in Room 305 (Data Structures class, ends at 11:30 AM). After that, they're free until 2:00 PM! 🏫"
+
+### Performance & Caching
+
+**First Load:** 3-5 seconds (fetches all schedules from database)  
+**Subsequent Opens:** <1 second (uses 30-minute cache)  
+**AI Response Time:** 2-3 seconds (unchanged)
+
+The app intelligently caches global schedule data for 30 minutes to keep the chatbot fast while ensuring information stays current!
 
 ## 🔒 Security & Privacy
 

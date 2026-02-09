@@ -1,7 +1,9 @@
 package com.example.flutter_firebase_test
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.view.View
 import android.widget.RemoteViews
@@ -78,12 +80,23 @@ class TimetableWidgetProvider : HomeWidgetProvider() {
                 views.setViewVisibility(R.id.time_remaining, View.GONE)
             }
             
-            // Add click handling to open app
-            val pendingIntent = es.antonborri.home_widget.HomeWidgetLaunchIntent.getActivity(
+            // REMOVED: Widget tap-to-open functionality (as requested)
+            // Widget is now non-clickable
+            
+            // Add refresh button functionality
+            val refreshIntent = Intent(context, TimetableWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
+            }
+            val refreshPendingIntent = PendingIntent.getBroadcast(
                 context,
-                MainActivity::class.java
+                appWidgetId,
+                refreshIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            // Set refresh button for both states
+            views.setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
+            views.setOnClickPendingIntent(R.id.refresh_button_empty, refreshPendingIntent)
             
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

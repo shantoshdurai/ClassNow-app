@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Check & Fix Schedule Data - Class Now</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .schedule-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+
+        .missing-staff {
+            border-left: 4px solid #f44336;
+        }
+
+        .has-staff {
+            border-left: 4px solid #4caf50;
+        }
+
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Schedule Data Checker - Class Now</h1>
+
+        <div id="status"></div>
+
+        <div class="stats" id="stats" style="display:none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalDocs">0</div>
+                <div class="stat-label">Total Classes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="withStaff">0</div>
+                <div class="stat-label">With Staff Info</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="missingStaff">0</div>
+                <div class="stat-label">Missing Staff</div>
+            </div>
+        </div>
+
+        <button onclick="checkAllSchedules()">🔍 Check All Schedules</button>
+        <button onclick="showSampleData()">📄 Show Sample Data</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Initialize Firebase - REPLACE WITH YOUR CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBw9x7MjsX_pHvPWzAcEGd8X_OGPY5H1kI",
+            authDomain: "your-app.firebaseapp.com",
+            projectId: "classnow-6bdad",
+            storageBucket: "your-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        async function checkAllSchedules() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const statsDiv = document.getElementById('stats');
+
+            statusDiv.innerHTML = '<div class="status info">🔄 Scanning database...</div>';
+            resultsDiv.innerHTML = '';
+
+            let totalDocs = 0;
+            let withStaff = 0;
+            let missingStaff = 0;
+            const results = [];
+
+            try {
+                // Get all departments
+                const deptSnap = await db.collection('departments').get();
+
+                for (const deptDoc of deptSnap.docs) {
+                    const deptId = deptDoc.id;
+
+                    // Get all years in this department
+                    const yearSnap = await db.collection('departments').doc(deptId)
+                        .collection('years').get();
+
+                    for (const yearDoc of yearSnap.docs) {
+                        const yearId = yearDoc.id;
+
+                        // Get all sections
+                        const sectionSnap = await db.collection('departments').doc(deptId)
+                            .collection('years').doc(yearId)
+                            .collection('sections').get();
+
+                        for (const sectionDoc of sectionSnap.docs) {
+                            const sectionId = sectionDoc.id;
+
+                            // Get schedule
+                            const scheduleSnap = await db.collection('departments').doc(deptId)
+                                .collection('years').doc(yearId)
+                                .collection('sections').doc(sectionId)
+                                .collection('schedule').get();
+
+                            scheduleSnap.forEach(classDoc => {
+                                totalDocs++;
+                                const data = classDoc.data();
+                                const hasStaffField = data.staff && data.staff !== '' && data.staff !== 'TBA';
+
+                                if (hasStaffField) {
+                                    withStaff++;
+                                } else {
+                                    missingStaff++;
+                                }
+
+                                results.push({
+                                    path: `${deptId}/${yearId}/${sectionId}`,
+                                    subject: data.subject || 'Unknown',
+                                    staff: data.staff || 'MISSING',
+                                    hasStaff: hasStaffField,
+                                    day: data.day || data.dayOfWeek || 'Unknown',
+                                    time: `${data.startTime || '?'} - ${data.endTime || '?'}`,
+                                    room: data.room || 'N/A'
+                                });
+                            });
+                        }
+                    }
+                }
+
+                // Update stats
+                document.getElementById('totalDocs').textContent = totalDocs;
+                document.getElementById('withStaff').textContent = withStaff;
+                document.getElementById('missingStaff').textContent = missingStaff;
+                statsDiv.style.display = 'grid';
+
+                // Show status
+                if (missingStaff === 0) {
+                    statusDiv.innerHTML = '<div class="status success">✅ All schedules have staff information!</div>';
+                } else {
+                    statusDiv.innerHTML = `<div class="status warning">⚠️ Found ${missingStaff} classes without staff information</div>`;
+                }
+
+                // Display results
+                let html = '<h3>📊 Detailed Results:</h3>';
+
+                // Group by section
+                const bySection = {};
+                results.forEach(r => {
+                    if (!bySection[r.path]) bySection[r.path] = [];
+                    bySection[r.path].push(r);
+                });
+
+                for (const [path, classes] of Object.entries(bySection)) {
+                    html += `<h4>Section: ${path}</h4>`;
+                    classes.forEach(c => {
+                        html += `<div class="schedule-item ${c.hasStaff ? 'has-staff' : 'missing-staff'}">
+                            <strong>${c.subject}</strong><br>
+                            ${c.day} | ${c.time} | Room ${c.room}<br>
+                            Staff: <strong>${c.staff}</strong>
+                        </div>`;
+                    });
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                console.error(error);
+            }
+        }
+
+        function showSampleData() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <h3>📝 How to Fix Missing Staff Data</h3>
+                <p>Each schedule document should have this structure:</p>
+                <pre>{
+  "day": "Monday",
+  "subject": "Mathematics",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "room": "101",
+  "staff": "Dr. Karthikeyan"  ← THIS IS REQUIRED
+}</pre>
+                <div class="status warning">
+                    <strong>⚠️ Important:</strong> The AI chatbot needs the <code>staff</code> field to answer questions about teachers!
+                </div>
+                <p><strong>To fix:</strong></p>
+                <ol>
+                    <li>Go to Firebase Console → Firestore Database</li>
+                    <li>Navigate to: departments/{dept}/years/{year}/sections/{section}/schedule</li>
+                    <li>For each class document, add the <code>staff</code> field with the teacher's name</li>
+                    <li>Save and re-run this checker</li>
+                </ol>
+            `;
+        }
+    </script>
+</body>
+
+</html>

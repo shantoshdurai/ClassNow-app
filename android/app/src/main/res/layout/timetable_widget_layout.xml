@@ -33,6 +33,20 @@
             android:textSize="10sp"
             android:textColor="#FFFFFF"
             android:alpha="0.7" />
+
+        <!-- Refresh Button -->
+        <ImageButton
+            android:id="@+id/refresh_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:padding="4dp"
+            android:src="@android:drawable/ic_popup_sync"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Refresh widget"
+            android:scaleType="fitCenter"
+            android:tint="#FFFFFF"
+            android:alpha="0.6" />
     </LinearLayout>
 
     <!-- Subject Name -->
@@ -66,17 +80,21 @@
             android:text="09:00 - 10:00"
             android:textSize="11sp"
             android:textColor="#FFFFFF"
-            android:alpha="0.7" />
+            android:alpha="0.7"
+            android:singleLine="true" />
 
         <TextView
             android:id="@+id/room_number"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="• Room 101"
             android:textSize="11sp"
             android:textColor="#FFFFFF"
-            android:alpha="0.7" />
+            android:alpha="0.7"
+            android:singleLine="true"
+            android:ellipsize="end" />
     </LinearLayout>
 
     <!-- Progress Bar (for current class) -->
@@ -129,6 +147,20 @@
             android:textSize="12sp"
             android:textColor="#FFFFFF"
             android:alpha="0.7" />
+
+        <!-- Refresh button for empty state -->
+        <ImageButton
+            android:id="@+id/refresh_button_empty"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="12dp"
+            android:padding="6dp"
+            android:src="@android:drawable/ic_popup_sync"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Refresh widget"
+            android:scaleType="fitCenter"
+            android:tint="#FFFFFF"
+            android:alpha="0.5" />
     </LinearLayout>
 
 </RelativeLayout>

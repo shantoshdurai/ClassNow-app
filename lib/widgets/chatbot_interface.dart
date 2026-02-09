@@ -425,6 +425,9 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
           onTap: () => _sendMessage(text),
           borderRadius: BorderRadius.circular(20),
           child: Container(
+            constraints: const BoxConstraints(
+              maxWidth: 200, // Prevent buttons from being too wide
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isDark ? Colors.grey[850] : Colors.grey[100],
@@ -439,12 +442,16 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
               children: [
                 Icon(icon, size: 16, color: theme.primaryColor),
                 const SizedBox(width: 8),
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                Flexible(
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -492,6 +499,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      autofocus: true, // Auto-pop keyboard when chatbot opens
                       decoration: InputDecoration(
                         hintText: 'Ask me anything...',
                         hintStyle: TextStyle(
@@ -500,9 +508,10 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
+                          horizontal: 22, // Increased for better alignment
                           vertical: 14,
                         ),
+                        isDense: true, // Prevents extra padding
                       ),
                       style: TextStyle(
                         fontSize: 15,
@@ -517,7 +526,9 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
                   ),
                   // Send button integrated into input field
                   Padding(
-                    padding: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.only(
+                      right: 6,
+                    ), // Increased for symmetry
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
