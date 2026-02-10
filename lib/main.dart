@@ -159,6 +159,7 @@ class _DashboardPageState extends State<DashboardPage>
   bool? _showSelectionOverlay;
   List<Map<String, dynamic>> _cachedSchedule = [];
   DateTime? _cachedScheduleUpdatedAt;
+  DateTime? _lastAnnouncementReadTime;
 
   // Performance tracking variables
   int _updateCount = 0;
@@ -195,6 +196,7 @@ class _DashboardPageState extends State<DashboardPage>
         WidgetService.updateWidget(forceRefresh: true);
       }
     });
+    _loadAnnouncementStatus();
     NotificationService.scheduleTimetableNotifications();
     _startConnectivityMonitoring();
     _startWidgetUpdateTimer();
@@ -278,6 +280,16 @@ class _DashboardPageState extends State<DashboardPage>
 
     // Initial check
     _checkConnectivity();
+  }
+
+  Future<void> _loadAnnouncementStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastRead = prefs.getString('last_announcement_read_time');
+    if (lastRead != null && mounted) {
+      setState(() {
+        _lastAnnouncementReadTime = DateTime.parse(lastRead);
+      });
+    }
   }
 
   void _scheduleNextClassUpdate() {
@@ -1570,6 +1582,7 @@ class _DashboardPageState extends State<DashboardPage>
             ),
             const SizedBox(height: 12),
             // Announcements Button (Secondary)
+            // Announcements Button (Secondary)
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 return GlassCard(
@@ -1581,20 +1594,54 @@ class _DashboardPageState extends State<DashboardPage>
                     heroTag: 'announcements',
                     backgroundColor: Colors.transparent,
                     elevation: 0,
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AnnouncementsPage(isAdmin: isAdmin),
-                      ),
-                    ),
+                    onPressed: () async {
+                      // 1. Mark as read immediately on click
+                      final now = DateTime.now();
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString(
+                        'last_announcement_read_time',
+                        now.toIso8601String(),
+                      );
+                      if (mounted) {
+                        setState(() {
+                          _lastAnnouncementReadTime = now;
+                        });
+                      }
+
+                      // 2. Navigate
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AnnouncementsPage(isAdmin: isAdmin),
+                        ),
+                      );
+                    },
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection('announcements')
+                          .orderBy('timestamp', descending: true)
+                          .limit(1) // Only need the latest one to check
                           .snapshots(),
                       builder: (context, snapshot) {
-                        final hasNew =
-                            snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+                        bool hasUnread = false;
+
+                        if (snapshot.hasData &&
+                            snapshot.data!.docs.isNotEmpty) {
+                          final latestDoc = snapshot.data!.docs.first;
+                          final data = latestDoc.data() as Map<String, dynamic>;
+                          final timestamp = (data['timestamp'] as Timestamp?)
+                              ?.toDate();
+
+                          if (timestamp != null) {
+                            // Check if newer than last read time
+                            if (_lastAnnouncementReadTime == null ||
+                                timestamp.isAfter(_lastAnnouncementReadTime!)) {
+                              hasUnread = true;
+                            }
+                          }
+                        }
+
                         return Stack(
                           clipBehavior: Clip.none,
                           alignment: Alignment.center,
@@ -1604,22 +1651,28 @@ class _DashboardPageState extends State<DashboardPage>
                               color: theme.primaryColor,
                               size: 28,
                             ),
-                            if (hasNew)
+                            if (hasUnread)
                               Positioned(
-                                right: -2,
-                                top: -2,
-                                child: GlowingCard(
-                                  glowColor: theme.colorScheme.error,
-                                  glowRadius: 4,
-                                  padding: const EdgeInsets.all(4),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Text(
-                                    '${snapshot.data!.docs.length}',
-                                    style: theme.textTheme.labelSmall?.copyWith(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
                                       color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                                      width: 1.5,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: theme.colorScheme.error
+                                            .withOpacity(0.4),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
