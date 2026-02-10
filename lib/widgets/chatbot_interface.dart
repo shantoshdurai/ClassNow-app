@@ -69,7 +69,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
       _messages.add(
         ChatMessage(
           text:
-              '$greeting! 👋 I\'m your Class Now assistant. Ask me about your schedule, classes, or staff!',
+              '$greeting! 👋 I\'m DSU AI. Ask me about your schedule, classes, or staff!',
           isUser: false,
         ),
       );
@@ -227,7 +227,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            'AI Assistant',
+                            'DSU AI',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               fontSize: 18,
@@ -358,7 +358,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'AI Assistant',
+                  'DSU AI',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,

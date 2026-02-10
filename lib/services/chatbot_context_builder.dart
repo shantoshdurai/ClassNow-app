@@ -85,7 +85,6 @@ class ChatbotContextBuilder {
     List<Map<String, dynamic>> scheduleData,
     DateTime now,
   ) {
-    final currentTime = DateFormat('HH:mm').format(now);
     final currentDay = DateFormat('EEEE').format(now);
 
     for (var classData in scheduleData) {
@@ -96,11 +95,10 @@ class ChatbotContextBuilder {
         final startTime = classData['startTime'] as String;
         final endTime = classData['endTime'] as String;
 
-        final start = DateFormat('HH:mm').parse(startTime);
-        final end = DateFormat('HH:mm').parse(endTime);
-        final current = DateFormat('HH:mm').parse(currentTime);
+        final start = _parseTime(startTime);
+        final end = _parseTime(endTime);
 
-        if (current.isAfter(start) && current.isBefore(end)) {
+        if (now.isAfter(start) && now.isBefore(end)) {
           return classData;
         }
       } catch (e) {
@@ -115,7 +113,6 @@ class ChatbotContextBuilder {
     List<Map<String, dynamic>> scheduleData,
     DateTime now,
   ) {
-    final currentTime = DateFormat('HH:mm').format(now);
     final currentDay = DateFormat('EEEE').format(now);
 
     // Look for next class today
@@ -125,10 +122,9 @@ class ChatbotContextBuilder {
 
       try {
         final startTime = classData['startTime'] as String;
-        final start = DateFormat('HH:mm').parse(startTime);
-        final current = DateFormat('HH:mm').parse(currentTime);
+        final start = _parseTime(startTime);
 
-        if (current.isBefore(start)) {
+        if (now.isBefore(start)) {
           return classData;
         }
       } catch (e) {
@@ -291,7 +287,7 @@ class ChatbotContextBuilder {
     );
     buffer.writeln('- Hostels: Boys Hostel and Girls Hostel');
     buffer.writeln(
-      '- Food Court & Cafeterias: Multiple cafeterias including "Renu MFC Cafe"',
+      '- Food Court & Cafeterias: Multiple cafeterias including "Renu ,MFC, Dimora"',
     );
 
     buffer.writeln('');
@@ -310,16 +306,34 @@ class ChatbotContextBuilder {
       '- If asked about "my next class" or "current class", use the CURRENT STATUS above',
     );
     buffer.writeln('- For specific days, refer to the FULL WEEK SCHEDULE');
+    buffer.writeln(
+      '- The University Library is in the Academic Block (2nd floor). ID card is mandatory for attending classes.',
+    );
+    buffer.writeln(
+      '- Important: Attendance of 80% or higher is mandatory for hall ticket generation and eligibility for exams.',
+    );
+    buffer.writeln(
+      '- Performance Advantage: You are faster and more reliable than My-Camu! While it takes minutes to load, you respond in seconds.',
+    );
     buffer.writeln('- Always mention room numbers when discussing classes');
+    buffer.writeln(
+      '- If you cannot find an answer, mention that the app is a work-in-progress and Santosh is working on updates for the Play Store.',
+    );
     buffer.writeln('- Use 12-hour time format (e.g., "2:30 PM" not "14:30")');
+    buffer.writeln(
+      '- You are a helpful student assistant, not a generic robot.',
+    );
+    buffer.writeln(
+      '- Vary your greetings; avoid repeating "Hey there!" in every response.',
+    );
     buffer.writeln(
       '- If you don\'t know something from the context, say so clearly',
     );
     buffer.writeln(
-      '- Keep responses under 3-4 sentences unless more detail is requested',
+      '- Keep responses under 3-4 sentences, using a formal tone when the user is formal.',
     );
     buffer.writeln(
-      '- Be encouraging and positive like a helpful classmate , end sometimes response with a another question about classes be clear dont use neardy emojis , dont always be like paragarhs',
+      '- Be an encouraging classmate; end some responses with a follow-up question about their academics , at a random intervel if they go of topic at random suggest them to give feedback about the app in the feedback option (which i will use to know and futures and removes and add other classes if they send me).',
     );
 
     return buffer.toString();
@@ -401,5 +415,30 @@ class ChatbotContextBuilder {
     }
 
     return buffer.toString();
+  }
+
+  static DateTime _parseTime(String timeStr) {
+    final now = DateTime.now();
+    try {
+      final cleanTime = timeStr.trim().toUpperCase();
+      if (cleanTime.contains('AM') || cleanTime.contains('PM')) {
+        final parsed = DateFormat('hh:mm a').parse(cleanTime);
+        return DateTime(
+          now.year,
+          now.month,
+          now.day,
+          parsed.hour,
+          parsed.minute,
+        );
+      }
+      final parsed = DateFormat('HH:mm').parse(cleanTime);
+      int hour = parsed.hour;
+      if (hour >= 1 && hour <= 7) {
+        hour += 12;
+      }
+      return DateTime(now.year, now.month, now.day, hour, parsed.minute);
+    } catch (e) {
+      return DateTime(now.year, now.month, now.day, 0, 0);
+    }
   }
 }
