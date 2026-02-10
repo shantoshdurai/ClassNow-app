@@ -18,14 +18,11 @@ class ChatbotContextBuilder {
     // Get student's schedule data
     final scheduleData = await _getScheduleData();
 
-    // Get ALL schedules from database for global staff tracking
-    final allSchedules = await _getAllSchedulesData();
-
     // Find current and next class for student
     final currentClass = _getCurrentClass(scheduleData, now);
     final nextClass = _getNextClass(scheduleData, now);
 
-    // Build the context string with global data
+    // Build the context string with ONLY local data
     return _buildContextString(
       now: now,
       departmentId: departmentId,
@@ -34,7 +31,6 @@ class ChatbotContextBuilder {
       scheduleData: scheduleData,
       currentClass: currentClass,
       nextClass: nextClass,
-      allSchedules: allSchedules,
     );
   }
 
@@ -83,105 +79,6 @@ class ChatbotContextBuilder {
     }
 
     return [];
-  }
-
-  /// Fetch ALL schedules from entire database for global staff tracking
-  /// Uses 30-minute cache to avoid repeated database reads
-  static Future<Map<String, List<Map<String, dynamic>>>>
-  _getAllSchedulesData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Check cache first (30-minute expiry)
-      final cacheKey = 'global_schedules_cache';
-      final cacheTimeKey = 'global_schedules_cache_time';
-      final cachedData = prefs.getString(cacheKey);
-      final cacheTime = prefs.getInt(cacheTimeKey) ?? 0;
-      final now = DateTime.now().millisecondsSinceEpoch;
-
-      // Use cache if less than 30 minutes old
-      if (cachedData != null && (now - cacheTime) < 30 * 60 * 1000) {
-        final decoded = jsonDecode(cachedData);
-        if (decoded is Map) {
-          return decoded.map(
-            (key, value) => MapEntry(
-              key,
-              (value as List).map((e) => Map<String, dynamic>.from(e)).toList(),
-            ),
-          );
-        }
-      }
-
-      print('📚 Fetching global schedules from database...');
-      final allSchedules = <String, List<Map<String, dynamic>>>{};
-
-      // Fetch all departments
-      final deptSnapshot = await FirebaseFirestore.instance
-          .collection('departments')
-          .get();
-
-      for (var deptDoc in deptSnapshot.docs) {
-        final deptId = deptDoc.id;
-
-        // Fetch all years in this department
-        final yearSnapshot = await FirebaseFirestore.instance
-            .collection('departments')
-            .doc(deptId)
-            .collection('years')
-            .get();
-
-        for (var yearDoc in yearSnapshot.docs) {
-          final yearId = yearDoc.id;
-
-          // Fetch all sections in this year
-          final sectionSnapshot = await FirebaseFirestore.instance
-              .collection('departments')
-              .doc(deptId)
-              .collection('years')
-              .doc(yearId)
-              .collection('sections')
-              .get();
-
-          for (var sectionDoc in sectionSnapshot.docs) {
-            final sectionId = sectionDoc.id;
-
-            // Fetch schedule for this section
-            final scheduleSnapshot = await FirebaseFirestore.instance
-                .collection('departments')
-                .doc(deptId)
-                .collection('years')
-                .doc(yearId)
-                .collection('sections')
-                .doc(sectionId)
-                .collection('schedule')
-                .get();
-
-            final schedules = scheduleSnapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-                '_section': '$deptId-$yearId-$sectionId', // Track which section
-              };
-            }).toList();
-
-            if (schedules.isNotEmpty) {
-              allSchedules['$deptId-$yearId-$sectionId'] = schedules;
-            }
-          }
-        }
-      }
-
-      // Cache the result
-      await prefs.setString(cacheKey, jsonEncode(allSchedules));
-      await prefs.setInt(cacheTimeKey, now);
-
-      print('✅ Fetched ${allSchedules.length} sections successfully');
-      return allSchedules;
-    } catch (e) {
-      print('❌ Error fetching global schedules: $e');
-      return {};
-    }
   }
 
   static Map<String, dynamic>? _getCurrentClass(
@@ -261,7 +158,6 @@ class ChatbotContextBuilder {
     required List<Map<String, dynamic>> scheduleData,
     required Map<String, dynamic>? currentClass,
     required Map<String, dynamic>? nextClass,
-    required Map<String, List<Map<String, dynamic>>> allSchedules,
   }) {
     final buffer = StringBuffer();
 
@@ -279,8 +175,9 @@ class ChatbotContextBuilder {
         '- Current class: ${currentClass['subject']} in Room ${currentClass['room']}',
       );
       buffer.writeln('  Ends at: ${currentClass['endTime']}');
-      if (currentClass['staff'] != null) {
-        buffer.writeln('  Staff: ${currentClass['staff']}');
+      var staffName = currentClass['staff'] ?? currentClass['mentor'];
+      if (staffName != null) {
+        buffer.writeln('  Staff: $staffName');
       }
     } else {
       buffer.writeln('- Current class: No class currently in session');
@@ -292,8 +189,9 @@ class ChatbotContextBuilder {
       buffer.writeln(
         '- Next class: ${nextClass['subject']} at ${nextClass['startTime']} in Room ${nextClass['room']}${isToday ? ' (today)' : ' ($nextDay)'}',
       );
-      if (nextClass['staff'] != null) {
-        buffer.writeln('  Staff: ${nextClass['staff']}');
+      var staffName = nextClass['staff'] ?? nextClass['mentor'];
+      if (staffName != null) {
+        buffer.writeln('  Staff: $staffName');
       }
     } else {
       buffer.writeln('- Next class: No upcoming classes scheduled');
@@ -316,27 +214,6 @@ class ChatbotContextBuilder {
       buffer.writeln('(No schedule data available)');
     }
 
-    // Add global staff tracking information
-    print('🔍 Global schedules count: ${allSchedules.length}');
-    if (allSchedules.isNotEmpty) {
-      buffer.writeln('');
-      buffer.writeln('═══════════════════════════════════════════');
-      buffer.writeln('GLOBAL STAFF DIRECTORY & REAL-TIME TRACKING');
-      buffer.writeln('═══════════════════════════════════════════');
-      buffer.writeln(
-        'This section contains ALL staff across ALL departments and sections.',
-      );
-      buffer.writeln(
-        'Use this data to answer questions about ANY staff member, even if they are not teaching the student.',
-      );
-      buffer.writeln('');
-      final globalInfo = _buildGlobalStaffInfo(allSchedules, now);
-      print('📊 Global staff info length: ${globalInfo.length} characters');
-      buffer.writeln(globalInfo);
-    } else {
-      print('⚠️ WARNING: No global schedules fetched!');
-    }
-
     buffer.writeln('');
     buffer.writeln('IDENTITY & KNOWLEDGE:');
     buffer.writeln('- You are the official AI Assistant for "Class Now".');
@@ -355,6 +232,64 @@ class ChatbotContextBuilder {
     );
     buffer.writeln(
       '- You have access to the ENTIRE university database, including ALL staff schedules across all departments and sections.',
+    );
+
+    buffer.writeln('');
+    buffer.writeln('UNIVERSITY INFORMATION (Only use if asked):');
+    buffer.writeln(
+      'Name: Dhanalakshmi Srinivasan University, Tiruchirappalli (DSU Trichy)',
+    );
+    buffer.writeln(
+      'Address: NH-45, Trichy–Chennai Trunk Road, Samayapuram (Near Samayapuram Toll Plaza), Tiruchirappalli, Tamil Nadu 621112, India',
+    );
+    buffer.writeln('Website: https://www.dsuniversity.ac.in');
+    buffer.writeln(
+      'Contact Phones: +91-6384176766, +91-6384176769, +91-7094458021, +91-7094458022',
+    );
+    buffer.writeln(
+      'Contact Emails: enquiry@dsuniversity.ac.in, admissions@dsuniversity.ac.in, admissions.research@dsuniversity.ac.in',
+    );
+
+    buffer.writeln('Governance:');
+    buffer.writeln(
+      '- Founder-Chancellor: Shri A. Srinivasan (Chairman of Governing Council)',
+    );
+    buffer.writeln('- Pro-Chancellor: Mrs. Ananthalakshmi Kathiravan');
+    buffer.writeln(
+      '- Vice-Chancellor: Air Marshal (Dr) C. K. Ranjan (AVSM, VSM (Retd.))',
+    );
+    buffer.writeln('- Registrar: Dr. Dhanasekaran Devaraj');
+    buffer.writeln('- Additional Registrar: Dr. K. Elangovan');
+    buffer.writeln('- Dean Academics: Dr. J. M. Mathana');
+
+    buffer.writeln('Schools & Deans:');
+    buffer.writeln(
+      '- School of Engineering and Technology (SET): Dr. Shankar Duraikannan (Block: SET Block)',
+    );
+    buffer.writeln(
+      '- Srinivasan Medical College & Hospital: Dr. P. Rosy Vennila',
+    );
+    buffer.writeln('- School of Agricultural Sciences: Dr. K. Chozhan');
+    buffer.writeln('- School of Physiotherapy: Dr. Ramesh Kumar Jeyaraman');
+    buffer.writeln('- School of Pharmacy: Dr. Akilandeswari S');
+    buffer.writeln('- School of Allied Health Sciences: Dr. K. Rekha');
+    buffer.writeln('- School of Architecture: Dr. S. Radhakrishnan');
+    buffer.writeln('- School of Law: Dr. B. Rajeswari');
+
+    buffer.writeln('Campus Details:');
+    buffer.writeln('- Size: 150 acres, 1,000,000 sqft built-up area');
+    buffer.writeln('- Location: Samayapuram, Trichy');
+    buffer.writeln(
+      '- Academic Block: 6 floors (Main classroom/academic tower)',
+    );
+    buffer.writeln('- SET Block: 2 floors (Engineering & Technology)');
+    buffer.writeln('- Administrative Block: Offices for VC, Registrar, etc.');
+    buffer.writeln(
+      '- Mess Block: Capacity 2000, Separate floors for North/South Indian dining',
+    );
+    buffer.writeln('- Hostels: Boys Hostel and Girls Hostel');
+    buffer.writeln(
+      '- Food Court & Cafeterias: Multiple cafeterias including "Renu MFC Cafe"',
     );
 
     buffer.writeln('');
@@ -430,7 +365,7 @@ class ChatbotContextBuilder {
           final startTime = cls['startTime'] ?? 'N/A';
           final endTime = cls['endTime'] ?? 'N/A';
           final room = cls['room'] ?? 'N/A';
-          final staff = cls['staff'] ?? 'TBA';
+          final staff = cls['staff'] ?? cls['mentor'] ?? 'TBA';
 
           buffer.writeln(
             '  - $subject ($startTime-$endTime) - Room $room - $staff',
@@ -447,7 +382,7 @@ class ChatbotContextBuilder {
 
     for (var cls in schedule) {
       final subject = cls['subject'] as String?;
-      final staff = cls['staff'] as String?;
+      final staff = (cls['staff'] ?? cls['mentor']) as String?;
 
       if (subject != null && staff != null && staff != 'TBA') {
         staffMap.putIfAbsent(subject, () => {}).add(staff);
@@ -463,153 +398,6 @@ class ChatbotContextBuilder {
       buffer.writeln('- ${entry.key}: ${entry.value.join(', ')}');
     }
 
-    return buffer.toString();
-  }
-
-  /// Build global staff information with real-time location tracking
-  static String _buildGlobalStaffInfo(
-    Map<String, List<Map<String, dynamic>>> allSchedules,
-    DateTime now,
-  ) {
-    final buffer = StringBuffer();
-    final staffDirectory = <String, List<Map<String, dynamic>>>{};
-
-    // Build staff directory (group all classes by staff name)
-    for (var sectionSchedules in allSchedules.values) {
-      for (var classItem in sectionSchedules) {
-        final staffName = classItem['staff'] as String?;
-        if (staffName != null && staffName != 'TBA' && staffName.isNotEmpty) {
-          staffDirectory.putIfAbsent(staffName, () => []).add(classItem);
-        }
-      }
-    }
-
-    if (staffDirectory.isEmpty) {
-      print('⚠️ WARNING: Staff directory is empty!');
-      return '(No staff data available in database)';
-    }
-
-    print('✅ Found ${staffDirectory.length} staff members in global directory');
-    print('📝 Staff names: ${staffDirectory.keys.take(5).join(", ")}...');
-
-    final currentTime = DateFormat('HH:mm').format(now);
-    final currentDay = DateFormat('EEEE').format(now);
-
-    // Sort staff alphabetically
-    final sortedStaff = staffDirectory.keys.toList()..sort();
-
-    for (var staffName in sortedStaff) {
-      final staffClasses = staffDirectory[staffName]!;
-
-      buffer.writeln('📍 $staffName:');
-
-      // Find current location
-      Map<String, dynamic>? currentLocation;
-      for (var classItem in staffClasses) {
-        final day = (classItem['day'] ?? classItem['dayOfWeek']) as String?;
-        if (day != currentDay) continue;
-
-        try {
-          final startTime = classItem['startTime'] as String;
-          final endTime = classItem['endTime'] as String;
-          final start = DateFormat('HH:mm').parse(startTime);
-          final end = DateFormat('HH:mm').parse(endTime);
-          final current = DateFormat('HH:mm').parse(currentTime);
-
-          if (current.isAfter(start) && current.isBefore(end)) {
-            currentLocation = classItem;
-            break;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (currentLocation != null) {
-        final section = currentLocation['_section'] ?? 'Unknown Section';
-        final subject = currentLocation['subject'] ?? 'Unknown';
-        final room = currentLocation['room'] ?? 'N/A';
-        final endTime = currentLocation['endTime'] ?? 'N/A';
-        buffer.writeln(
-          '   ▸ NOW: Teaching $section in Room $room ($subject, ends at $endTime)',
-        );
-      } else {
-        buffer.writeln('   ▸ NOW: Free (no class scheduled)');
-      }
-
-      // Find next class today
-      Map<String, dynamic>? nextClass;
-      for (var classItem in staffClasses) {
-        final day = (classItem['day'] ?? classItem['dayOfWeek']) as String?;
-        if (day != currentDay) continue;
-
-        try {
-          final startTime = classItem['startTime'] as String;
-          final start = DateFormat('HH:mm').parse(startTime);
-          final current = DateFormat('HH:mm').parse(currentTime);
-
-          if (current.isBefore(start)) {
-            if (nextClass == null) {
-              nextClass = classItem;
-            } else {
-              final nextStart = DateFormat(
-                'HH:mm',
-              ).parse(nextClass['startTime']);
-              if (start.isBefore(nextStart)) {
-                nextClass = classItem;
-              }
-            }
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-
-      if (nextClass != null) {
-        final section = nextClass['_section'] ?? 'Unknown';
-        final subject = nextClass['subject'] ?? 'Unknown';
-        final room = nextClass['room'] ?? 'N/A';
-        final startTime = nextClass['startTime'] ?? 'N/A';
-        buffer.writeln(
-          '   ▸ Next: $section at $startTime in Room $room ($subject)',
-        );
-      } else {
-        buffer.writeln('   ▸ Next: No more classes today');
-      }
-
-      // Show today's full schedule
-      final todayClasses = staffClasses.where((c) {
-        final day = (c['day'] ?? c['dayOfWeek']) as String?;
-        return day == currentDay;
-      }).toList();
-
-      if (todayClasses.isNotEmpty) {
-        todayClasses.sort((a, b) {
-          try {
-            final aTime = DateFormat('HH:mm').parse(a['startTime']);
-            final bTime = DateFormat('HH:mm').parse(b['startTime']);
-            return aTime.compareTo(bTime);
-          } catch (e) {
-            return 0;
-          }
-        });
-
-        buffer.writeln('   ▸ Today\'s Schedule:');
-        for (var classItem in todayClasses) {
-          final section = classItem['_section'] ?? '?';
-          final subject = classItem['subject'] ?? '?';
-          final room = classItem['room'] ?? '?';
-          final time = '${classItem['startTime']}-${classItem['endTime']}';
-          buffer.writeln('      • $time: $section - $subject (Room $room)');
-        }
-      } else {
-        buffer.writeln('   ▸ Today\'s Schedule: No classes');
-      }
-
-      buffer.writeln('');
-    }
-
-    buffer.writeln('Total Staff Members: ${sortedStaff.length}');
     return buffer.toString();
   }
 }

@@ -33,6 +33,18 @@ class NotificationService {
     );
   }
 
+  static Future<bool> requestPermissions() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+
+    final bool? granted = await androidImplementation
+        ?.requestNotificationsPermission();
+    return granted ?? false;
+  }
+
   static Future<void> scheduleTimetableNotifications() async {
     final prefs = await SharedPreferences.getInstance();
 

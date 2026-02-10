@@ -104,13 +104,13 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
             // Department Selection
             _buildSelectionCard(
               label: 'Department',
-              value: _selectedDeptName, // Display Name
+              value: _selectedDeptName,
               placeholder: 'Select Department',
               icon: Icons.business_rounded,
               onTap: () => _showSelectionSheet(
                 title: 'Select Department',
                 collection: 'departments',
-                orderBy: 'name', // Ensure ordered by name if field exists
+                orderBy: 'name',
                 currentValue: _selectedDeptId,
                 onSelected: (id, name) {
                   setState(() {
@@ -130,13 +130,12 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
             if (_selectedDeptId != null)
               _buildSelectionCard(
                 label: 'Year',
-                value: _selectedYearName, // Display Name
+                value: _selectedYearName,
                 placeholder: 'Select Year',
                 icon: Icons.calendar_today_rounded,
                 onTap: () => _showSelectionSheet(
                   title: 'Select Year',
                   collection: 'departments/$_selectedDeptId/years',
-                  orderBy: 'name',
                   currentValue: _selectedYearId,
                   onSelected: (id, name) {
                     setState(() {
@@ -154,14 +153,13 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
             if (_selectedYearId != null)
               _buildSelectionCard(
                 label: 'Section',
-                value: _selectedSectionName, // Display Name
+                value: _selectedSectionName,
                 placeholder: 'Select Section',
                 icon: Icons.class_rounded,
                 onTap: () => _showSelectionSheet(
                   title: 'Select Section',
                   collection:
                       'departments/$_selectedDeptId/years/$_selectedYearId/sections',
-                  orderBy: 'name',
                   currentValue: _selectedSectionId,
                   onSelected: (id, name) {
                     setState(() {
@@ -260,8 +258,7 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    value ??
-                        placeholder, // Note: You might need to look up the NAME of the ID if possible, but for now ID/Name
+                    value ?? placeholder,
                     style: TextStyle(
                       color: value != null
                           ? theme.colorScheme.onSurface

@@ -83,11 +83,11 @@ class TimetableWidgetProvider : HomeWidgetProvider() {
             // REMOVED: Widget tap-to-open functionality (as requested)
             // Widget is now non-clickable
             
-            // Add refresh button functionality
-            val refreshIntent = Intent(context, TimetableWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
-            }
+            // Trigger background update in Dart
+            val refreshIntent = Intent(context, es.antonborri.home_widget.HomeWidgetBackgroundReceiver::class.java)
+            refreshIntent.action = "es.antonborri.home_widget.action.BACKGROUND"
+            refreshIntent.data = android.net.Uri.parse("classnow://update")
+
             val refreshPendingIntent = PendingIntent.getBroadcast(
                 context,
                 appWidgetId,

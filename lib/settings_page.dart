@@ -10,6 +10,7 @@ import 'package:flutter_firebase_test/notification_settings_page.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -102,6 +103,19 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Background reset to default')),
       );
+    }
+  }
+
+  Future<void> _launchFeedback() async {
+    final Uri url = Uri.parse(
+      'https://docs.google.com/forms/d/e/1FAIpQLSeZlo_8A2e8DT-JcwobElZPlYOA8vQpAuueoGtJjqKDe0kdtw/viewform?usp=preview',
+    );
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch feedback form')),
+        );
+      }
     }
   }
 
@@ -667,6 +681,39 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 32),
+
+                // 🗣️ PRIORITY 3: Support & Feedback
+                _buildSettingsGroup(
+                  context,
+                  title: 'Support',
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.feedback_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        'Feedback & Contributions',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Report issues or share materials',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.open_in_new_rounded,
+                        size: 14,
+                        color: theme.hintColor,
+                      ),
+                      onTap: _launchFeedback,
+                    ),
+                  ],
                 ),
               ],
             ),

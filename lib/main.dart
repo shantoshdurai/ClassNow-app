@@ -16,7 +16,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_firebase_test/screens/onboarding_screen.dart';
+import 'package:flutter_firebase_test/onboarding_screen.dart';
 
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
@@ -28,7 +28,12 @@ import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/widgets/skeleton_loader.dart';
 import 'package:flutter_firebase_test/retro_digital_display.dart';
 import 'package:flutter_firebase_test/splash_screen.dart';
+import 'package:flutter_firebase_test/screens/onboarding_screen.dart'
+    as IntroFlow;
 import 'package:flutter_firebase_test/subject_utils.dart';
+
+// ... other imports ...
+
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/widgets/chatbot_interface.dart';
 import 'package:flutter_firebase_test/services/gemini_service.dart';
@@ -111,12 +116,15 @@ class AppLauncher extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<UserSelectionProvider>(
       builder: (context, userSelection, child) {
-        // The provider loads the selection in its constructor.
-        // We can check if the selection is loaded and valid.
+        // 1. Show User's Preferred Guide Screen if never shown
+        if (!userSelection.isIntroShown) {
+          return const IntroFlow.GuideScreen();
+        }
+
+        // 2. Then check for Class Selection
         if (userSelection.hasSelection) {
           return const DashboardPage();
         } else {
-          // If no selection is found after loading, go to onboarding.
           return const OnboardingScreen();
         }
       },
@@ -1900,7 +1908,11 @@ class _DashboardPageState extends State<DashboardPage>
 
     final now = DateTime.now();
     final currentTime = DateFormat('HH:mm').format(now);
-    final currentDay = DateFormat('EEEE').format(now);
+    final currentDay = DateFormat('EEEE', 'en_US').format(now);
+
+    // Get indices for comparison (Sunday = -1, Monday = 0, etc.)
+    final int currentDayIndex = weekDays.indexOf(currentDay);
+    final int selectedDayIndex = weekDays.indexOf(selectedDay);
 
     _ScheduleItem? currentClass;
     final List<_ScheduleItem> upcomingClasses = [];
@@ -1910,14 +1922,21 @@ class _DashboardPageState extends State<DashboardPage>
       final startTime = doc.data['startTime'] ?? '';
       final endTime = doc.data['endTime'] ?? '';
 
-      if (_isTimeInRange(currentTime, startTime, endTime) &&
-          selectedDay == currentDay) {
-        currentClass = doc;
-      } else if (_isTimeBefore(currentTime, startTime) &&
-          selectedDay == currentDay) {
+      if (selectedDayIndex > currentDayIndex) {
+        // Future day - all classes upcoming
         upcomingClasses.add(doc);
-      } else {
+      } else if (selectedDayIndex < currentDayIndex) {
+        // Past day - all classes completed
         completedClasses.add(doc);
+      } else {
+        // Today - use time comparison
+        if (_isTimeInRange(currentTime, startTime, endTime)) {
+          currentClass = doc;
+        } else if (_isTimeBefore(currentTime, startTime)) {
+          upcomingClasses.add(doc);
+        } else {
+          completedClasses.add(doc);
+        }
       }
     }
 
@@ -1937,7 +1956,9 @@ class _DashboardPageState extends State<DashboardPage>
           if (adjustedIndex < upcomingClasses.length) {
             return _buildUpcomingClassCard(
               upcomingClasses[adjustedIndex],
-              adjustedIndex == 0 && currentClass == null,
+              adjustedIndex == 0 &&
+                  currentClass == null &&
+                  selectedDayIndex == currentDayIndex,
             );
           } else {
             final completedIndex = adjustedIndex - upcomingClasses.length;

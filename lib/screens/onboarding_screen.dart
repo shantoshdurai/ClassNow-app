@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_firebase_test/notification_service.dart';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_firebase_test/main.dart';
+import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
+import 'package:flutter_firebase_test/onboarding_screen.dart'
+    as ClassSelectionScreen;
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+class GuideScreen extends StatefulWidget {
+  const GuideScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<GuideScreen> createState() => _GuideScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _GuideScreenState extends State<GuideScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -62,27 +63,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_completed', true);
+    // 1. Mark intro as shown in provider
+    await Provider.of<UserSelectionProvider>(
+      context,
+      listen: false,
+    ).setIntroShown();
 
     if (mounted) {
-      // Navigate to DashboardPage which has selection UI
-      // Use pushAndRemoveUntil to clear the stack and prevent back navigation
-      Navigator.of(context).pushAndRemoveUntil(
+      // 2. Navigate to Class Selection Screen (Root OnboardingScreen)
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const DashboardPage(forceSelectionMode: true),
+          builder: (context) => const ClassSelectionScreen.OnboardingScreen(),
         ),
-        (route) => false,
       );
     }
   }
 
   Future<void> _requestNotificationPermission() async {
     try {
-      // Initialize notification service first
       await NotificationService.init();
-
-      // Request permission - this will show system dialog on Android 13+
       final plugin = NotificationService.getNotificationPlugin();
       if (plugin != null) {
         await plugin
@@ -97,12 +96,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _handleNextButton() async {
-    // If on notification page (page index 1), request notification permission
     if (_currentPage == 1) {
       await _requestNotificationPermission();
     }
 
-    // Move to next page or complete
     if (_currentPage == _pages.length - 1) {
       _completeOnboarding();
     } else {
@@ -121,7 +118,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
@@ -136,8 +132,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-
-            // Page view
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -152,8 +146,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-
-            // Page indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -161,10 +153,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 (index) => _buildIndicator(index == _currentPage),
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // Next/Get Started button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               child: SizedBox(
@@ -191,7 +180,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
           ],
         ),

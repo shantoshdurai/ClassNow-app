@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
+import 'package:flutter_firebase_test/services/seed_data.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
@@ -70,8 +71,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       final snapshot = await FirebaseFirestore.instance
           .collection('departments')
           .get();
-      final items = snapshot.docs.map((doc) {
-        final name = (doc.data())['name'] ?? doc.id;
+
+      var matchingDocs = snapshot.docs.where((doc) {
+        final name = (doc.data()['name'] ?? doc.id).toString();
+        return name.toLowerCase().contains('school of engineering');
+      }).toList();
+
+      // Deduplication Logic:
+      // If multiple "School of Engineering" entries exist, we want to keep the "good" one.
+      // Priority:
+      // 1. school-of-engineering (The corrected seed ID)
+      // 2. school-of-engineering-and-technology (The old working ID)
+      // 3. SET (The old broken ID)
+      if (matchingDocs.length > 1) {
+        matchingDocs.sort((a, b) {
+          int score(String id) {
+            if (id == 'school-of-engineering') return 3;
+            if (id == 'school-of-engineering-and-technology') return 2;
+            return 1;
+          }
+
+          return score(b.id).compareTo(score(a.id)); // Higher score first
+        });
+        // Filter to keep only the best match
+        matchingDocs = [matchingDocs.first];
+      }
+
+      final items = matchingDocs.map((doc) {
+        final name = doc.data()['name'] ?? doc.id;
         return DropdownMenuItem(value: doc.id, child: Text(name));
       }).toList();
 
@@ -80,6 +107,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           departmentItems = items;
           isInitialLoading = false;
         });
+
+        if (departmentItems.isNotEmpty) {
+          if (departmentItems.length == 1) {
+            final id = departmentItems.first.value;
+            if (selectedDepartmentId != id) {
+              // Schedule the next fetch after the build phase
+              Future.microtask(() {
+                if (mounted) {
+                  setState(() => selectedDepartmentId = id);
+                  _fetchYears(id!);
+                }
+              });
+            }
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -105,21 +147,40 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .doc(departmentId)
           .collection('years')
           .get();
-      final items = snapshot.docs.map((doc) {
-        final name = (doc.data())['name'] ?? doc.id;
-        return DropdownMenuItem(value: doc.id, child: Text(name));
-      }).toList();
+
+      final items = snapshot.docs
+          .where((doc) {
+            final name = (doc.data()['name'] ?? doc.id).toString();
+            return name.contains('2024');
+          })
+          .map((doc) {
+            final name = doc.data()['name'] ?? doc.id;
+            return DropdownMenuItem(value: doc.id, child: Text(name));
+          })
+          .toList();
+
       if (mounted) {
         setState(() {
           yearItems = items;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
           areYearsLoading = false;
         });
+
+        if (yearItems.isNotEmpty) {
+          if (yearItems.length == 1) {
+            final id = yearItems.first.value;
+            if (selectedYearId != id) {
+              Future.microtask(() {
+                if (mounted) {
+                  setState(() => selectedYearId = id);
+                  _fetchSections(departmentId, id!);
+                }
+              });
+            }
+          }
+        }
       }
+    } catch (e) {
+      if (mounted) setState(() => areYearsLoading = false);
     }
   }
 
@@ -137,21 +198,33 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .doc(yearId)
           .collection('sections')
           .get();
-      final items = snapshot.docs.map((doc) {
-        final name = (doc.data())['name'] ?? doc.id;
-        return DropdownMenuItem(value: doc.id, child: Text(name));
-      }).toList();
+
+      final items = snapshot.docs
+          .where((doc) {
+            final name = (doc.data()['name'] ?? doc.id).toString();
+            final lowerName = name.toLowerCase();
+            // Filter out "Section A", "Section B" etc.
+            // We want "AIDA4", "A5" to pass.
+            // Invalid: Starts with 'section ' OR is just a single letter 'a','b','c'
+            final isGeneric =
+                lowerName.startsWith('section ') ||
+                ['a', 'b', 'c', 'd'].contains(lowerName);
+            return !isGeneric;
+          })
+          .map((doc) {
+            final name = doc.data()['name'] ?? doc.id;
+            return DropdownMenuItem(value: doc.id, child: Text(name));
+          })
+          .toList();
+
       if (mounted) {
         setState(() {
           sectionItems = items;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
           areSectionsLoading = false;
         });
       }
+    } catch (e) {
+      if (mounted) setState(() => areSectionsLoading = false);
     }
   }
 
@@ -364,7 +437,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               onChanged: (value) {
                                 if (value != null) {
                                   _fetchYears(value);
-                                  setState(() => selectedDepartmentId = value);
+                                  setState(() {
+                                    selectedDepartmentId = value;
+                                    selectedYearId = null;
+                                    selectedSectionId = null;
+                                  });
                                 }
                               },
                             ),
@@ -446,12 +523,41 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             elevation: 8,
                             shadowColor: theme.primaryColor.withOpacity(0.5),
                           ),
-                          child: const Text(
-                            "Continue",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: const Text("Continue", style: TextStyle()),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      TextButton(
+                        onPressed: () async {
+                          try {
+                            await seedAIDSData();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Database restored! Please restart the app or reload sections.',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              _fetchDepartments();
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error restoring: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Text(
+                          'Restore Database (Fix)',
+                          style: TextStyle(
+                            color: theme.hintColor.withOpacity(0.5),
+                            fontSize: 12,
                           ),
                         ),
                       ),

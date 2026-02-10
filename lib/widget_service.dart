@@ -113,7 +113,12 @@ class WidgetService {
           final end = DateFormat('HH:mm').parse(endTime);
           final current = DateFormat('HH:mm').parse(currentTime);
 
-          if (current.isAfter(start) && current.isBefore(end)) {
+          // Inclusive start, exclusive end
+          final isRunning =
+              (current.isAtSameMomentAs(start) || current.isAfter(start)) &&
+              current.isBefore(end);
+
+          if (isRunning) {
             currentClass = classData;
             final totalMinutes = end.difference(start).inMinutes;
             final elapsedMinutes = current.difference(start).inMinutes;
@@ -292,7 +297,7 @@ class WidgetService {
         _alarmId,
         alarmCallback,
         exact: true,
-        wakeup: false, // BATTERY OPTIMIZED
+        wakeup: true, // Prioritize reliability
         rescheduleOnReboot: true,
       );
     }
