@@ -366,7 +366,16 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final docs = snapshot.data!.docs;
+                  final docs = collection == 'departments'
+                      ? snapshot.data!.docs
+                            .where(
+                              (doc) =>
+                                  doc.id ==
+                                  'school-of-engineering-and-technology',
+                            )
+                            .toList()
+                      : snapshot.data!.docs;
+
                   if (docs.isEmpty) {
                     return Center(
                       child: Text(

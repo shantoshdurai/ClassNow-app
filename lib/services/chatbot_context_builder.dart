@@ -264,7 +264,7 @@ class ChatbotContextBuilder {
 
     buffer.writeln('Schools & Deans:');
     buffer.writeln(
-      '- School of Engineering and Technology (SET): Dr. Shankar Duraikannan (Block: SET Block)',
+      '- School of Engineering (SOE): Dr. Shankar Duraikannan (Block: SOE Block)',
     );
     buffer.writeln(
       '- Srinivasan Medical College & Hospital: Dr. P. Rosy Vennila',
@@ -282,7 +282,7 @@ class ChatbotContextBuilder {
     buffer.writeln(
       '- Academic Block: 6 floors (Main classroom/academic tower)',
     );
-    buffer.writeln('- SET Block: 2 floors (Engineering & Technology)');
+    buffer.writeln('- SOE Block: 2 floors (Engineering)');
     buffer.writeln('- Administrative Block: Offices for VC, Registrar, etc.');
     buffer.writeln(
       '- Mess Block: Capacity 2000, Separate floors for North/South Indian dining',

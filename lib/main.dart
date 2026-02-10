@@ -2022,11 +2022,43 @@ class _DashboardPageState extends State<DashboardPage>
     );
   }
 
+  DateTime _parseTime(String timeStr) {
+    try {
+      // Remove any whitespace and convert to uppercase for consistency
+      final cleanTime = timeStr.trim().toUpperCase();
+
+      // Try parsing with AM/PM if present
+      if (cleanTime.contains('AM') || cleanTime.contains('PM')) {
+        return DateFormat('hh:mm a').parse(cleanTime);
+      }
+
+      // Default to 24h format
+      DateTime parsed = DateFormat('HH:mm').parse(cleanTime);
+
+      // Smart Conversion: In a school context, hours like 1, 2, 3, 4, 5, 6
+      // are almost always PM (13, 14, 15, 16, 17, 18).
+      // If hour is between 1 and 7 (inclusive), we treat it as PM.
+      if (parsed.hour >= 1 && parsed.hour <= 7) {
+        return DateTime(
+          parsed.year,
+          parsed.month,
+          parsed.day,
+          parsed.hour + 12,
+          parsed.minute,
+        );
+      }
+
+      return parsed;
+    } catch (e) {
+      return DateTime(2000, 1, 1, 0, 0); // Fallback to start of day
+    }
+  }
+
   bool _isTimeInRange(String currentTime, String startTime, String endTime) {
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
-      final start = DateFormat('HH:mm').parse(startTime);
-      final end = DateFormat('HH:mm').parse(endTime);
+      final start = _parseTime(startTime);
+      final end = _parseTime(endTime);
 
       return (current.isAfter(start) || current.isAtSameMomentAs(start)) &&
           (current.isBefore(end) || current.isAtSameMomentAs(end));
@@ -2038,7 +2070,7 @@ class _DashboardPageState extends State<DashboardPage>
   bool _isTimeBefore(String currentTime, String startTime) {
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
-      final start = DateFormat('HH:mm').parse(startTime);
+      final start = _parseTime(startTime);
       return current.isBefore(start);
     } catch (e) {
       return false;
@@ -2059,8 +2091,8 @@ class _DashboardPageState extends State<DashboardPage>
 
     try {
       final current = DateFormat('HH:mm').parse(currentTime);
-      final classStart = DateFormat('HH:mm').parse(start);
-      final classEnd = DateFormat('HH:mm').parse(end);
+      final classStart = _parseTime(start);
+      final classEnd = _parseTime(end);
 
       final totalDuration = classEnd.difference(classStart).inMinutes;
       final elapsedDuration = current.difference(classStart).inMinutes;

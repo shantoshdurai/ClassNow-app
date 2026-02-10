@@ -109,9 +109,9 @@ class WidgetService {
         final endTime = classData['endTime'] as String;
 
         try {
-          final start = DateFormat('HH:mm').parse(startTime);
-          final end = DateFormat('HH:mm').parse(endTime);
-          final current = DateFormat('HH:mm').parse(currentTime);
+          final start = _parseTime(startTime);
+          final end = _parseTime(endTime);
+          final current = _parseTime(currentTime);
 
           // Inclusive start, exclusive end
           final isRunning =
@@ -238,14 +238,18 @@ class WidgetService {
   }
 
   static Future<void> _updateProvider() async {
-    await HomeWidget.updateWidget(
-      name: 'TimetableWidgetProvider',
-      androidName: 'com.example.flutter_firebase_test.TimetableWidgetProvider',
-    );
-    await HomeWidget.updateWidget(
-      name: 'RobotWidgetProvider',
-      androidName: 'com.example.flutter_firebase_test.RobotWidgetProvider',
-    );
+    // FIX: The HomeWidget plugin might be appending the package name automatically
+    // or the previous configuration was incorrect leading to double package names.
+    // Using just the class name for the androidName.
+    try {
+      await HomeWidget.updateWidget(
+        name: 'TimetableWidgetProvider',
+        androidName: 'TimetableWidgetProvider',
+      );
+      print('✅ [WidgetService] Updated TimetableWidgetProvider');
+    } catch (e) {
+      print('⚠️ [WidgetService] Failed to update TimetableWidgetProvider: $e');
+    }
   }
 
   static Future<void> updateFromForeground() async {
@@ -305,7 +309,33 @@ class WidgetService {
 
   static DateTime _parseTime(String timeStr) {
     final now = DateTime.now();
-    final parsed = DateFormat('HH:mm').parse(timeStr);
-    return DateTime(now.year, now.month, now.day, parsed.hour, parsed.minute);
+    try {
+      final cleanTime = timeStr.trim().toUpperCase();
+
+      // Try parsing with AM/PM if present
+      if (cleanTime.contains('AM') || cleanTime.contains('PM')) {
+        final parsed = DateFormat('hh:mm a').parse(cleanTime);
+        return DateTime(
+          now.year,
+          now.month,
+          now.day,
+          parsed.hour,
+          parsed.minute,
+        );
+      }
+
+      // Default to 24h format
+      final parsed = DateFormat('HH:mm').parse(cleanTime);
+      int hour = parsed.hour;
+
+      // Smart Conversion: School hours 1-7 are likely PM
+      if (hour >= 1 && hour <= 7) {
+        hour += 12;
+      }
+
+      return DateTime(now.year, now.month, now.day, hour, parsed.minute);
+    } catch (e) {
+      return DateTime(now.year, now.month, now.day, 0, 0);
+    }
   }
 }

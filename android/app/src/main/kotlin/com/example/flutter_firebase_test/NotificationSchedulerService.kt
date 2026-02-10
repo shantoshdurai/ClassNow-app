@@ -121,8 +121,13 @@ class NotificationSchedulerService(private val context: Context) {
                 return
             }
             
-            val hour = timeParts[0].toInt()
+            var hour = timeParts[0].toInt()
             val minute = timeParts[1].toInt()
+            
+            // Smart Conversion: School hours 1-7 are likely PM
+            if (hour in 1..7) {
+                hour += 12
+            }
             
             // Get the day index (1 = Monday, 7 = Sunday)
             val dayIndex = getDayIndex(dayOfWeek)

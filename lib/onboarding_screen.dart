@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
-import 'package:flutter_firebase_test/services/seed_data.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
@@ -73,29 +72,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .get();
 
       var matchingDocs = snapshot.docs.where((doc) {
-        final name = (doc.data()['name'] ?? doc.id).toString();
-        return name.toLowerCase().contains('school of engineering');
+        return doc.id == 'school-of-engineering-and-technology';
       }).toList();
-
-      // Deduplication Logic:
-      // If multiple "School of Engineering" entries exist, we want to keep the "good" one.
-      // Priority:
-      // 1. school-of-engineering (The corrected seed ID)
-      // 2. school-of-engineering-and-technology (The old working ID)
-      // 3. SET (The old broken ID)
-      if (matchingDocs.length > 1) {
-        matchingDocs.sort((a, b) {
-          int score(String id) {
-            if (id == 'school-of-engineering') return 3;
-            if (id == 'school-of-engineering-and-technology') return 2;
-            return 1;
-          }
-
-          return score(b.id).compareTo(score(a.id)); // Higher score first
-        });
-        // Filter to keep only the best match
-        matchingDocs = [matchingDocs.first];
-      }
 
       final items = matchingDocs.map((doc) {
         final name = doc.data()['name'] ?? doc.id;
@@ -148,16 +126,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .collection('years')
           .get();
 
-      final items = snapshot.docs
-          .where((doc) {
-            final name = (doc.data()['name'] ?? doc.id).toString();
-            return name.contains('2024');
-          })
-          .map((doc) {
-            final name = doc.data()['name'] ?? doc.id;
-            return DropdownMenuItem(value: doc.id, child: Text(name));
-          })
-          .toList();
+      final items = snapshot.docs.map((doc) {
+        final name = doc.data()['name'] ?? doc.id;
+        return DropdownMenuItem(value: doc.id, child: Text(name));
+      }).toList();
 
       if (mounted) {
         setState(() {
@@ -199,23 +171,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .collection('sections')
           .get();
 
-      final items = snapshot.docs
-          .where((doc) {
-            final name = (doc.data()['name'] ?? doc.id).toString();
-            final lowerName = name.toLowerCase();
-            // Filter out "Section A", "Section B" etc.
-            // We want "AIDA4", "A5" to pass.
-            // Invalid: Starts with 'section ' OR is just a single letter 'a','b','c'
-            final isGeneric =
-                lowerName.startsWith('section ') ||
-                ['a', 'b', 'c', 'd'].contains(lowerName);
-            return !isGeneric;
-          })
-          .map((doc) {
-            final name = doc.data()['name'] ?? doc.id;
-            return DropdownMenuItem(value: doc.id, child: Text(name));
-          })
-          .toList();
+      final items = snapshot.docs.map((doc) {
+        final name = doc.data()['name'] ?? doc.id;
+        return DropdownMenuItem(value: doc.id, child: Text(name));
+      }).toList();
 
       if (mounted) {
         setState(() {
@@ -527,40 +486,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ),
                       const SizedBox(height: 24),
-                      TextButton(
-                        onPressed: () async {
-                          try {
-                            await seedAIDSData();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Database restored! Please restart the app or reload sections.',
-                                  ),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              _fetchDepartments();
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error restoring: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        child: Text(
-                          'Restore Database (Fix)',
-                          style: TextStyle(
-                            color: theme.hintColor.withOpacity(0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 24),
+                      // Restore button removed to prevent data loss
+                      const SizedBox(height: 24),
                       const SizedBox(height: 24),
                     ],
                   ),

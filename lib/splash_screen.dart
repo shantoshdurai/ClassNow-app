@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_firebase_test/main.dart';
 import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -72,7 +74,16 @@ class _SplashScreenState extends State<SplashScreen>
         _initAuth(),
       ]);
 
-      // 4. Defer Workmanager to after splash (non-critical)
+      // 4. Ensure User Selection is loaded before navigating
+      // This prevents the "Guide Screen loop" by ensuring we know the state
+      if (mounted) {
+        await Provider.of<UserSelectionProvider>(
+          context,
+          listen: false,
+        ).loadSelection();
+      }
+
+      // 5. Defer Workmanager to after splash (non-critical)
       _deferredWorkmanagerInit();
     } catch (e) {
       print('Error during initialization: $e');
