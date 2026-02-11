@@ -11,6 +11,21 @@ An offline-first Flutter app that keeps you synchronized with your academic sche
 - **AI Chatbot:** Ask "Where is my next class?" and get instant answers.
 - **OLED Dark Mode:** Battery-saving true black interface.
 
+
+## 📸 Gallery
+
+<p align="center">
+  <img src="lib/screens/github_images/features%20of%20the%20app.png" width="22%" />
+  <img src="lib/screens/github_images/Ai%20Chat.png" width="22%" />
+  <img src="lib/screens/github_images/great%20customization.png" width="22%" />
+  <img src="lib/screens/github_images/mentors%20section.png" width="22%" />
+</p>
+
+<p align="center">
+  <b>Scan to Download</b><br>
+  <img src="lib/screens/github_images/app%20qr%20code.png" width="200" />
+</p>
+
 ## 🚀 Quick Start
 1.  **Clone Repo**:
     ```bash
