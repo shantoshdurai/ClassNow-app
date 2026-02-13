@@ -41,6 +41,38 @@ class _TimetableWidgetState extends State<TimetableWidget>
     super.dispose();
   }
 
+  DateTime _parseTime(String timeStr) {
+    try {
+      final now = DateTime.now();
+      final cleanTime = timeStr.trim().toUpperCase();
+
+      if (cleanTime.contains('AM') || cleanTime.contains('PM')) {
+        final parsed = DateFormat('hh:mm a').parse(cleanTime);
+        return DateTime(
+          now.year,
+          now.month,
+          now.day,
+          parsed.hour,
+          parsed.minute,
+        );
+      }
+
+      final parts = cleanTime.split(':');
+      var hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+
+      // Smart Conversion: In a school context, hours like 1-7 are likely PM
+      if (hour >= 1 && hour <= 7) {
+        hour += 12;
+      }
+
+      return DateTime(now.year, now.month, now.day, hour, minute);
+    } catch (e) {
+      final now = DateTime.now();
+      return DateTime(now.year, now.month, now.day, 0, 0);
+    }
+  }
+
   Map<String, dynamic>? _getCurrentClass(List<DocumentSnapshot> docs) {
     final now = DateTime.now();
     final currentDay = DateFormat('EEEE').format(now);
@@ -49,23 +81,8 @@ class _TimetableWidgetState extends State<TimetableWidget>
       final data = doc.data() as Map<String, dynamic>;
       if (data['day'] != currentDay) continue;
 
-      final startParts = (data['startTime'] as String).split(':');
-      final endParts = (data['endTime'] as String).split(':');
-
-      final start = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(startParts[0]),
-        int.parse(startParts[1]),
-      );
-      final end = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(endParts[0]),
-        int.parse(endParts[1]),
-      );
+      final start = _parseTime(data['startTime'] as String);
+      final end = _parseTime(data['endTime'] as String);
 
       if (now.isAfter(start) && now.isBefore(end)) {
         return {'data': data, 'start': start, 'end': end, 'isCurrent': true};
@@ -81,18 +98,15 @@ class _TimetableWidgetState extends State<TimetableWidget>
     DocumentSnapshot? nextClass;
     DateTime? nextStart;
 
+    // Sort logic to prioritize earliest future class
+    // We iterate through all, so sorting isn't strictly necessary for finding min,
+    // but safer to find closest. Actually the loop below finds min.
+
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
       if (data['day'] != currentDay) continue;
 
-      final startParts = (data['startTime'] as String).split(':');
-      final start = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(startParts[0]),
-        int.parse(startParts[1]),
-      );
+      final start = _parseTime(data['startTime'] as String);
 
       if (start.isAfter(now)) {
         if (nextStart == null || start.isBefore(nextStart)) {
@@ -104,17 +118,10 @@ class _TimetableWidgetState extends State<TimetableWidget>
 
     if (nextClass != null) {
       final data = nextClass.data() as Map<String, dynamic>;
-      final endParts = (data['endTime'] as String).split(':');
       return {
         'data': data,
         'start': nextStart,
-        'end': DateTime(
-          now.year,
-          now.month,
-          now.day,
-          int.parse(endParts[0]),
-          int.parse(endParts[1]),
-        ),
+        'end': _parseTime(data['endTime'] as String),
         'isCurrent': false,
       };
     }

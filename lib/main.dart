@@ -617,8 +617,8 @@ class _DashboardPageState extends State<DashboardPage>
                 final startTime = data['startTime'] as String;
                 final endTime = data['endTime'] as String;
 
-                final start = DateFormat('HH:mm').parse(startTime);
-                final end = DateFormat('HH:mm').parse(endTime);
+                final start = _parseTime(startTime);
+                final end = _parseTime(endTime);
                 final current = DateFormat('HH:mm').parse(currentTime);
 
                 if (current.isAfter(start) && current.isBefore(end)) {
@@ -1912,11 +1912,11 @@ class _DashboardPageState extends State<DashboardPage>
     final docs = all
         .where((e) => (e.data['day'] ?? '') == selectedDay)
         .toList();
-    docs.sort(
-      (a, b) => (a.data['startTime'] ?? '00:00').compareTo(
-        (b.data['startTime'] ?? '00:00'),
-      ),
-    );
+    docs.sort((a, b) {
+      final startA = _parseTime(a.data['startTime'] ?? '00:00');
+      final startB = _parseTime(b.data['startTime'] ?? '00:00');
+      return startA.compareTo(startB);
+    });
 
     if (docs.isEmpty) {
       return Padding(
