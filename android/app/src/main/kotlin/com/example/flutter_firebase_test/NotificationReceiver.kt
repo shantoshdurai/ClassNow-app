@@ -21,8 +21,42 @@ class NotificationReceiver : BroadcastReceiver() {
     
     override fun onReceive(context: Context, intent: Intent) {
         Log.d(TAG, "Received alarm broadcast")
-        
+
+        // Check if notifications are enabled
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val isEnabled = prefs.getBoolean("flutter.notifications_enabled", true)
+
+        if (!isEnabled) {
+            Log.d(TAG, "Notifications are disabled in settings, skipping notification")
+            return
+        }
+
         val subject = intent.getStringExtra("subject") ?: "Class"
+        
+        // Check if specific subject is enabled
+        val allSubjects = prefs.getBoolean("flutter.notifications_all_subjects", true)
+        if (!allSubjects) {
+            val selectedSubjectsJson = prefs.getString("flutter.notification_selected_subjects", "[]") ?: "[]"
+            try {
+                val jsonArray = org.json.JSONArray(selectedSubjectsJson)
+                var isSubjectSelected = false
+                for (i in 0 until jsonArray.length()) {
+                    if (jsonArray.getString(i) == subject) {
+                        isSubjectSelected = true
+                        break
+                    }
+                }
+                
+                if (!isSubjectSelected) {
+                    Log.d(TAG, "Notification for $subject is disabled, skipping")
+                    return
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing selected subjects", e)
+                // Default to showing if there's an error parsing
+            }
+        }
+        
         val room = intent.getStringExtra("room") ?: "Unknown Room"
         val leadTime = intent.getIntExtra("leadTime", 15)
         val dayOfWeek = intent.getStringExtra("dayOfWeek") ?: ""
@@ -31,7 +65,7 @@ class NotificationReceiver : BroadcastReceiver() {
         // Show the notification
         showNotification(context, subject, room, leadTime)
         
-        // Reschedule for next week
+        // Reschedule for next week (only if enabled)
         rescheduleForNextWeek(context, intent, dayOfWeek, startTime)
     }
     
