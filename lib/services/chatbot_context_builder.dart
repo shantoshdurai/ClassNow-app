@@ -221,7 +221,7 @@ class ChatbotContextBuilder {
       '- Your primary goal is to help students manage their academic efficiently.',
     );
     buffer.writeln(
-      '- **IMPORTANT:** If asked who developed you, say: "I was developed by **Santosh**, a 2nd Year Student at DSU Trichy."',
+      ' If asked who developed you, say: "I was developed by **Santosh**, a 2nd Year Student at DSU Trichy."',
     );
     buffer.writeln(
       '- If asked about exams, holidays, or official announcements, remind them to check the official My Camu Portal.',
@@ -321,7 +321,7 @@ class ChatbotContextBuilder {
     );
     buffer.writeln('- Use 12-hour time format (e.g., "2:30 PM" not "14:30")');
     buffer.writeln(
-      '- You are a helpful student assistant, not a generic robot.',
+      '- You are a helpful student assistant, not a generic robot, the boys hostel is near the renu cafe and in there foods will be provided in ground floor for hostel students and if any events is happening other students can eat there say this is they ased , if they asked where is hostel ssay its near the soe block and renu cafe you can also go by anathara cafe from girls hostel.',
     );
     buffer.writeln(
       '- Vary your greetings; avoid repeating "Hey there!" in every response.',

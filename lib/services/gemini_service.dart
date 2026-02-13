@@ -86,20 +86,37 @@ User: $userMessage''';
     }
   }
 
-  /// Stream responses (using non-streaming for simplicity, but simulates typing)
+  /// Stream responses (Simulates typing effect for better UX)
   static Stream<String> chatStream({
     required String userMessage,
     required String systemContext,
     List<Map<String, String>>? history,
   }) async* {
+    // Get the full response first
     final response = await chat(
       userMessage: userMessage,
       systemContext: systemContext,
       history: history,
     );
 
-    // Yield the full text directly
-    yield response;
+    // Simulate "streaming" by yielding small chunks
+    // This gives the visual of typing without needing a streaming API
+    if (response.length < 50) {
+      yield response;
+    } else {
+      final chars = response.split('');
+      String buffer = '';
+
+      for (int i = 0; i < chars.length; i++) {
+        buffer += chars[i];
+        // Yield every few characters to reduce UI jitter
+        if (i % 3 == 0 || i == chars.length - 1) {
+          yield buffer;
+          buffer = '';
+          await Future.delayed(const Duration(milliseconds: 15));
+        }
+      }
+    }
   }
 
   /// Clear API key
