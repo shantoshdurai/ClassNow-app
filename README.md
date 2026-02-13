@@ -48,3 +48,7 @@ An offline-first Flutter app that keeps you synchronized with your academic sche
 ## 🛠️ Troubleshooting
 - **Widgets not updating?** Enable Autostart and remove Battery Restrictions.
 - **Crash on launch?** Verify `google-services.json` is present.
+
+## 🤝 Contributing
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started.
+
