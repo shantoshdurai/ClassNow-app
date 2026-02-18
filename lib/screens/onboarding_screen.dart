@@ -7,6 +7,8 @@ import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart'
     as ClassSelectionScreen;
 
+/// A screen that guides the user through the key features of the application.
+/// It displays a series of onboarding pages and handles navigation to the main app flow.
 class GuideScreen extends StatefulWidget {
   const GuideScreen({super.key});
 
@@ -240,6 +242,7 @@ class _GuideScreenState extends State<GuideScreen> {
   }
 }
 
+/// A data model representing a single page in the onboarding flow.
 class OnboardingPage {
   final IconData icon;
   final String title;
