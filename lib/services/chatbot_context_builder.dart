@@ -22,6 +22,9 @@ class ChatbotContextBuilder {
     final currentClass = _getCurrentClass(scheduleData, now);
     final nextClass = _getNextClass(scheduleData, now);
 
+    // Get Attendance Data from SharedPreferences
+    final attendanceContext = await _getAttendanceContext(prefs);
+
     // Build the context string with ONLY local data
     return _buildContextString(
       now: now,
@@ -31,7 +34,42 @@ class ChatbotContextBuilder {
       scheduleData: scheduleData,
       currentClass: currentClass,
       nextClass: nextClass,
+      attendanceContext: attendanceContext,
     );
+  }
+
+  static Future<String> _getAttendanceContext(SharedPreferences prefs) async {
+    final overallStr = prefs.getString('mycamu_attendance_percent');
+    final subjectsStr = prefs.getString('mycamu_subject_attendance');
+    final countStr = prefs.getString('mycamu_attendance_count');
+
+    if (overallStr == null && subjectsStr == null)
+      return "No attendance data available yet.";
+
+    final buffer = StringBuffer();
+    if (overallStr != null) {
+      buffer.write("OVERALL ATTENDANCE: $overallStr%");
+      if (countStr != null) {
+        buffer.write(" ($countStr periods attended)");
+      }
+      buffer.writeln();
+    }
+
+    if (subjectsStr != null) {
+      buffer.writeln("SUBJECT-WISE ATTENDANCE:");
+      try {
+        final List<dynamic> subjects = jsonDecode(subjectsStr);
+        for (var sub in subjects) {
+          final s = sub as Map<String, dynamic>;
+          buffer.writeln(
+            "- ${s['code']}: ${s['percent']}% (Attended: ${s['attended']}/${s['total']})",
+          );
+        }
+      } catch (e) {
+        buffer.writeln("(Error parsing subject details)");
+      }
+    }
+    return buffer.toString();
   }
 
   static Future<List<Map<String, dynamic>>> _getScheduleData() async {
@@ -154,6 +192,7 @@ class ChatbotContextBuilder {
     required List<Map<String, dynamic>> scheduleData,
     required Map<String, dynamic>? currentClass,
     required Map<String, dynamic>? nextClass,
+    required String attendanceContext,
   }) {
     final buffer = StringBuffer();
 
@@ -161,6 +200,52 @@ class ChatbotContextBuilder {
       'You are a helpful assistant for "Class Now", a college timetable management app.',
     );
     buffer.writeln('');
+
+    // Inject Attendance Data prominently
+    buffer.writeln('=== ATTENDANCE DATA (FROM MYCAMU) ===');
+    buffer.writeln(attendanceContext);
+    buffer.writeln('=====================================');
+    buffer.writeln('');
+
+    // Add instructions for attendance calculations
+    buffer.writeln('ATTENDANCE CALCULATION INSTRUCTIONS:');
+    buffer.writeln(
+      '- When the user asks "what if I miss X days" or "what if I take leave", calculate the impact.',
+    );
+    buffer.writeln(
+      '- IMPORTANT: The "attended" number stays the SAME (they haven\'t attended those future classes yet).',
+    );
+    buffer.writeln(
+      '- IMPORTANT: The "total" number INCREASES by the number of classes they will miss.',
+    );
+    buffer.writeln('');
+    buffer.writeln('STEP-BY-STEP CALCULATION:');
+    buffer.writeln(
+      '1. Parse current attendance: "101/128 periods" means attended=101, total=128',
+    );
+    buffer.writeln(
+      '2. Count classes in the time period they mention (look at their schedule)',
+    );
+    buffer.writeln(
+      '3. Calculate: new_total = current_total + classes_they_will_miss',
+    );
+    buffer.writeln(
+      '4. Calculate: new_percentage = (current_attended / new_total) × 100',
+    );
+    buffer.writeln('5. Show the result as: X% (attended/new_total)');
+    buffer.writeln('');
+    buffer.writeln('EXAMPLE:');
+    buffer.writeln('- Current: 101/128 = 79%');
+    buffer.writeln('- Question: "What if I take 2 days leave?"');
+    buffer.writeln('- Their schedule shows: 5 classes per day');
+    buffer.writeln('- Classes missed: 2 days × 5 = 10 classes');
+    buffer.writeln('- New total: 128 + 10 = 138');
+    buffer.writeln('- New percentage: 101 ÷ 138 = 73.19%');
+    buffer.writeln(
+      '- Answer: "Your attendance would drop to 73.19% (101/138)"',
+    );
+    buffer.writeln('');
+
     buffer.writeln('CURRENT STATUS:');
     buffer.writeln(
       '- Current time: ${DateFormat('EEEE, MMMM d, h:mm a').format(now)}',

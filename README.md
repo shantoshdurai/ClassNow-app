@@ -26,6 +26,14 @@ An offline-first Flutter app that keeps you synchronized with your academic sche
   <img src="lib/screens/github_images/app%20qr%20code.png" width="200" />
 </p>
 
+## 📂 Project Structure
+
+- **lib/screens/**: Contains all the UI screens like Onboarding, Sync, etc.
+- **lib/services/**: Backend logic and helper functions.
+- **lib/widgets/**: Reusable UI components.
+- **lib/providers/**: State management classes.
+- **lib/main.dart**: Application entry point.
+
 ## 🚀 Quick Start
 1.  **Clone Repo**:
     ```bash

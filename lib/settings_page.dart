@@ -11,6 +11,7 @@ import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_firebase_test/screens/mycamu_sync_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -712,6 +713,84 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: theme.hintColor,
                       ),
                       onTap: _launchFeedback,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // 🧪 PRIORITY 4: Experimental - Beta Features
+                _buildSettingsGroup(
+                  context,
+                  title: 'Experimental',
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.science_outlined,
+                        color: theme.primaryColor,
+                      ),
+                      title: Text(
+                        'Sync MyCamu Attendance',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Link your MyCamu account to see attendance',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: theme.hintColor,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MyCamuSyncScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(
+                      height: 1,
+                      indent: 56,
+                      endIndent: 16,
+                      color: Colors.white10,
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        Icons.delete_sweep_outlined,
+                        color: Colors.redAccent,
+                      ),
+                      title: Text(
+                        'Clear Attendance Data',
+                        style: AppTextStyles.interMentor.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Remove synced attendance data',
+                        style: AppTextStyles.interSmall.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                      onTap: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('mycamu_attendance_percent');
+                        await prefs.remove('mycamu_subject_attendance');
+                        await prefs.remove('mycamu_last_sync');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Attendance data cleared!'),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
