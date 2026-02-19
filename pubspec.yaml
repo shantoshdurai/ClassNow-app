@@ -55,6 +55,7 @@ dependencies:
   flutter_markdown: ^0.7.3
   http: ^1.2.0
   url_launcher: ^6.3.2
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_test:

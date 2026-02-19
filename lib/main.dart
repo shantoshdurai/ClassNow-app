@@ -71,6 +71,8 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
 
 // Global ValueNotifier for retro display setting
 final retroDisplayEnabledNotifier = ValueNotifier<bool>(false);
+// Global Notifier to trigger attendance card refresh
+final attendanceUpdateNotifier = ValueNotifier<int>(0);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1510,6 +1512,7 @@ class _DashboardPageState extends State<DashboardPage>
                           ),
                           child: Column(
                             children: [
+                              _buildAttendanceCard(),
                               ValueListenableBuilder<bool>(
                                 valueListenable: retroDisplayEnabledNotifier,
                                 builder: (context, retroEnabled, child) {
@@ -2839,6 +2842,239 @@ class _DashboardPageState extends State<DashboardPage>
         ),
       ),
     );
+  }
+
+  Widget _buildAttendanceCard() {
+    return ValueListenableBuilder<int>(
+      valueListenable: attendanceUpdateNotifier,
+      builder: (context, _, child) {
+        return FutureBuilder<SharedPreferences>(
+          future: SharedPreferences.getInstance(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final prefs = snapshot.data!;
+            final percentStr = prefs.getString('mycamu_attendance_percent');
+            final subjectsStr = prefs.getString('mycamu_subject_attendance');
+            final countStr = prefs.getString('mycamu_attendance_count');
+
+            if (percentStr == null && subjectsStr == null)
+              return const SizedBox.shrink();
+
+            final double percent = double.tryParse(percentStr ?? '0') ?? 0;
+            final theme = Theme.of(context);
+
+            return Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: GlassCard(
+                opacity: 0.1,
+                blur: 20,
+                borderRadius: BorderRadius.circular(16),
+                padding: EdgeInsets.zero,
+                child: InkWell(
+                  onTap: () {
+                    if (subjectsStr != null) {
+                      _showDetailedAttendance(context, subjectsStr);
+                    } else {
+                      // Show attendance count if available
+                      final message = countStr != null
+                          ? 'Classes Attended: $countStr'
+                          : 'No detailed breakdown available. Sync again!';
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              value: percent / 100,
+                              backgroundColor: theme.canvasColor.withOpacity(
+                                0.2,
+                              ),
+                              color: percent < 75
+                                  ? Colors.redAccent
+                                  : Colors.greenAccent,
+                              strokeWidth: 6,
+                            ),
+                            Text(
+                              '${percent.toInt()}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Overall Attendance',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '$percentStr%',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: percent < 75
+                                      ? Colors.redAccent
+                                      : Colors.greenAccent,
+                                  fontSize: 24,
+                                ),
+                              ),
+                              if (countStr != null)
+                                Text(
+                                  '$countStr periods',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.hintColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (subjectsStr != null)
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: theme.hintColor,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showDetailedAttendance(BuildContext context, String subjectsJson) {
+    try {
+      final List<dynamic> subjects = jsonDecode(subjectsJson);
+      final theme = Theme.of(context);
+
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Subject Breakdown',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: subjects.isEmpty ? 0 : subjects.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final sub = subjects[index];
+                    final p = sub['percent'] ?? 0;
+                    final attended = sub['attended'] ?? 0;
+                    final total = sub['total'] ?? 0;
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: theme.dividerColor.withOpacity(0.1),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: (p < 75 ? Colors.red : Colors.green)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$p%',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: p < 75 ? Colors.red : Colors.green,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sub['code'] ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Attended: $attended / $total',
+                                  style: TextStyle(
+                                    color: theme.hintColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      print("Error parsing subjects: $e");
+    }
   }
 }
 
