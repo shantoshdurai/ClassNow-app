@@ -38,6 +38,8 @@ import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/widgets/chatbot_interface.dart';
 import 'package:flutter_firebase_test/services/gemini_service.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   // For Workmanager
@@ -45,6 +47,7 @@ void callbackDispatcher() {
     print("Native called background task: $task");
     try {
       await Firebase.initializeApp();
+      await dotenv.load(fileName: ".env");
       await WidgetService.updateWidget(forceRefresh: true);
     } catch (e) {
       print("Background task failed: $e");
@@ -60,6 +63,7 @@ Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
   if (uri?.host == 'update' || uri?.path == '/update') {
     try {
       await Firebase.initializeApp();
+      await dotenv.load(fileName: ".env");
       await WidgetService.updateWidget(
         forceRefresh: true,
       ); // Added forceRefresh: true
@@ -77,8 +81,11 @@ final attendanceUpdateNotifier = ValueNotifier<int>(0);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Gemini AI chatbot
-  await GeminiService.saveApiKey('AIzaSyCyPtZlTNVzBU30moJHVeRsRu9SUAH2CJg');
+  await dotenv.load(fileName: ".env");
+
+  // Initialize Gemini AI chatbot API key
+  // We no longer hardcode the API key here for security reasons.
+  // The API key should be configured via the ApiKeySetupDialog in the UI.
 
   HomeWidget.registerBackgroundCallback(homeWidgetBackgroundCallback);
 
@@ -542,6 +549,53 @@ class _DashboardPageState extends State<DashboardPage>
         DateTime.now().toIso8601String(),
       );
     }
+  }
+
+  Widget _buildExamModeBanner() {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: GlassCard(
+        blur: 20,
+        opacity: 0.15,
+        borderRadius: BorderRadius.circular(24),
+        padding: const EdgeInsets.all(24),
+        border: Border.all(color: Colors.orange.withOpacity(0.5), width: 2),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.edit_document,
+                size: 48,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Exams are going on!',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Regular classes are temporarily suspended. Best of luck with your exams!',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildRetroDisplayCard() {
@@ -1510,34 +1564,67 @@ class _DashboardPageState extends State<DashboardPage>
                           constraints: BoxConstraints(
                             minHeight: MediaQuery.of(context).size.height - 100,
                           ),
-                          child: Column(
-                            children: [
-                              _buildAttendanceCard(),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: retroDisplayEnabledNotifier,
-                                builder: (context, retroEnabled, child) {
-                                  if (retroEnabled) {
-                                    return Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        16,
-                                        0,
-                                        16,
-                                        20,
-                                      ),
-                                      child: _buildRetroDisplayCard(),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                              _buildDaySelector(),
-                              const SizedBox(height: 10),
-                              _buildClassList(),
-                              if (isAdmin && selectedDay == 'Saturday') ...[
-                                const SizedBox(height: 20),
-                                _MentorSaturdayControlPanel(),
-                              ],
-                            ],
+                          child: StreamBuilder<DocumentSnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('departments')
+                                .doc(userSelection.departmentId)
+                                .collection('years')
+                                .doc(userSelection.yearId)
+                                .collection('settings')
+                                .doc('mode')
+                                .snapshots(),
+                            builder: (context, modeSnapshot) {
+                              bool isExamMode = false;
+                              if (modeSnapshot.hasData &&
+                                  modeSnapshot.data!.exists) {
+                                final data =
+                                    modeSnapshot.data!.data()
+                                        as Map<String, dynamic>?;
+                                isExamMode = data?['isExamMode'] ?? false;
+                              }
+                              return Column(
+                                children: [
+                                  _buildAttendanceCard(),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable:
+                                        retroDisplayEnabledNotifier,
+                                    builder: (context, retroEnabled, child) {
+                                      if (retroEnabled && !isExamMode) {
+                                        return Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            16,
+                                            0,
+                                            16,
+                                            20,
+                                          ),
+                                          child: _buildRetroDisplayCard(),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
+                                  if (isExamMode) ...[
+                                    _buildExamModeBanner(),
+                                  ] else ...[
+                                    _buildDaySelector(),
+                                    const SizedBox(height: 10),
+                                    _buildClassList(),
+                                  ],
+                                  if (isAdmin &&
+                                      selectedDay == 'Saturday' &&
+                                      !isExamMode) ...[
+                                    const SizedBox(height: 20),
+                                    _MentorSaturdayControlPanel(),
+                                  ],
+                                  if (isAdmin) ...[
+                                    const SizedBox(height: 20),
+                                    _MentorExamModeControlPanel(
+                                      isExamMode: isExamMode,
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
                           ),
                         );
                       },
@@ -3318,6 +3405,147 @@ class __MentorSaturdayControlPanelState
                   : const Text(
                       'Apply to Saturday',
                       style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MentorExamModeControlPanel extends StatefulWidget {
+  final bool isExamMode;
+  const _MentorExamModeControlPanel({required this.isExamMode});
+
+  @override
+  __MentorExamModeControlPanelState createState() =>
+      __MentorExamModeControlPanelState();
+}
+
+class __MentorExamModeControlPanelState
+    extends State<_MentorExamModeControlPanel> {
+  bool _isLoading = false;
+
+  Future<void> _toggleExamMode() async {
+    setState(() => _isLoading = true);
+    try {
+      final userSelection = Provider.of<UserSelectionProvider>(
+        context,
+        listen: false,
+      );
+      final docRef = FirebaseFirestore.instance
+          .collection('departments')
+          .doc(userSelection.departmentId)
+          .collection('years')
+          .doc(userSelection.yearId)
+          .collection('settings')
+          .doc('mode');
+
+      await docRef.set({
+        'isExamMode': !widget.isExamMode,
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isExamMode ? 'Exam Mode Disabled!' : 'Exam Mode Enabled!',
+            ),
+            backgroundColor: widget.isExamMode ? Colors.orange : Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      blur: 20,
+      opacity: 0.1,
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (widget.isExamMode ? Colors.red : Colors.green)
+                      .withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.edit_document,
+                  color: widget.isExamMode ? Colors.red : Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Exam Mode Control',
+                style: AppTextStyles.interTitle.copyWith(
+                  fontSize: 18,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.isExamMode
+                ? 'Exam Mode is currently ACTIVE. Regular classes are hidden.'
+                : 'Turn on Exam Mode to suspend regular classes and show the Exam banner.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark
+                  ? Colors.white60
+                  : theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.isExamMode
+                    ? Colors.red
+                    : theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: _isLoading ? null : _toggleExamMode,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      widget.isExamMode
+                          ? 'Disable Exam Mode'
+                          : 'Enable Exam Mode',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
             ),
           ),

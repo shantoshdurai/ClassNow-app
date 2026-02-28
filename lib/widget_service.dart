@@ -7,12 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+@pragma('vm:entry-point')
 class WidgetService {
   static const String _scheduleCacheKey = 'widget_schedule_cache';
   static const String _scheduleCacheUpdateKey = 'widget_schedule_cache_updated';
   static const int _alarmId = 777;
 
   /// entrypoint for background work
+  @pragma('vm:entry-point')
   static Future<void> updateWidget({bool forceRefresh = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {

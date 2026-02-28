@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Service for interacting with Google's Gemini AI via direct HTTP
 class GeminiService {
@@ -16,6 +17,13 @@ class GeminiService {
 
   /// Get stored API key
   static Future<String?> getApiKey() async {
+    // 1. Try to load from .env file first
+    final String? envKey = dotenv.env['GEMINI_API_KEY'];
+    if (envKey != null && envKey.isNotEmpty) {
+      return envKey;
+    }
+
+    // 2. Fallback to Shared Preferences
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_apiKeyPref);
   }
