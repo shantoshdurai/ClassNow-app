@@ -3442,17 +3442,16 @@ class __MentorExamModeControlPanelState
           .collection('settings')
           .doc('mode');
 
-      await docRef.set({
-        'isExamMode': !widget.isExamMode,
-      }, SetOptions(merge: true));
+      final newMode = !widget.isExamMode;
+      await docRef.set({'isExamMode': newMode}, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.isExamMode ? 'Exam Mode Disabled!' : 'Exam Mode Enabled!',
+              newMode ? 'Exam Mode Enabled!' : 'Exam Mode Disabled!',
             ),
-            backgroundColor: widget.isExamMode ? Colors.orange : Colors.green,
+            backgroundColor: newMode ? Colors.green : Colors.orange,
           ),
         );
       }
