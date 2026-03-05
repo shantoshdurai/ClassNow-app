@@ -85,10 +85,22 @@ class ChatbotContextBuilder {
       if (cachedData != null) {
         final decoded = jsonDecode(cachedData);
         if (decoded is List) {
-          return decoded
+          final list = decoded
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
+
+          // Sort by startTime
+          list.sort((a, b) {
+            try {
+              return (a['startTime'] as String).compareTo(
+                b['startTime'] as String,
+              );
+            } catch (e) {
+              return 0;
+            }
+          });
+          return list;
         }
       }
 
@@ -108,9 +120,21 @@ class ChatbotContextBuilder {
             .collection('schedule')
             .get();
 
-        return snapshot.docs
+        final list = snapshot.docs
             .map((doc) => {'id': doc.id, ...doc.data()})
             .toList();
+
+        // Sort by startTime for all subsequent logic
+        list.sort((a, b) {
+          try {
+            return (a['startTime'] as String).compareTo(
+              b['startTime'] as String,
+            );
+          } catch (e) {
+            return 0;
+          }
+        });
+        return list;
       }
     } catch (e) {
       print('Error fetching schedule data: $e');
@@ -174,7 +198,18 @@ class ChatbotContextBuilder {
     final tomorrow = DateFormat(
       'EEEE',
     ).format(now.add(const Duration(days: 1)));
-    for (var classData in scheduleData) {
+
+    // Sort schedule data by time to ensure we pick the EARLIEST tomorrow
+    final sortedSchedule = List<Map<String, dynamic>>.from(scheduleData);
+    sortedSchedule.sort((a, b) {
+      try {
+        return (a['startTime'] as String).compareTo(b['startTime'] as String);
+      } catch (e) {
+        return 0;
+      }
+    });
+
+    for (var classData in sortedSchedule) {
       final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
       if (dayOfWeek == tomorrow) {
         return classData;
@@ -313,6 +348,9 @@ class ChatbotContextBuilder {
     );
     buffer.writeln(
       '- You have access to the ENTIRE university database, including ALL staff schedules across all departments and sections.',
+    );
+    buffer.writeln(
+      '- IMPORTANT: Always acknowledge the user\'s section (e.g. "As a student of $sectionId...") when they ask about their own schedule.',
     );
 
     buffer.writeln('');
