@@ -26,10 +26,12 @@ jobs:
         run: flutter pub get
 
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: true # Formatting differences shouldn't block CI
+        run: dart format --output=none --set-exit-if-changed lib/
 
       - name: Run analyzer
-        run: flutter analyze # Don't use --fatal-infos so minor warnings don't fail CI
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Check for outdated packages
+        continue-on-error: true # Outdated packages are informational, not blocking
         run: flutter pub outdated

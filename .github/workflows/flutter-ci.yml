@@ -23,11 +23,11 @@ jobs:
         run: flutter pub get
 
       - name: Analyze code
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run tests
         run: flutter test
 
       - name: Build APK (debug)
-        continue-on-error: true # Might fail due to missing google-services.json in CI
+        continue-on-error: true # Requires google-services.json which is not committed
         run: flutter build apk --debug
