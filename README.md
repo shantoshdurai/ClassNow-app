@@ -4,6 +4,12 @@
 
 An offline-first Flutter app that keeps you synchronized with your academic schedule. Featuring intelligent notifications, AI-powered queries, and beautiful home screen widgets.
 
+## 🚀 Latest Updates (March 2026)
+- **📅 Timetable 24-25 Live**: Successfully migrated and imported the complete timetable for all sections (A1-A5 & B1-B5) into the 2024 academic year.
+- **🤖 Chatbot Intelligence**: Upgraded the DSU AI Assistant with **chronological sorting** for "Next Class" queries and **Section Awareness** to provide personalized schedule info.
+- **🛠️ Firebase Tooling**: Integrated a direct-to-cloud upload system (`tool/direct_upload.py`) for lightning-fast database updates bypassing the emulator.
+- **🧹 Database Optimization**: Cleaned up duplicate "2nd-year" records and standardized the Firestore hierarchy for future scalability.
+
 ## ✨ Features
 - **Smart Dashboard:** Automatically highlights current and next class.
 - **Interactive Widgets:** Check your schedule directly from the home screen.
