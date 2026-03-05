@@ -17,8 +17,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'static_widget.dart';
-import 'notification_service.dart';
+import '../../static_widget.dart';
+import '../../notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +54,7 @@ class AnimationConstants {
   static const Duration normal = Duration(milliseconds: 300);
   static const Duration slow = Duration(milliseconds: 500);
   static const Duration verySlow = Duration(milliseconds: 800);
-  
+
   static const Curve easeOut = Curves.easeOutCubic;
   static const Curve easeIn = Curves.easeInCubic;
   static const Curve elastic = Curves.elasticOut;
@@ -71,49 +71,49 @@ class AppTextStyles {
     fontWeight: FontWeight.w700,
     letterSpacing: -0.5,
   );
-  
+
   static TextStyle get interSubtitle => GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.2,
   );
-  
+
   static TextStyle get interBadge => GoogleFonts.inter(
     fontSize: 11,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.3,
   );
-  
+
   static TextStyle get interLiveNow => GoogleFonts.inter(
     fontSize: 10,
     fontWeight: FontWeight.w700,
     letterSpacing: 1.2,
   );
-  
+
   static TextStyle get interSubject => GoogleFonts.inter(
     fontSize: 22,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
   );
-  
+
   static TextStyle get interProgress => GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
   );
-  
+
   static TextStyle get interMentor => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
   );
-  
+
   static TextStyle get interNext => GoogleFonts.inter(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
   );
-  
+
   static TextStyle get interSmall => GoogleFonts.inter(
     fontSize: 13,
     fontWeight: FontWeight.w400,
@@ -127,14 +127,14 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       print('🔄 Background widget update task started: $task');
-      
+
       await Firebase.initializeApp();
-      
+
       final prefs = await SharedPreferences.getInstance();
       final departmentId = prefs.getString('departmentId');
       final yearId = prefs.getString('yearId');
       final sectionId = prefs.getString('sectionId');
-      
+
       if (departmentId != null && yearId != null && sectionId != null) {
         final snapshot = await FirebaseFirestore.instance
             .collection('departments')
@@ -146,39 +146,43 @@ void callbackDispatcher() {
             .collection('schedule')
             .orderBy('startTime')
             .get();
-        
-        final scheduleData = snapshot.docs.map((doc) => Map<String, dynamic>.from(doc.data())).toList();
-        
+
+        final scheduleData = snapshot.docs
+            .map((doc) => Map<String, dynamic>.from(doc.data()))
+            .toList();
+
         final now = DateTime.now();
         final currentTime = DateFormat('HH:mm').format(now);
         final currentDay = DateFormat('EEEE').format(now);
-        
+
         Map<String, dynamic>? currentClass;
         Map<String, dynamic>? nextClass;
         String? timeRemaining;
         double progress = 0.0;
-        
+
         for (var i = 0; i < scheduleData.length; i++) {
           final classData = scheduleData[i];
           final startTime = classData['startTime'] as String;
           final endTime = classData['endTime'] as String;
-          final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
+          final dayOfWeek =
+              (classData['day'] ?? classData['dayOfWeek']) as String?;
           if (dayOfWeek == null) continue;
-          
+
           if (dayOfWeek == currentDay) {
             final start = DateFormat('HH:mm').parse(startTime);
             final end = DateFormat('HH:mm').parse(endTime);
             final current = DateFormat('HH:mm').parse(currentTime);
-            
+
             if (current.isAfter(start) && current.isBefore(end)) {
               currentClass = classData;
               final totalMinutes = end.difference(start).inMinutes;
               final elapsedMinutes = current.difference(start).inMinutes;
               progress = elapsedMinutes / totalMinutes;
-              
+
               final remaining = end.difference(current);
               if (remaining.inHours > 0) {
-                timeRemaining = '${remaining.inHours}h ${remaining.inMinutes % 60}m';
+                timeRemaining =
+                    '${remaining.inHours}h ${remaining.inMinutes % 60}m';
               } else {
                 timeRemaining = '${remaining.inMinutes}m';
               }
@@ -189,7 +193,7 @@ void callbackDispatcher() {
             }
           }
         }
-        
+
         await HomeWidget.renderFlutterWidget(
           StaticTimetableWidget(
             currentClass: currentClass,
@@ -202,17 +206,15 @@ void callbackDispatcher() {
         );
 
         await HomeWidget.renderFlutterWidget(
-          SmallRobotWidget(
-            currentClass: currentClass,
-            nextClass: nextClass,
-          ),
+          SmallRobotWidget(currentClass: currentClass, nextClass: nextClass),
           key: 'robot_widget',
           logicalSize: const Size(160, 160),
         );
 
         await HomeWidget.updateWidget(
           name: 'TimetableWidgetProvider',
-          androidName: 'com.example.flutter_firebase_test.TimetableWidgetProvider',
+          androidName:
+              'com.example.flutter_firebase_test.TimetableWidgetProvider',
           iOSName: 'TimetableWidget',
         );
 
@@ -221,10 +223,10 @@ void callbackDispatcher() {
           androidName: 'com.example.flutter_firebase_test.RobotWidgetProvider',
           iOSName: 'RobotWidget',
         );
-        
+
         print('✅ Background widget update completed successfully');
       }
-      
+
       return Future.value(true);
     } catch (e) {
       print('❌ Background widget update failed: $e');
@@ -235,9 +237,9 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Workmanager().initialize(callbackDispatcher);
-  
+
   await Workmanager().registerPeriodicTask(
     "widgetUpdate",
     "widgetUpdateTask",
@@ -248,9 +250,11 @@ void main() async {
       requiresDeviceIdle: false,
     ),
   );
-  
+
   await Firebase.initializeApp();
-  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
   try {
     if (FirebaseAuth.instance.currentUser == null) {
       await FirebaseAuth.instance.signInAnonymously();
@@ -313,16 +317,15 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> 
+class _DashboardPageState extends State<DashboardPage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  
   String selectedDay = DateFormat('EEEE').format(DateTime.now());
   bool isAdmin = false;
   bool notificationsEnabled = true;
   bool widgetsEnabled = true;
   bool retroDisplayEnabled = true;
   bool isOnline = true;
-  
+
   Timer? _connectivityTimer;
   Timer? _widgetUpdateTimer;
   Timer? _notificationTimer;
@@ -332,18 +335,20 @@ class _DashboardPageState extends State<DashboardPage>
   String? _scheduleCacheKey;
   List<Map<String, dynamic>> _cachedSchedule = [];
   DateTime? _cachedScheduleUpdatedAt;
-  
+
   // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _scaleController;
-  
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
 
   List<_ScheduleItem> _itemsFromMaps(List<Map<String, dynamic>> all) {
-    return all.map((e) => _ScheduleItem(data: Map<String, dynamic>.from(e))).toList();
+    return all
+        .map((e) => _ScheduleItem(data: Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   final List<String> weekDays = [
@@ -359,45 +364,52 @@ class _DashboardPageState extends State<DashboardPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Initialize animation controllers
     _fadeController = AnimationController(
       vsync: this,
       duration: AnimationConstants.slow,
     );
-    
+
     _slideController = AnimationController(
       vsync: this,
       duration: AnimationConstants.normal,
     );
-    
+
     _scaleController = AnimationController(
       vsync: this,
       duration: AnimationConstants.normal,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: AnimationConstants.easeOut),
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: AnimationConstants.easeOut,
+      ),
     );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _slideController, curve: AnimationConstants.easeOut),
-    );
-    
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: AnimationConstants.easeOut,
+          ),
+        );
+
     _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: AnimationConstants.easeOut),
+      CurvedAnimation(
+        parent: _scaleController,
+        curve: AnimationConstants.easeOut,
+      ),
     );
-    
+
     // Start animations
     _fadeController.forward();
     _slideController.forward();
     _scaleController.forward();
-    
+
     print('🚀 DashboardPage initState - Setting up timers and observers');
-    
+
     _loadSettings().then((_) {
       if (!mounted) return;
       if (widgetsEnabled) {
@@ -425,40 +437,44 @@ class _DashboardPageState extends State<DashboardPage>
   void dispose() {
     print('🗑️ DashboardPage dispose - Canceling all timers and animations');
     WidgetsBinding.instance.removeObserver(this);
-    
+
     // Dispose animation controllers
     _fadeController.dispose();
     _slideController.dispose();
     _scaleController.dispose();
-    
+
     // Cancel all timers to prevent memory leaks
     _connectivityTimer?.cancel();
     _widgetUpdateTimer?.cancel();
     _notificationTimer?.cancel();
     _duringClassTimer?.cancel();
     _classScheduleTimer?.cancel();
-    
+
     super.dispose();
   }
 
   void _startConnectivityMonitoring() {
     print('🌐 Starting connectivity monitoring');
     _connectivityTimer?.cancel();
-    _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 30), (
+      timer,
+    ) async {
       if (!mounted) {
         timer.cancel();
         return;
       }
       await _checkConnectivity();
     });
-    
+
     _checkConnectivity();
   }
-  
+
   void _startWidgetUpdateTimer() {
     print('⏰ Starting widget update timer (every 1 minute)');
     _widgetUpdateTimer?.cancel();
-    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+    _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 1), (
+      timer,
+    ) async {
       if (!mounted) {
         timer.cancel();
         return;
@@ -469,36 +485,47 @@ class _DashboardPageState extends State<DashboardPage>
       }
     });
   }
-  
+
   void _scheduleNextClassUpdate() {
     print('📅 Scheduling next class update');
     _classScheduleTimer?.cancel();
-    
+
     final now = DateTime.now();
     DateTime? nextUpdateTime;
-    
+
     for (var classData in _cachedSchedule) {
       final startTime = DateFormat('HH:mm').parse(classData['startTime']);
       final endTime = DateFormat('HH:mm').parse(classData['endTime']);
       final dayOfWeek = (classData['day'] ?? classData['dayOfWeek']) as String?;
-      
+
       if (dayOfWeek == DateFormat('EEEE', 'en_US').format(now)) {
-        final startDateTime = DateTime(now.year, now.month, now.day, 
-                                       startTime.hour, startTime.minute);
-        final endDateTime = DateTime(now.year, now.month, now.day, 
-                                     endTime.hour, endTime.minute);
-        
-        if (startDateTime.isAfter(now) && 
-            (nextUpdateTime == null || startDateTime.isBefore(nextUpdateTime))) {
+        final startDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          startTime.hour,
+          startTime.minute,
+        );
+        final endDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          endTime.hour,
+          endTime.minute,
+        );
+
+        if (startDateTime.isAfter(now) &&
+            (nextUpdateTime == null ||
+                startDateTime.isBefore(nextUpdateTime))) {
           nextUpdateTime = startDateTime;
         }
-        if (endDateTime.isAfter(now) && 
+        if (endDateTime.isAfter(now) &&
             (nextUpdateTime == null || endDateTime.isBefore(nextUpdateTime))) {
           nextUpdateTime = endDateTime;
         }
       }
     }
-    
+
     if (nextUpdateTime != null) {
       final delay = nextUpdateTime.difference(now);
       print('⏰ Next class update scheduled in: ${delay.inMinutes} minutes');
@@ -512,9 +539,15 @@ class _DashboardPageState extends State<DashboardPage>
     } else {
       print('📅 No more classes today, scheduling for tomorrow');
       final tomorrow = now.add(const Duration(days: 1));
-      final tomorrowMorning = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 6, 0);
+      final tomorrowMorning = DateTime(
+        tomorrow.year,
+        tomorrow.month,
+        tomorrow.day,
+        6,
+        0,
+      );
       final delay = tomorrowMorning.difference(now);
-      
+
       _classScheduleTimer = Timer(delay, () {
         if (mounted && widgetsEnabled) {
           print('🌅 Morning widget update triggered');
@@ -529,7 +562,7 @@ class _DashboardPageState extends State<DashboardPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     print('🔄 App lifecycle state changed to: $state');
-    
+
     if (state == AppLifecycleState.resumed) {
       print('📱 App resumed - updating widgets and reloading settings');
       _loadSettings();
@@ -537,7 +570,7 @@ class _DashboardPageState extends State<DashboardPage>
         _updateHomeScreenWidget();
       }
       _scheduleNextClassUpdate();
-      
+
       // Replay animations on resume for smooth effect
       _fadeController.forward(from: 0.7);
       _scaleController.forward(from: 0.95);
@@ -546,19 +579,19 @@ class _DashboardPageState extends State<DashboardPage>
 
   Future<void> _checkConnectivity() async {
     bool wasOnline = isOnline;
-    
+
     try {
       await FirebaseFirestore.instance
           .collection('announcements')
           .limit(1)
           .get(const GetOptions(source: Source.server));
-      
+
       if (mounted) {
         setState(() {
           isOnline = true;
         });
       }
-      
+
       if (!wasOnline && mounted) {
         await NotificationService.refreshNotificationsWhenOnline();
         if (widgetsEnabled) {
@@ -570,7 +603,6 @@ class _DashboardPageState extends State<DashboardPage>
           color: Colors.green,
         );
       }
-      
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -578,13 +610,11 @@ class _DashboardPageState extends State<DashboardPage>
         });
       }
 
-      if (wasOnline && mounted) {
-        _showAnimatedSnackBar(
-          'You're offline. Showing saved timetable.',
-          icon: Icons.cloud_off,
-          color: Colors.orange,
-        );
-      }
+      _showAnimatedSnackBar(
+        "You're offline. Showing saved timetable.",
+        icon: Icons.cloud_off,
+        color: Colors.orange,
+      );
     }
   }
 
@@ -626,40 +656,47 @@ class _DashboardPageState extends State<DashboardPage>
 
     final decoded = jsonDecode(raw);
     final list = (decoded is List)
-        ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
+        ? decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
         : <Map<String, dynamic>>[];
 
     setState(() {
       _scheduleCacheKey = cacheKey;
       _cachedSchedule = list;
-      _cachedScheduleUpdatedAt = updatedRaw != null ? DateTime.tryParse(updatedRaw) : null;
+      _cachedScheduleUpdatedAt = updatedRaw != null
+          ? DateTime.tryParse(updatedRaw)
+          : null;
     });
   }
 
-  Future<void> _saveScheduleCache(String cacheKey, List<QueryDocumentSnapshot> docs, {required bool fromServer}) async {
+  Future<void> _saveScheduleCache(
+    String cacheKey,
+    List<QueryDocumentSnapshot> docs, {
+    required bool fromServer,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final payload = docs
-        .map((d) {
-          final data = d.data() as Map<String, dynamic>;
-          return {
-            'id': d.id,
-            ...data,
-          };
-        })
-        .toList();
+    final payload = docs.map((d) {
+      final data = d.data() as Map<String, dynamic>;
+      return {'id': d.id, ...data};
+    }).toList();
     await prefs.setString(cacheKey, jsonEncode(payload));
     if (fromServer) {
-      await prefs.setString('${cacheKey}_updatedAt', DateTime.now().toIso8601String());
+      await prefs.setString(
+        '${cacheKey}_updatedAt',
+        DateTime.now().toIso8601String(),
+      );
     }
   }
 
   // REST OF THE CODE CONTINUES...
   // (Due to length constraints, I'll provide the key enhanced widgets)
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       // Animated background gradient
       body: Container(
@@ -678,7 +715,7 @@ class _DashboardPageState extends State<DashboardPage>
           slivers: [
             // Animated App Bar
             _buildAnimatedAppBar(theme),
-            
+
             // Retro Display
             if (retroDisplayEnabled)
               SliverToBoxAdapter(
@@ -690,7 +727,7 @@ class _DashboardPageState extends State<DashboardPage>
                   ),
                 ),
               ),
-            
+
             // Day Selector
             SliverToBoxAdapter(
               child: FadeTransition(
@@ -698,15 +735,15 @@ class _DashboardPageState extends State<DashboardPage>
                 child: _buildDaySelector(),
               ),
             ),
-            
+
             // Class List
             _buildAnimatedClassList(),
-            
+
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
-      
+
       // Animated FAB
       floatingActionButton: ScaleTransition(
         scale: _scaleAnimation,
@@ -755,7 +792,10 @@ class _DashboardPageState extends State<DashboardPage>
                     const SizedBox(width: 8),
                     AnimatedContainer(
                       duration: AnimationConstants.normal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
@@ -778,10 +818,7 @@ class _DashboardPageState extends State<DashboardPage>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                theme.primaryColor,
-                theme.primaryColor.withOpacity(0.8),
-              ],
+              colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
             ),
           ),
         ),
@@ -803,10 +840,7 @@ class _DashboardPageState extends State<DashboardPage>
           tooltip: "Settings",
           icon: const Icon(Icons.settings, color: Colors.white),
           onPressed: () {
-            Navigator.push(
-              context,
-              _createSlideRoute(const SettingsPage()),
-            );
+            Navigator.push(context, _createSlideRoute(const SettingsPage()));
           },
         ),
         AnimatedSwitcher(
@@ -818,7 +852,9 @@ class _DashboardPageState extends State<DashboardPage>
             key: ValueKey(notificationsEnabled),
             tooltip: "Notifications",
             icon: Icon(
-              notificationsEnabled ? Icons.notifications_active : Icons.notifications_off,
+              notificationsEnabled
+                  ? Icons.notifications_active
+                  : Icons.notifications_off,
               color: Colors.white,
             ),
             onPressed: () {}, // Your notification toggle logic
@@ -830,7 +866,9 @@ class _DashboardPageState extends State<DashboardPage>
 
   Widget _buildAnimatedFAB(ThemeData theme) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('announcements').snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('announcements')
+          .snapshots(),
       builder: (context, snapshot) {
         final hasNew = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
         return FloatingActionButton.extended(
@@ -892,10 +930,7 @@ class _DashboardPageState extends State<DashboardPage>
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
-                  ),
+                  child: Opacity(opacity: value, child: child),
                 );
               },
               child: _buildClassCard(index),
@@ -916,9 +951,7 @@ class _DashboardPageState extends State<DashboardPage>
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: theme.dividerColor.withOpacity(0.2),
-          ),
+          side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
         ),
         child: InkWell(
           onTap: () {
@@ -930,10 +963,7 @@ class _DashboardPageState extends State<DashboardPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sample Class $index',
-                  style: AppTextStyles.interNext,
-                ),
+                Text('Sample Class $index', style: AppTextStyles.interNext),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -964,44 +994,42 @@ class _DashboardPageState extends State<DashboardPage>
         const end = Offset.zero;
         const curve = Curves.easeInOutCubic;
 
-        var tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
 
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
+        return SlideTransition(position: animation.drive(tween), child: child);
       },
     );
   }
 
   // Add all your other existing methods here...
   // (connectivity, widget updates, etc.)
-  
+
   Widget _buildRetroDisplayCard() {
     // Your existing implementation
     return Container();
   }
-  
+
   Widget _buildDaySelector() {
     // Your existing implementation with enhanced animations
     return Container();
   }
-  
+
   String? _getCurrentClassInfo() {
     // Your existing implementation
     return null;
   }
-  
+
   Future<void> _loadSettings() async {
     // Your existing implementation
   }
-  
+
   Future<void> _updateHomeScreenWidget() async {
     // Your existing implementation
   }
-  
+
   Future<void> _checkAdminStatus(User user) async {
     // Your existing implementation
   }
