@@ -66,3 +66,14 @@ An offline-first Flutter app that keeps you synchronized with your academic sche
 ## 🤝 Contributing
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started.
 
+
+## 🏆 Achievements
+
+- Built with Flutter & Firebase
+- AI-powered chatbot using Gemini API
+- Supports 2024 academic timetable for DSU
+- Available for Android & iOS
+
+## 📄 License
+
+MIT License — feel free to use and contribute!
