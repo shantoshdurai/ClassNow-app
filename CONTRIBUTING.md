@@ -35,3 +35,12 @@ Thank you for your interest in contributing to Class Now! We welcome contributio
 If you find a bug or have a feature request, please open an issue in the repository.
 
 Thank you for contributing!
+
+
+## 🛡️ Code of Conduct
+
+Please be respectful and inclusive. We follow the [Contributor Covenant](https://www.contributor-covenant.org/) code of conduct.
+
+## 📬 Contact
+
+For questions, open an issue or reach out via the Discussions tab.
