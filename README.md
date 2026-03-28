@@ -1,79 +1,112 @@
-# Class Now 📱
+<h1 align="center">ClassNow</h1>
 
-**The Smart Timetable Assistant.**
+<p align="center">
+  <b>AI-powered university class management app</b><br/>
+  Built with Flutter · Firebase · Gemini API
+</p>
 
-An offline-first Flutter app that keeps you synchronized with your academic schedule. Featuring intelligent notifications, AI-powered queries, and beautiful home screen widgets.
-
-## 🚀 Latest Updates (March 2026)
-- **📅 Timetable 24-25 Live**: Successfully migrated and imported the complete timetable for all sections (A1-A5 & B1-B5) into the 2024 academic year.
-- **🤖 Chatbot Intelligence**: Upgraded the DSU AI Assistant with **chronological sorting** for "Next Class" queries and **Section Awareness** to provide personalized schedule info.
-- **🛠️ Firebase Tooling**: Integrated a direct-to-cloud upload system (`tool/direct_upload.py`) for lightning-fast database updates bypassing the emulator.
-- **🧹 Database Optimization**: Cleaned up duplicate "2nd-year" records and standardized the Firestore hierarchy for future scalability.
-
-## ✨ Features
-- **Smart Dashboard:** Automatically highlights current and next class.
-- **Interactive Widgets:** Check your schedule directly from the home screen.
-- **Timely Alerts:** Customizable notifications before every class.
-- **AI Chatbot:** Ask "Where is my next class?" and get instant answers.
-- **OLED Dark Mode:** Battery-saving true black interface.
-
-
-## 📸 Gallery
+<p align="center">
+  <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black"/>
+  <img src="https://img.shields.io/badge/Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge"/>
+</p>
 
 <p align="center">
   <img src="lib/screens/github_images/features%20of%20the%20app.png" width="22%" />
-  <img src="lib/screens/github_images/Ai%20Chat.png" width="22%" />
+  <img src="lib/screens/github_images/AI%20Chat.png" width="22%" />
   <img src="lib/screens/github_images/great%20customization.png" width="22%" />
   <img src="lib/screens/github_images/mentors%20section.png" width="22%" />
 </p>
 
+---
+
+## What is ClassNow?
+
+ClassNow is a full-stack Flutter application that solves a real problem for university students — never missing a class or losing track of schedules. It combines real-time Firebase sync, a Gemini-powered AI chatbot, home screen widgets, and a mentor portal into one polished app.
+
+Built and actively used at DSU (Dayananda Sagar University) with real student timetable data.
+
+---
+
+## Features
+
+- **Smart Dashboard** — auto-highlights your current and next class in real time
+- **AI Chatbot** — ask "Where is my next class?" and get an instant, context-aware answer powered by Gemini API
+- **Home Screen Widgets** — check your schedule without opening the app
+- **Push Notifications** — customizable alerts before each class starts
+- **Mentor Portal** — separate login for mentors to manage and broadcast timetable updates
+- **Offline-First** — works without internet using local caching
+- **OLED Dark Mode** — true black UI for battery efficiency
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Flutter (Dart) |
+| Backend | Firebase Firestore, Firebase Auth |
+| AI | Google Gemini API |
+| Notifications | Firebase Cloud Messaging |
+| State Management | Provider |
+| CI/CD | GitHub Actions |
+| Platform | Android, iOS |
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Flutter SDK 3.x
+- Firebase project with Firestore and Auth enabled
+- Gemini API key
+
+### Setup
+
+```bash
+git clone https://github.com/shantoshdurai/ClassNow-app.git
+cd ClassNow-app
+flutter pub get
+```
+
+Add your `google-services.json` to `android/app/` and configure your Gemini API key.
+
+```bash
+flutter run
+```
+
+---
+
+## Project Structure
+
+```
+lib/
+├── screens/       # All UI screens
+├── services/      # Firebase, Gemini API, notification logic
+├── widgets/       # Reusable UI components & home screen widgets
+├── providers/     # State management
+└── main.dart      # Entry point
+```
+
+---
+
+## Scan to Download
+
 <p align="center">
-  <b>Scan to Download</b><br>
-  <img src="lib/screens/github_images/app%20qr%20code.png" width="200" />
+  <img src="lib/screens/github_images/app%20qr%20code.png" width="180"/>
 </p>
 
-## 📂 Project Structure
+---
 
-- **lib/screens/**: Contains all the UI screens like Onboarding, Sync, etc.
-- **lib/services/**: Backend logic and helper functions.
-- **lib/widgets/**: Reusable UI components.
-- **lib/providers/**: State management classes.
-- **lib/main.dart**: Application entry point.
+## Built By
 
-## 🚀 Quick Start
-1.  **Clone Repo**:
-    ```bash
-    git clone https://github.com/shantoshdurai/Timewise-app.git
-    cd flutter_firebase_test
-    ```
+**Santosh Durai** — CS Student at DSU, Tamil Nadu
+[GitHub](https://github.com/shantoshdurai) · [LinkedIn](https://linkedin.com/in/shantoshdurai)
 
-2.  **Install Dependencies**:
-    ```bash
-    flutter pub get
-    ```
+---
 
-3.  **Firebase Setup**: Place your `google-services.json` in `android/app/`.
+## License
 
-4.  **Run**:
-    ```bash
-    flutter run
-    ```
-
-## 🛠️ Troubleshooting
-- **Widgets not updating?** Enable Autostart and remove Battery Restrictions.
-- **Crash on launch?** Verify `google-services.json` is present.
-
-## 🤝 Contributing
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started.
-
-
-## 🏆 Achievements
-
-- Built with Flutter & Firebase
-- AI-powered chatbot using Gemini API
-- Supports 2024 academic timetable for DSU
-- Available for Android & iOS
-
-## 📄 License
-
-MIT License — feel free to use and contribute!
+MIT License — free to use and contribute.
