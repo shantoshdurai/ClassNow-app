@@ -26,19 +26,22 @@
 
 ClassNow is a full-stack Flutter application that solves a real problem for university students — never missing a class or losing track of schedules. It combines real-time Firebase sync, a Gemini-powered AI chatbot, home screen widgets, and a mentor portal into one polished app.
 
-Built and actively used at DSU (Dayananda Sagar University) with real student timetable data.
+Built and actively used at **Dhanalakshmi Srinivasan University, Trichy** with real student timetable data for 500+ students.
 
 ---
 
 ## Features
 
-- **Smart Dashboard** — auto-highlights your current and next class in real time
-- **AI Chatbot** — ask "Where is my next class?" and get an instant, context-aware answer powered by Gemini API
-- **Home Screen Widgets** — check your schedule without opening the app
-- **Push Notifications** — customizable alerts before each class starts
-- **Mentor Portal** — separate login for mentors to manage and broadcast timetable updates
-- **Offline-First** — works without internet using local caching
-- **OLED Dark Mode** — true black UI for battery efficiency
+| Feature | Description |
+|---|---|
+| **Smart Dashboard** | Auto-highlights your current and next class in real time |
+| **AI Chatbot** | Ask "Where is my next class?" and get an instant, section-aware answer powered by Gemini API |
+| **Home Screen Widgets** | Native Android widgets to check your schedule without opening the app |
+| **Intelligent Notifications** | Customizable class reminders with background scheduling via WorkManager |
+| **Offline-First** | Full Firestore offline persistence — works without internet after initial sync |
+| **Mentor Portal** | Separate login for mentors to manage and broadcast timetable updates |
+| **MyCamu Sync** | One-tap onboarding that syncs student section and year data |
+| **OLED Dark Mode** | True black UI for battery efficiency on AMOLED displays |
 
 ---
 
@@ -46,49 +49,111 @@ Built and actively used at DSU (Dayananda Sagar University) with real student ti
 
 | Layer | Technology |
 |---|---|
-| Frontend | Flutter (Dart) |
-| Backend | Firebase Firestore, Firebase Auth |
-| AI | Google Gemini API |
-| Notifications | Firebase Cloud Messaging |
-| State Management | Provider |
-| CI/CD | GitHub Actions |
-| Platform | Android, iOS |
+| **Framework** | Flutter (Dart) |
+| **Backend** | Firebase (Firestore, Auth, Cloud Functions) |
+| **AI/ML** | Google Gemini API via `google_generative_ai` |
+| **State Management** | Provider |
+| **Notifications** | `flutter_local_notifications` + `android_alarm_manager_plus` + `workmanager` |
+| **Widgets** | `home_widget` (native Android home screen widgets) |
+| **Networking** | `connectivity_plus` for online/offline detection |
+| **CI/CD** | GitHub Actions (build, test, lint, format) |
+
+---
+
+## Architecture
+
+```
+lib/
+├── main.dart                  # App entry point, Firebase init, theme setup
+├── screens/                   # UI screens (onboarding, sync, privacy, etc.)
+├── services/
+│   ├── gemini_service.dart        # Gemini API integration
+│   ├── chatbot_context_builder.dart # Dynamic prompt engineering with live timetable data
+│   ├── seed_data.dart             # Firestore data seeding
+│   └── diagnose_firestore.dart    # Debug utility for Firestore state
+├── providers/                 # State management (user selection, preferences)
+├── widgets/
+│   ├── chatbot_interface.dart     # Full chat UI with markdown rendering
+│   ├── glass_widgets.dart         # Glassmorphism UI components
+│   ├── skeleton_loader.dart       # Shimmer loading states
+│   └── class_selection_widget.dart
+├── notification_service.dart  # Local notification scheduling engine
+├── widget_service.dart        # Home screen widget data bridge
+└── theme_provider.dart        # Dynamic theming (light/dark/OLED)
+```
+
+---
+
+## How the AI Chatbot Works
+
+The chatbot is the most technically complex feature. Here's the pipeline:
+
+1. **Context Building** (`chatbot_context_builder.dart`) — Dynamically constructs a prompt that includes the student's section, current day/time, full timetable, and campus knowledge base.
+2. **Gemini Integration** (`gemini_service.dart`) — Sends the assembled context + user query to Google's Gemini API.
+3. **Response Rendering** (`chatbot_interface.dart`) — Displays AI responses with full Markdown support (bold, lists, code blocks).
+
+The chatbot is **section-aware** (A1–A5 & B1–B5), **time-aware** (knows what "next class" means relative to now), and includes **campus-specific knowledge** (hostel locations, cafes, blocks).
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- Flutter SDK 3.x
+- Flutter SDK `>=3.10.7`
 - Firebase project with Firestore and Auth enabled
-- Gemini API key
+- Google Gemini API key
 
 ### Setup
 
 ```bash
-git clone https://github.com/shantoshdurai/ClassNow-app.git
-cd ClassNow-app
+git clone https://github.com/shantoshdurai/Timewise-app.git
+cd flutter_firebase_test
 flutter pub get
 ```
 
-Add your `google-services.json` to `android/app/` and configure your Gemini API key.
+1. Place your `google-services.json` in `android/app/`
+2. Create a `.env` file in the project root with your Gemini API key:
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
+3. Run:
+   ```bash
+   flutter run
+   ```
 
-```bash
-flutter run
+---
+
+## CI/CD
+
+The project includes automated GitHub Actions workflows:
+
+- **Flutter CI** — Builds the APK, runs tests, checks formatting and static analysis on every push/PR
+- **Code Quality** — Runs `dart analyze` with strict rules
+- **Stale Bot** — Automatically manages stale issues and PRs
+
+---
+
+## Database Schema
+
+Firestore is structured for multi-year, multi-section scalability:
+
+```
+timetable/
+└── {year}/
+    └── {section}/
+        └── {day}/
+            └── periods: [{ subject, time, room, faculty }]
 ```
 
 ---
 
-## Project Structure
+## Troubleshooting
 
-```
-lib/
-├── screens/       # All UI screens
-├── services/      # Firebase, Gemini API, notification logic
-├── widgets/       # Reusable UI components & home screen widgets
-├── providers/     # State management
-└── main.dart      # Entry point
-```
+| Problem | Solution |
+|---|---|
+| Widgets not updating | Enable Autostart and disable Battery Optimization for the app |
+| Crash on launch | Verify `google-services.json` is in `android/app/` |
+| Chatbot not responding | Check that your Gemini API key is valid in `.env` |
 
 ---
 
@@ -97,6 +162,12 @@ lib/
 <p align="center">
   <img src="lib/screens/github_images/app%20qr%20code.png" width="180"/>
 </p>
+
+---
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
