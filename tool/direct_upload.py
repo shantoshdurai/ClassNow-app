@@ -1,8 +1,10 @@
 import json
 import requests
 
-PROJECT_ID = "studio-4155999944-16272"
-API_KEY = "AIzaSyD1-EdouHHKdVb9PsgoX4vwM_HHvW3Won0"
+import os
+
+PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "your-project-id")
+API_KEY = os.environ.get("FIREBASE_API_KEY", "your-api-key")
 
 # Firestore REST API base
 BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
