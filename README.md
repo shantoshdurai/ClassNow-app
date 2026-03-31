@@ -14,10 +14,9 @@
 </p>
 
 <p align="center">
-  <img src="lib/screens/github_images/features%20of%20the%20app.png" width="22%" />
-  <img src="lib/screens/github_images/AI%20Chat.png" width="22%" />
-  <img src="lib/screens/github_images/great%20customization.png" width="22%" />
-  <img src="lib/screens/github_images/mentors%20section.png" width="22%" />
+  <img src="lib/screens/github_images/features%20of%20the%20app.png" width="30%" />
+  <img src="lib/screens/github_images/great%20customization.png" width="30%" />
+  <img src="lib/screens/github_images/mentors%20section.png" width="30%" />
 </p>
 
 ---
@@ -160,7 +159,7 @@ timetable/
 ## Scan to Download
 
 <p align="center">
-  <img src="lib/screens/github_images/app%20qr%20code.png" width="180"/>
+  <img src="lib/screens/github_images/SCAN_IMAGE.jpeg" width="250"/>
 </p>
 
 ---
