@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ClassNow · Redesign (Print)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:"Inter",system-ui,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  *{box-sizing:border-box}
+  .page-block{padding:48px 32px;page-break-after:always;break-after:page}
+  .page-block:last-child{page-break-after:auto;break-after:auto}
+  .hero h1{font-family:"Fraunces",Georgia,serif;font-size:44px;font-weight:500;letter-spacing:-1px;margin:0 0 8px;color:#15130F}
+  .hero p{font-size:14px;color:#5a5245;max-width:680px;line-height:1.5;margin:0 0 8px}
+  .section-h{margin:0 0 28px;display:flex;flex-direction:column;gap:4px}
+  .section-h .t{font-family:"Fraunces",serif;font-size:26px;font-weight:600;color:rgba(40,30,20,0.9);letter-spacing:-0.3px}
+  .section-h .s{font-size:13px;color:rgba(60,50,40,0.6)}
+  .row{display:flex;gap:36px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+  .art{display:flex;flex-direction:column;gap:8px;break-inside:avoid}
+  .art .lbl{font-size:11px;font-weight:500;color:rgba(60,50,40,0.7);letter-spacing:0.3px}
+  .frame{border-radius:22px;box-shadow:0 30px 60px -20px rgba(0,0,0,0.25),0 1px 3px rgba(0,0,0,0.08);overflow:hidden}
+  .frame.dark{box-shadow:0 30px 60px -20px rgba(0,0,0,0.6),0 1px 3px rgba(0,0,0,0.12)}
+  @page { size: 1400px 1100px; margin: 0; }
+  @media print {
+    html,body{background:#f0eee9}
+    .page-block{padding:40px 32px}
+  }
+</style>
+</head>
+<body>
+<div id="root"><div style="padding:60px;font-family:serif;font-size:18px;color:#888">Loading…</div></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" data-presets="react">
+
+// ===== lib/icons.jsx =====
+// Minimal stroke icon set — no external libs
+const Icon = ({ path, size = 20, stroke = 'currentColor', fill = 'none', sw = 1.6, style = {} }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke}
+    strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {path}
+  </svg>
+);
+
+const I = {
+  Bell:     (p) => <Icon {...p} path={<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>} />,
+  Lock:     (p) => <Icon {...p} path={<><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 1 1 8 0v4"/></>} />,
+  Plus:     (p) => <Icon {...p} path={<><path d="M12 5v14M5 12h14"/></>} />,
+  Wand:     (p) => <Icon {...p} path={<><path d="M15 4V2M15 10V8M12.5 6.5H11M19 6.5h-1.5M4 20 16 8l-4-4L0 16"/></>} />,
+  Pin:      (p) => <Icon {...p} path={<><path d="M12 21s-7-6-7-11a7 7 0 1 1 14 0c0 5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></>} />,
+  User:     (p) => <Icon {...p} path={<><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>} />,
+  Chat:     (p) => <Icon {...p} path={<><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></>} />,
+  Clock:    (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>} />,
+  ChevR:    (p) => <Icon {...p} path={<><path d="m9 6 6 6-6 6"/></>} />,
+  ChevL:    (p) => <Icon {...p} path={<><path d="m15 6-6 6 6 6"/></>} />,
+  Search:   (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></>} />,
+  Moon:     (p) => <Icon {...p} path={<><path d="M20 14.5A8 8 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></>} />,
+  Sun:      (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></>} />,
+  Check:    (p) => <Icon {...p} path={<><path d="m5 12 5 5L20 7"/></>} />,
+  Cog:      (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></>} />,
+  Door:     (p) => <Icon {...p} path={<><path d="M4 21h16M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><circle cx="15" cy="12" r="1" fill="currentColor"/></>} />,
+  Map:      (p) => <Icon {...p} path={<><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2Z"/><path d="M9 3v16M15 5v16"/></>} />,
+  Arrow:    (p) => <Icon {...p} path={<><path d="M5 12h14M13 6l6 6-6 6"/></>} />,
+  Book:     (p) => <Icon {...p} path={<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5Z"/></>} />,
+  Flame:    (p) => <Icon {...p} path={<><path d="M12 2s4 4 4 8a4 4 0 0 1-8 0 4 4 0 0 1 2-3.5C11 10 12 8 12 2Z"/><path d="M12 22a6 6 0 0 0 6-6c0-2-1-3-2-4 0 2-2 3-4 3s-4-1-4-3c-1 1-2 2-2 4a6 6 0 0 0 6 6Z"/></>} />,
+  Grid:     (p) => <Icon {...p} path={<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>} />,
+  List:     (p) => <Icon {...p} path={<><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></>} />,
+  Share:    (p) => <Icon {...p} path={<><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6 12 2 8 6M12 2v14"/></>} />,
+  Log:      (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></>} />,
+  Star:     (p) => <Icon {...p} path={<><path d="m12 2 3 7 7 .5-5.5 4.5L18 21l-6-4-6 4 1.5-7L2 9.5 9 9Z"/></>} />,
+  Badge:    (p) => <Icon {...p} path={<><circle cx="12" cy="8" r="6"/><path d="M8.5 13 7 22l5-3 5 3-1.5-9"/></>} />,
+};
+
+Object.assign(window, { Icon, I });
+
+
+// ===== lib/data.jsx =====
+// Shared data for the ClassNow redesign
+
+const TODAY_LABEL = "Tue · 21 Apr";
+const DAYS = [
+  { key: 'Mon', date: 20 },
+  { key: 'Tue', date: 21, active: true },
+  { key: 'Wed', date: 22 },
+  { key: 'Thu', date: 23 },
+  { key: 'Fri', date: 24 },
+  { key: 'Sat', date: 25, off: true },
+];
+
+// Subject color map (used subtly, not as heavy fills)
+const SUBJECT_TONES = {
+  'Operating Systems':       { hue: 'OS',  ink: '#6E4CF5' },
+  'Environmental Science':   { hue: 'ES',  ink: '#2C8D5E' },
+  'Discrete Mathematics':    { hue: 'DM',  ink: '#C2410C' },
+  'Computational Intelligence': { hue: 'CI', ink: '#0369A1' },
+  'Design Thinking':         { hue: 'DT',  ink: '#B91C6B' },
+  'Break':                   { hue: '·',   ink: '#99938A' },
+};
+
+// Master schedule — a day of classes
+const SCHEDULE = [
+  { start: '08:30', end: '09:20', title: 'Operating Systems',       mentor: 'Mrs. Keerthanasri',  room: '704', block: 'Main Block',    code: 'CS31', status: 'done' },
+  { start: '09:20', end: '10:10', title: 'Environmental Science',   mentor: 'Dr. K. Rajalakshmi', room: '704', block: 'Main Block',    code: 'CH11', status: 'done' },
+  { start: '10:10', end: '11:00', title: 'Discrete Mathematics',    mentor: 'Mrs. N. Subashini',  room: '704', block: 'Main Block',    code: 'MA21', status: 'now' },
+  { start: '11:00', end: '11:15', title: 'Break',                   mentor: null,                 room: null,  block: null,            code: null,    status: 'break' },
+  { start: '11:15', end: '12:05', title: 'Computational Intelligence', mentor: 'Ms. P. Sudha',     room: '704', block: 'Main Block',    code: 'CS42', status: 'next' },
+  { start: '12:05', end: '12:55', title: 'Design Thinking',         mentor: 'Mrs. N. Radha',      room: '612', block: 'Studio',        code: 'DS10', status: 'later' },
+];
+
+// User profile
+const USER = {
+  name: 'Aarav Rao',
+  handle: '22csa117',
+  program: 'B.Tech · CSE (AI)',
+  year: '3rd Year · Semester 6',
+  avatarInitials: 'AR',
+  streak: 18,
+  attendance: 87,
+};
+
+Object.assign(window, { TODAY_LABEL, DAYS, SUBJECT_TONES, SCHEDULE, USER });
+
+
+// ===== lib/android-frame.jsx =====
+
+// Android.jsx — Simplified Android (Material 3) device frame
+// Status bar + top app bar + content + gesture nav + keyboard.
+// Based on Figma M3 spec. No dependencies, no image assets.
+
+const MD_C = {
+  surface: '#f4fbf8',
+  surfaceVariant: '#dae5e1',
+  inverseOnSurface: '#ecf2ef',
+  secondaryContainer: '#cde8e1',
+  primaryFixedDim: '#83d5c6',
+  onSurface: '#171d1b',
+  onSurfaceVar: '#49454f',
+  onPrimaryContainer: '#00201c',
+  primary: '#006a60',
+  frameBorder: 'rgba(116,119,117,0.5)',
+};
+
+// ─────────────────────────────────────────────────────────────
+// Status bar (time left, wifi/cell/battery right)
+// ─────────────────────────────────────────────────────────────
+function AndroidStatusBar({ dark = false }) {
+  const c = dark ? '#fff' : MD_C.onSurface;
+  return (
+    <div style={{
+      height: 40, display: 'flex', alignItems: 'center',
+      justifyContent: 'space-between', padding: '0 16px',
+      position: 'relative',
+      fontFamily: 'Roboto, system-ui, sans-serif',
+    }}>
+      {/* time left */}
+      <div style={{ width: 128, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: 0.25, lineHeight: '20px', color: c }}>9:30</span>
+      </div>
+      {/* camera punch-hole (center) */}
+      <div style={{
+        position: 'absolute', left: '50%', top: 8, transform: 'translateX(-50%)',
+        width: 24, height: 24, borderRadius: 100, background: '#2e2e2e',
+      }} />
+      {/* status icons right */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', paddingRight: 2 }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" style={{ marginRight: -2 }}>
+            <path d="M8 13.3L.67 5.97a10.37 10.37 0 0114.66 0L8 13.3z" fill={c}/>
+          </svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" style={{ marginRight: -2 }}>
+            <path d="M14.67 14.67V1.33L1.33 14.67h13.34z" fill={c}/>
+          </svg>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <rect x="3.75" y="2" width="8.5" height="13" rx="1.5" fill={c}/>
+          <rect x="5.5" y="0.9" width="5" height="2" rx="0.5" fill={c}/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Top app bar (Material 3 small/medium)
+// ─────────────────────────────────────────────────────────────
+function AndroidAppBar({ title = 'Title', large = false }) {
+  const iconDot = (
+    <div style={{
+      width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{ width: 22, height: 22, borderRadius: '50%', background: MD_C.onSurfaceVar, opacity: 0.3 }} />
+    </div>
+  );
+  return (
+    <div style={{ background: MD_C.surface, padding: '4px 4px 0' }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 4 }}>
+        {iconDot}
+        {!large && (
+          <span style={{
+            flex: 1, fontSize: 22, fontWeight: 400, color: MD_C.onSurface,
+            fontFamily: 'Roboto, system-ui, sans-serif',
+          }}>{title}</span>
+        )}
+        {large && <div style={{ flex: 1 }} />}
+        {iconDot}
+      </div>
+      {large && (
+        <div style={{
+          padding: '16px 16px 20px',
+          fontSize: 28, fontWeight: 400, color: MD_C.onSurface,
+          fontFamily: 'Roboto, system-ui, sans-serif',
+        }}>{title}</div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// List item (Material 3)
+// ─────────────────────────────────────────────────────────────
+function AndroidListItem({ headline, supporting, leading }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 16,
+      padding: '12px 16px', minHeight: 56, boxSizing: 'border-box',
+      fontFamily: 'Roboto, system-ui, sans-serif',
+    }}>
+      {leading && (
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          background: MD_C.primary, color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, fontWeight: 500, flexShrink: 0,
+        }}>{leading}</div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 16, color: MD_C.onSurface, lineHeight: '24px' }}>{headline}</div>
+        {supporting && (
+          <div style={{ fontSize: 14, color: MD_C.onSurfaceVar, lineHeight: '20px' }}>{supporting}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Gesture nav bar (pill)
+// ─────────────────────────────────────────────────────────────
+function AndroidNavBar({ dark = false }) {
+  return (
+    <div style={{
+      height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        width: 108, height: 4, borderRadius: 2,
+        background: dark ? '#fff' : MD_C.onSurface, opacity: 0.4,
+      }} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Device frame — wraps everything
+// ─────────────────────────────────────────────────────────────
+function AndroidDevice({
+  children, width = 412, height = 892, dark = false,
+  title, large = false, keyboard = false,
+}) {
+  return (
+    <div style={{
+      width, height, borderRadius: 18, overflow: 'hidden',
+      background: dark ? '#1d1b20' : MD_C.surface,
+      border: `8px solid ${MD_C.frameBorder}`,
+      boxShadow: '0 30px 80px rgba(0,0,0,0.25)',
+      display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
+    }}>
+      <AndroidStatusBar dark={dark} />
+      {title !== undefined && <AndroidAppBar title={title} large={large} />}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {children}
+      </div>
+      {keyboard && <AndroidKeyboard />}
+      <AndroidNavBar dark={dark} />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard — Gboard (Material 3)
+// ─────────────────────────────────────────────────────────────
+function AndroidKeyboard() {
+  let _k = 0;
+  const key = (l, { flex = 1, bg = MD_C.surface, r = 6, minW, fs = 21 } = {}) => (
+    <div key={_k++} style={{
+      height: 46, borderRadius: r, flex, minWidth: minW,
+      background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'Roboto, system-ui', fontSize: fs,
+      color: MD_C.onPrimaryContainer,
+    }}>{l}</div>
+  );
+  const row = (keys, style = {}) => (
+    <div style={{ display: 'flex', gap: 6, justifyContent: 'center', ...style }}>
+      {keys.map(l => key(l))}
+    </div>
+  );
+  return (
+    <div style={{
+      background: MD_C.inverseOnSurface, padding: '0 8px 8px',
+      display: 'flex', flexDirection: 'column', gap: 4,
+    }}>
+      {/* navbar spacer (icons omitted) */}
+      <div style={{ height: 44 }} />
+      {/* key rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {row(['q','w','e','r','t','y','u','i','o','p'])}
+        {row(['a','s','d','f','g','h','j','k','l'], { padding: '0 20px' })}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {key('', { bg: MD_C.surfaceVariant })}
+          <div style={{ display: 'flex', gap: 6, flex: 7, minWidth: 274 }}>
+            {['z','x','c','v','b','n','m'].map(l => key(l))}
+          </div>
+          {key('', { bg: MD_C.surfaceVariant })}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {key('?123', { bg: MD_C.secondaryContainer, r: 100, minW: 58, fs: 14 })}
+          {key(',', { bg: MD_C.surfaceVariant })}
+          {key('', { flex: 3, minW: 154 })}
+          {key('.', { bg: MD_C.surfaceVariant })}
+          {key('', { bg: MD_C.primaryFixedDim, r: 100, minW: 58 })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, {
+  AndroidDevice, AndroidStatusBar, AndroidAppBar, AndroidListItem, AndroidNavBar, AndroidKeyboard,
+});
+
+
+// ===== lib/paper-dashboard.jsx =====
+// ─────────────────────────────────────────────────────────────
+// VARIATION A — "PAPER"
+// Editorial light UI, warm off-white, serif display, mono times
+// ─────────────────────────────────────────────────────────────
+
+const paper = {
+  bg: '#F6F2EA',
+  paper: '#FBF8F1',
+  ink: '#15130F',
+  ink2: '#3C382F',
+  muted: '#7D7668',
+  faint: '#D9D2C2',
+  line: '#E7E1D2',
+  accent: 'oklch(62% 0.18 48)', // amber
+  accentSoft: 'oklch(94% 0.04 48)',
+  accentInk: 'oklch(35% 0.12 48)',
+  serif: '"Fraunces", "GT Sectra", "Playfair Display", Georgia, serif',
+  sans:  '"Inter", -apple-system, system-ui, sans-serif',
+  mono:  '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
+};
+
+// ─ Status bar (paper theme) ─
+function PaperStatus() {
+  return (
+    <div style={{
+      height: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 22px', fontFamily: paper.mono, fontSize: 12, color: paper.ink, position: 'relative', letterSpacing: 0.4,
+    }}>
+      <span>9:30</span>
+      <div style={{position:'absolute',left:'50%',top:10,transform:'translateX(-50%)',width:18,height:18,borderRadius:100,background:'#1a1a1a'}} />
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+        <span>5G</span>
+        <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0.5" y="0.5" width="11" height="9" rx="1.5" stroke={paper.ink} fill="none"/><rect x="2" y="2" width="8" height="6" rx="0.5" fill={paper.ink}/><rect x="12" y="3.5" width="1.5" height="3" fill={paper.ink}/></svg>
+      </div>
+    </div>
+  );
+}
+
+// ─ Tiny weekday pill ─
+function PaperDay({ d }) {
+  const active = d.active;
+  return (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+      padding: '10px 0 8px', cursor: 'pointer',
+      background: active ? paper.ink : 'transparent',
+      color: active ? paper.paper : paper.ink,
+      borderRadius: 14,
+      opacity: d.off ? 0.35 : 1,
+    }}>
+      <span style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.2,textTransform:'uppercase',opacity:0.6}}>{d.key}</span>
+      <span style={{fontFamily:paper.serif,fontSize:22,fontWeight:500,lineHeight:1}}>{d.date}</span>
+    </div>
+  );
+}
+
+// ─ Schedule row (timeline spine) ─
+function PaperClass({ c, first, last }) {
+  const isNow = c.status === 'now';
+  const isDone = c.status === 'done';
+  const isBreak = c.status === 'break';
+  if (isBreak) {
+    return (
+      <div style={{display:'grid',gridTemplateColumns:'64px 1fr',gap:14,alignItems:'center',padding:'6px 0'}}>
+        <div style={{fontFamily:paper.mono,fontSize:11,color:paper.muted,textAlign:'right'}}>{c.start}</div>
+        <div style={{display:'flex',alignItems:'center',gap:10,color:paper.muted,fontSize:12,letterSpacing:0.5,textTransform:'uppercase'}}>
+          <span style={{flex:1,height:1,background:paper.line}}/>
+          <span style={{fontFamily:paper.mono}}>Break · {parseInt(c.end)-parseInt(c.start)}m… but actually 15m</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'64px 1fr',gap:14,alignItems:'stretch'}}>
+      {/* left time + spine */}
+      <div style={{position:'relative',paddingTop:14}}>
+        <div style={{fontFamily:paper.mono,fontSize:11,color:isNow?paper.accentInk:paper.ink,textAlign:'right',lineHeight:1.2}}>
+          {c.start}
+        </div>
+        <div style={{fontFamily:paper.mono,fontSize:10,color:paper.muted,textAlign:'right',marginTop:2}}>{c.end}</div>
+        {/* dot */}
+        <div style={{
+          position:'absolute',right:-6,top:18,width:10,height:10,borderRadius:20,
+          background: isNow ? paper.accent : (isDone ? paper.faint : paper.paper),
+          border: `2px solid ${isNow ? paper.accent : paper.ink}`,
+          boxShadow: isNow ? `0 0 0 4px ${paper.accentSoft}` : 'none',
+        }}/>
+        {/* spine */}
+        {!last && <div style={{position:'absolute',right:-2,top:28,bottom:-4,width:1,background:paper.line}}/>}
+      </div>
+      {/* right: card */}
+      <div style={{
+        background: isNow ? paper.paper : 'transparent',
+        border: isNow ? `1px solid ${paper.line}` : 'none',
+        borderRadius: 18,
+        padding: isNow ? '16px 18px' : '10px 0 18px',
+        position: 'relative',
+        boxShadow: isNow ? '0 1px 0 rgba(0,0,0,0.02), 0 12px 24px -18px rgba(0,0,0,0.25)' : 'none',
+        opacity: isDone ? 0.55 : 1,
+      }}>
+        {isNow && (
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+            <span style={{width:6,height:6,borderRadius:10,background:paper.accent,boxShadow:`0 0 0 3px ${paper.accentSoft}`}}/>
+            <span style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.accentInk,fontWeight:600}}>In session · 28m left</span>
+          </div>
+        )}
+        <div style={{fontFamily:paper.serif,fontSize:isNow?24:18,fontWeight:500,color:paper.ink,letterSpacing:-0.3,lineHeight:1.15, textDecoration: isDone?'line-through':'none'}}>{c.title}</div>
+        <div style={{display:'flex',alignItems:'center',gap:14,marginTop:6,fontFamily:paper.sans,fontSize:12,color:paper.muted}}>
+          <span>{c.mentor}</span>
+          <span style={{color:paper.faint}}>·</span>
+          <span style={{fontFamily:paper.mono}}>Room {c.room}</span>
+          <span style={{color:paper.faint}}>·</span>
+          <span style={{fontFamily:paper.mono,letterSpacing:0.5}}>{c.code}</span>
+        </div>
+        {isNow && (
+          <div style={{display:'flex',gap:8,marginTop:14}}>
+            <button style={{flex:1,background:paper.ink,color:paper.paper,border:'none',borderRadius:12,padding:'10px 12px',fontFamily:paper.sans,fontSize:12,fontWeight:600,letterSpacing:0.2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <I.Map size={14}/> Directions
+            </button>
+            <button style={{flex:1,background:'transparent',color:paper.ink,border:`1px solid ${paper.line}`,borderRadius:12,padding:'10px 12px',fontFamily:paper.sans,fontSize:12,fontWeight:600,letterSpacing:0.2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+              <I.Book size={14}/> Notes
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─ Full Paper dashboard ─
+function PaperDashboard() {
+  return (
+    <div style={{background:paper.bg,minHeight:'100%',fontFamily:paper.sans,color:paper.ink,paddingBottom:100}}>
+      <PaperStatus/>
+
+      {/* Header */}
+      <div style={{padding:'10px 22px 8px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted}}>Today</div>
+          <div style={{fontFamily:paper.serif,fontSize:28,fontWeight:500,color:paper.ink,letterSpacing:-0.6,marginTop:2}}>Tuesday, 21</div>
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          <button style={{width:40,height:40,borderRadius:14,border:`1px solid ${paper.line}`,background:paper.paper,display:'flex',alignItems:'center',justifyContent:'center',color:paper.ink,cursor:'pointer'}}><I.Search size={18}/></button>
+          <button style={{width:40,height:40,borderRadius:14,border:`1px solid ${paper.line}`,background:paper.paper,display:'flex',alignItems:'center',justifyContent:'center',color:paper.ink,cursor:'pointer',position:'relative'}}>
+            <I.Bell size={18}/>
+            <span style={{position:'absolute',top:10,right:10,width:6,height:6,borderRadius:10,background:paper.accent}}/>
+          </button>
+        </div>
+      </div>
+
+      {/* Week strip */}
+      <div style={{display:'flex',gap:4,padding:'10px 18px 18px'}}>
+        {DAYS.map(d => <PaperDay key={d.key} d={d}/>)}
+      </div>
+
+      {/* Hero stats strip */}
+      <div style={{margin:'0 22px 22px',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:18,padding:'14px 4px'}}>
+        <div style={{textAlign:'center',borderRight:`1px solid ${paper.line}`}}>
+          <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500}}>6</div>
+          <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.2,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Classes</div>
+        </div>
+        <div style={{textAlign:'center',borderRight:`1px solid ${paper.line}`}}>
+          <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500}}>2<span style={{fontFamily:paper.sans,fontSize:13,color:paper.muted,fontWeight:400}}>h</span>28<span style={{fontFamily:paper.sans,fontSize:13,color:paper.muted,fontWeight:400}}>m</span></div>
+          <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.2,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Left today</div>
+        </div>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500,color:paper.accentInk}}>87<span style={{fontFamily:paper.sans,fontSize:13,color:paper.muted,fontWeight:400}}>%</span></div>
+          <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.2,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Attendance</div>
+        </div>
+      </div>
+
+      {/* Schedule timeline */}
+      <div style={{padding:'0 22px',display:'flex',flexDirection:'column',gap:2}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted}}>Today's schedule</div>
+          <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1,color:paper.muted,display:'flex',alignItems:'center',gap:4}}>List <I.ChevR size={12}/></div>
+        </div>
+        {SCHEDULE.map((c,i) => <PaperClass key={i} c={c} first={i===0} last={i===SCHEDULE.length-1}/>)}
+      </div>
+    </div>
+  );
+}
+
+// Bottom nav shared for paper
+function PaperNav() {
+  const items = [
+    { key: 'home', icon: I.Grid, label: 'Today', active: true },
+    { key: 'week', icon: I.List, label: 'Week' },
+    { key: 'map',  icon: I.Map, label: 'Rooms' },
+    { key: 'me',   icon: I.User, label: 'Me' },
+  ];
+  return (
+    <div style={{position:'absolute',bottom:10,left:12,right:12,borderRadius:22,background:paper.paper,border:`1px solid ${paper.line}`,boxShadow:'0 14px 32px -18px rgba(0,0,0,0.35)',display:'flex',padding:6,fontFamily:paper.sans}}>
+      {items.map(it => {
+        const Ico = it.icon;
+        return (
+          <div key={it.key} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,padding:'8px 0',background:it.active?paper.ink:'transparent',color:it.active?paper.paper:paper.muted,borderRadius:16}}>
+            <Ico size={18}/>
+            <span style={{fontSize:10,fontWeight:600,letterSpacing:0.3}}>{it.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+Object.assign(window, { paper, PaperDashboard, PaperNav, PaperStatus });
+
+
+// ===== lib/glass-dashboard.jsx =====
+// ─────────────────────────────────────────────────────────────
+// VARIATION B — "GLASS" (dark premium w/ aurora glow)
+// ─────────────────────────────────────────────────────────────
+
+const glass = {
+  bg:       '#08090D',
+  bg2:      '#0E1016',
+  surface:  'rgba(255,255,255,0.04)',
+  surface2: 'rgba(255,255,255,0.06)',
+  border:   'rgba(255,255,255,0.08)',
+  border2:  'rgba(255,255,255,0.14)',
+  ink:      '#F4F5F7',
+  ink2:     '#B8BAC2',
+  muted:    '#6C6F79',
+  accent:   'oklch(72% 0.18 230)',
+  accent2:  'oklch(78% 0.22 210)',
+  accentGlow: 'oklch(72% 0.18 230 / 0.5)',
+  sans:     '"Inter", -apple-system, system-ui, sans-serif',
+  display:  '"Geist", "Inter", system-ui, sans-serif',
+  mono:     '"JetBrains Mono", ui-monospace, monospace',
+};
+
+// Aurora background (SVG gradient blobs)
+function Aurora() {
+  return (
+    <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none'}}>
+      <div style={{position:'absolute',top:-120,right:-80,width:360,height:360,borderRadius:'50%',background:'radial-gradient(circle, oklch(72% 0.18 230 / 0.45), transparent 65%)',filter:'blur(20px)'}}/>
+      <div style={{position:'absolute',top:200,left:-140,width:320,height:320,borderRadius:'50%',background:'radial-gradient(circle, oklch(62% 0.22 310 / 0.35), transparent 65%)',filter:'blur(20px)'}}/>
+      <div style={{position:'absolute',bottom:-80,right:-60,width:280,height:280,borderRadius:'50%',background:'radial-gradient(circle, oklch(78% 0.22 170 / 0.25), transparent 65%)',filter:'blur(20px)'}}/>
+      {/* hex/grid texture */}
+      <svg width="100%" height="100%" style={{position:'absolute',inset:0,opacity:0.09}}>
+        <defs>
+          <pattern id="grid" width="18" height="18" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.7" fill="#fff"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+      </svg>
+    </div>
+  );
+}
+
+function GlassStatus() {
+  return (
+    <div style={{height:36,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 22px',fontFamily:glass.mono,fontSize:12,color:glass.ink,position:'relative',letterSpacing:0.4,zIndex:2}}>
+      <span>9:30</span>
+      <div style={{position:'absolute',left:'50%',top:10,transform:'translateX(-50%)',width:18,height:18,borderRadius:100,background:'#000'}}/>
+      <div style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+        <span>5G</span>
+        <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0.5" y="0.5" width="11" height="9" rx="1.5" stroke={glass.ink} fill="none"/><rect x="2" y="2" width="8" height="6" rx="0.5" fill={glass.ink}/><rect x="12" y="3.5" width="1.5" height="3" fill={glass.ink}/></svg>
+      </div>
+    </div>
+  );
+}
+
+// ─ Day pill ─
+function GlassDay({ d }) {
+  const active = d.active;
+  return (
+    <div style={{
+      flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 0 10px',borderRadius:14,
+      background: active ? `linear-gradient(180deg, ${glass.accent}, oklch(55% 0.18 260))` : 'transparent',
+      border: active ? '1px solid rgba(255,255,255,0.18)' : '1px solid transparent',
+      color: active ? '#fff' : glass.ink2,
+      boxShadow: active ? `0 0 0 0 ${glass.accent}, 0 8px 24px -6px ${glass.accentGlow}` : 'none',
+      opacity: d.off ? 0.3 : 1,
+    }}>
+      <span style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',opacity:0.8}}>{d.key}</span>
+      <span style={{fontFamily:glass.display,fontSize:20,fontWeight:500,lineHeight:1}}>{d.date}</span>
+    </div>
+  );
+}
+
+// ─ NOW card — the hero ─
+function GlassNowCard({ c }) {
+  const pct = 44; // mock progress through class
+  return (
+    <div style={{
+      position:'relative',margin:'14px 22px 18px',borderRadius:24,padding:'18px 20px 16px',overflow:'hidden',
+      background: `linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))`,
+      border: `1px solid ${glass.border2}`,
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      boxShadow: `0 24px 48px -24px ${glass.accentGlow}, 0 0 0 1px rgba(255,255,255,0.02) inset`,
+    }}>
+      {/* glow edge */}
+      <div style={{position:'absolute',inset:-1,borderRadius:25,border:`1px solid ${glass.accent}`,opacity:0.4,pointerEvents:'none'}}/>
+
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+        <span style={{width:8,height:8,borderRadius:10,background:glass.accent,boxShadow:`0 0 10px ${glass.accent}`,animation:'gpulse 1.8s ease-in-out infinite'}}/>
+        <span style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.8,textTransform:'uppercase',color:glass.accent2,fontWeight:600}}>Class in session</span>
+        <span style={{flex:1}}/>
+        <span style={{fontFamily:glass.mono,fontSize:11,color:glass.ink2}}>28m left</span>
+      </div>
+
+      <div style={{fontFamily:glass.display,fontSize:30,fontWeight:600,color:glass.ink,letterSpacing:-0.8,lineHeight:1.05}}>
+        {c.title}
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:14,marginTop:10,fontFamily:glass.sans,fontSize:12,color:glass.ink2}}>
+        <span style={{display:'flex',alignItems:'center',gap:5}}><I.User size={12}/> {c.mentor}</span>
+        <span style={{color:glass.muted}}>·</span>
+        <span style={{display:'flex',alignItems:'center',gap:5,fontFamily:glass.mono}}><I.Pin size={12}/> Rm {c.room}</span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{marginTop:14,height:6,borderRadius:6,background:'rgba(255,255,255,0.06)',overflow:'hidden',position:'relative'}}>
+        <div style={{width:`${pct}%`,height:'100%',background:`linear-gradient(90deg, ${glass.accent}, ${glass.accent2})`,boxShadow:`0 0 12px ${glass.accentGlow}`}}/>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:glass.mono,fontSize:10,color:glass.muted}}>
+        <span>{c.start}</span><span>{c.end}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─ Compact upcoming row ─
+function GlassRow({ c }) {
+  const isNext = c.status === 'next';
+  const isDone = c.status === 'done';
+  const isBreak = c.status === 'break';
+  if (isBreak) {
+    return (
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'6px 24px',color:glass.muted,fontFamily:glass.mono,fontSize:10,letterSpacing:1,textTransform:'uppercase'}}>
+        <span style={{flex:1,height:1,background:'rgba(255,255,255,0.06)'}}/>
+        <span>Break · 15m</span>
+        <span style={{flex:1,height:1,background:'rgba(255,255,255,0.06)'}}/>
+      </div>
+    );
+  }
+  return (
+    <div style={{
+      margin:'0 22px 10px',padding:'14px 16px',borderRadius:18,
+      background: isNext ? 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))' : 'transparent',
+      border: isNext ? `1px solid ${glass.border}` : `1px solid transparent`,
+      display:'flex',alignItems:'center',gap:14,
+      opacity: isDone ? 0.5 : 1,
+    }}>
+      <div style={{fontFamily:glass.mono,fontSize:11,color:glass.ink2,textAlign:'right',minWidth:40,lineHeight:1.3}}>
+        <div>{c.start}</div>
+        <div style={{color:glass.muted,fontSize:10}}>{c.end}</div>
+      </div>
+      <div style={{width:2,alignSelf:'stretch',borderRadius:2,background: isNext ? `linear-gradient(180deg, ${glass.accent}, transparent)` : 'rgba(255,255,255,0.08)'}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:glass.display,fontSize:15,fontWeight:500,color:glass.ink,letterSpacing:-0.2,textDecoration:isDone?'line-through':'none'}}>{c.title}</div>
+        <div style={{fontFamily:glass.sans,fontSize:11,color:glass.muted,marginTop:2,display:'flex',gap:8}}>
+          <span>{c.mentor}</span>
+          <span>·</span>
+          <span style={{fontFamily:glass.mono}}>Rm {c.room}</span>
+        </div>
+      </div>
+      {isNext && (
+        <div style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1,textTransform:'uppercase',color:glass.accent2,padding:'4px 8px',borderRadius:6,background:'rgba(0,150,255,0.12)',border:`1px solid ${glass.border}`}}>Up next</div>
+      )}
+      {isDone && (
+        <div style={{width:20,height:20,borderRadius:20,background:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',color:glass.muted}}>
+          <I.Check size={12} sw={2}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GlassDashboard() {
+  const now = SCHEDULE.find(s => s.status === 'now');
+  return (
+    <div style={{background:glass.bg,minHeight:'100%',color:glass.ink,fontFamily:glass.sans,paddingBottom:100,position:'relative',overflow:'hidden'}}>
+      <style>{`@keyframes gpulse {0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.3)}}`}</style>
+      <Aurora/>
+      <div style={{position:'relative',zIndex:1}}>
+        <GlassStatus/>
+
+        {/* Header */}
+        <div style={{padding:'10px 22px 0',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg, ${glass.accent}, oklch(55% 0.18 260))`,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:glass.display,fontSize:13,fontWeight:700,color:'#fff',letterSpacing:-0.3}}>AR</div>
+            <div>
+              <div style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:glass.muted}}>Good morning,</div>
+              <div style={{fontFamily:glass.display,fontSize:16,fontWeight:600,color:glass.ink,letterSpacing:-0.3,marginTop:1}}>Aarav</div>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:6}}>
+            <button style={{width:38,height:38,borderRadius:12,border:`1px solid ${glass.border}`,background:glass.surface,color:glass.ink,display:'flex',alignItems:'center',justifyContent:'center'}}><I.Search size={16}/></button>
+            <button style={{width:38,height:38,borderRadius:12,border:`1px solid ${glass.border}`,background:glass.surface,color:glass.ink,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+              <I.Bell size={16}/>
+              <span style={{position:'absolute',top:9,right:9,width:7,height:7,borderRadius:10,background:glass.accent,boxShadow:`0 0 6px ${glass.accent}`}}/>
+            </button>
+          </div>
+        </div>
+
+        {/* Week */}
+        <div style={{display:'flex',gap:4,padding:'14px 18px 4px'}}>
+          {DAYS.map(d => <GlassDay key={d.key} d={d}/>)}
+        </div>
+
+        {/* NOW hero card */}
+        {now && <GlassNowCard c={now}/>}
+
+        {/* Schedule */}
+        <div style={{padding:'4px 0 0'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px 12px'}}>
+            <div style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:glass.muted}}>Rest of the day · 3 classes</div>
+            <I.ChevR size={14} stroke={glass.muted}/>
+          </div>
+          {SCHEDULE.filter(s => s.status !== 'now' && s.status !== 'done').map((c,i) => <GlassRow key={i} c={c}/>)}
+        </div>
+
+        {/* Small callouts grid */}
+        <div style={{padding:'12px 22px 0',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <div style={{padding:'14px',borderRadius:18,background:glass.surface,border:`1px solid ${glass.border}`}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,fontFamily:glass.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:glass.muted}}><I.Flame size={12} stroke="oklch(72% 0.2 40)"/> Streak</div>
+            <div style={{fontFamily:glass.display,fontSize:24,fontWeight:600,marginTop:6,letterSpacing:-0.5}}>18 <span style={{fontSize:12,color:glass.muted,fontWeight:400}}>days</span></div>
+          </div>
+          <div style={{padding:'14px',borderRadius:18,background:glass.surface,border:`1px solid ${glass.border}`}}>
+            <div style={{display:'flex',alignItems:'center',gap:6,fontFamily:glass.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:glass.muted}}><I.Badge size={12} stroke={glass.accent2}/> Attendance</div>
+            <div style={{fontFamily:glass.display,fontSize:24,fontWeight:600,marginTop:6,letterSpacing:-0.5}}>87<span style={{fontSize:13,color:glass.muted}}>%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlassNav() {
+  const items = [
+    { key: 'home', icon: I.Grid, label: 'Today', active: true },
+    { key: 'week', icon: I.List, label: 'Week' },
+    { key: 'map',  icon: I.Map, label: 'Rooms' },
+    { key: 'me',   icon: I.User, label: 'Me' },
+  ];
+  return (
+    <div style={{position:'absolute',bottom:10,left:12,right:12,borderRadius:22,background:'rgba(12,14,20,0.75)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',border:`1px solid ${glass.border2}`,boxShadow:'0 14px 32px -6px rgba(0,0,0,0.6)',display:'flex',padding:6,fontFamily:glass.sans,zIndex:5}}>
+      {items.map(it => {
+        const Ico = it.icon;
+        return (
+          <div key={it.key} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,padding:'8px 0',background:it.active?`linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))`:'transparent',color:it.active?glass.ink:glass.muted,borderRadius:16,border:it.active?`1px solid ${glass.border}`:'1px solid transparent'}}>
+            <Ico size={18}/>
+            <span style={{fontSize:10,fontWeight:600,letterSpacing:0.3}}>{it.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+Object.assign(window, { glass, GlassDashboard, GlassNav, GlassStatus, Aurora });
+
+
+// ===== lib/settings.jsx =====
+// Settings / Profile screens — Paper + Glass
+
+// ────────────────── PAPER SETTINGS ──────────────────
+function PaperSettings() {
+  const Row = ({ icon: Ico, title, meta, last, children }) => (
+    <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 18px',borderBottom:last?'none':`1px solid ${paper.line}`}}>
+      <div style={{width:34,height:34,borderRadius:10,background:paper.bg,border:`1px solid ${paper.line}`,display:'flex',alignItems:'center',justifyContent:'center',color:paper.ink}}><Ico size={16}/></div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:paper.sans,fontSize:14,fontWeight:500,color:paper.ink}}>{title}</div>
+        {meta && <div style={{fontFamily:paper.sans,fontSize:12,color:paper.muted,marginTop:1}}>{meta}</div>}
+      </div>
+      {children || <I.ChevR size={16} stroke={paper.muted}/>}
+    </div>
+  );
+
+  const Toggle = ({on}) => (
+    <div style={{width:36,height:20,borderRadius:20,background:on?paper.ink:paper.faint,padding:2,display:'flex',alignItems:'center',justifyContent:on?'flex-end':'flex-start'}}>
+      <div style={{width:16,height:16,borderRadius:20,background:paper.paper,boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+    </div>
+  );
+
+  return (
+    <div style={{background:paper.bg,minHeight:'100%',fontFamily:paper.sans,color:paper.ink,paddingBottom:100}}>
+      <PaperStatus/>
+      {/* Top bar */}
+      <div style={{padding:'8px 18px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <button style={{width:36,height:36,borderRadius:12,border:`1px solid ${paper.line}`,background:paper.paper,display:'flex',alignItems:'center',justifyContent:'center'}}><I.ChevL size={16}/></button>
+        <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted}}>Profile</div>
+        <button style={{width:36,height:36,borderRadius:12,border:`1px solid ${paper.line}`,background:paper.paper,display:'flex',alignItems:'center',justifyContent:'center'}}><I.Cog size={16}/></button>
+      </div>
+
+      {/* Profile header card */}
+      <div style={{margin:'0 18px',padding:'22px 20px',background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:22,textAlign:'center',position:'relative'}}>
+        <div style={{width:72,height:72,margin:'0 auto',borderRadius:24,background:paper.ink,color:paper.paper,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:paper.serif,fontSize:28,fontWeight:500,letterSpacing:-0.5}}>AR</div>
+        <div style={{fontFamily:paper.serif,fontSize:24,fontWeight:500,letterSpacing:-0.4,marginTop:14}}>Aarav Rao</div>
+        <div style={{fontFamily:paper.mono,fontSize:11,color:paper.muted,marginTop:2,letterSpacing:0.4}}>22CSA117 · B.Tech CSE (AI)</div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginTop:18,paddingTop:16,borderTop:`1px solid ${paper.line}`}}>
+          <div>
+            <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500}}>3<span style={{fontFamily:paper.sans,fontSize:12,color:paper.muted}}>rd</span></div>
+            <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Year</div>
+          </div>
+          <div style={{borderLeft:`1px solid ${paper.line}`,borderRight:`1px solid ${paper.line}`}}>
+            <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500}}>18</div>
+            <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Day streak</div>
+          </div>
+          <div>
+            <div style={{fontFamily:paper.serif,fontSize:22,fontWeight:500,color:paper.accentInk}}>87<span style={{fontFamily:paper.sans,fontSize:12,color:paper.muted}}>%</span></div>
+            <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:paper.muted,marginTop:2}}>Attendance</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div style={{padding:'24px 18px 0'}}>
+        <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted,padding:'0 4px 10px'}}>Schedule</div>
+        <div style={{background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:18,overflow:'hidden'}}>
+          <Row icon={I.Clock} title="Notifications" meta="15 min before each class"/>
+          <Row icon={I.Pin} title="Default block" meta="Main Block"/>
+          <Row icon={I.Wand} title="Auto-sync with MyCamu" meta="Last synced 6:40 AM" last><Toggle on/></Row>
+        </div>
+      </div>
+
+      <div style={{padding:'22px 18px 0'}}>
+        <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted,padding:'0 4px 10px'}}>Appearance</div>
+        <div style={{background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:18,overflow:'hidden'}}>
+          <Row icon={I.Sun} title="Theme" meta="Paper (light)"/>
+          <Row icon={I.Grid} title="Home widget" meta="Next class · Medium"/>
+          <Row icon={I.Book} title="Display" meta="Timeline view" last/>
+        </div>
+      </div>
+
+      <div style={{padding:'22px 18px 0'}}>
+        <div style={{fontFamily:paper.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:paper.muted,padding:'0 4px 10px'}}>Account</div>
+        <div style={{background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:18,overflow:'hidden'}}>
+          <Row icon={I.User} title="Edit profile"/>
+          <Row icon={I.Lock} title="Privacy" meta="Manage data"/>
+          <Row icon={I.Log} title="Sign out" last><div style={{width:16}}/></Row>
+        </div>
+        <div style={{textAlign:'center',fontFamily:paper.mono,fontSize:10,color:paper.muted,marginTop:22,letterSpacing:0.5}}>ClassNow · v3.2.1</div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────── GLASS SETTINGS ──────────────────
+function GlassSettings() {
+  const Row = ({ icon: Ico, title, meta, last, children, accent }) => (
+    <div style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:last?'none':`1px solid ${glass.border}`}}>
+      <div style={{width:34,height:34,borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${glass.border}`,display:'flex',alignItems:'center',justifyContent:'center',color:accent||glass.ink}}><Ico size={16}/></div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:glass.sans,fontSize:14,fontWeight:500,color:glass.ink}}>{title}</div>
+        {meta && <div style={{fontFamily:glass.sans,fontSize:12,color:glass.muted,marginTop:1}}>{meta}</div>}
+      </div>
+      {children || <I.ChevR size={16} stroke={glass.muted}/>}
+    </div>
+  );
+
+  const Toggle = ({on}) => (
+    <div style={{width:38,height:22,borderRadius:20,background:on?`linear-gradient(90deg, ${glass.accent}, ${glass.accent2})`:'rgba(255,255,255,0.08)',padding:2,display:'flex',alignItems:'center',justifyContent:on?'flex-end':'flex-start',boxShadow:on?`0 0 12px ${glass.accentGlow}`:'none'}}>
+      <div style={{width:18,height:18,borderRadius:20,background:'#fff',boxShadow:'0 2px 4px rgba(0,0,0,0.3)'}}/>
+    </div>
+  );
+
+  return (
+    <div style={{background:glass.bg,minHeight:'100%',color:glass.ink,fontFamily:glass.sans,paddingBottom:100,position:'relative',overflow:'hidden'}}>
+      <Aurora/>
+      <div style={{position:'relative',zIndex:1}}>
+        <GlassStatus/>
+        {/* Top bar */}
+        <div style={{padding:'8px 18px 14px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <button style={{width:38,height:38,borderRadius:12,background:glass.surface,border:`1px solid ${glass.border}`,color:glass.ink,display:'flex',alignItems:'center',justifyContent:'center'}}><I.ChevL size={16}/></button>
+          <div style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.8,textTransform:'uppercase',color:glass.muted}}>Profile</div>
+          <button style={{width:38,height:38,borderRadius:12,background:glass.surface,border:`1px solid ${glass.border}`,color:glass.ink,display:'flex',alignItems:'center',justifyContent:'center'}}><I.Share size={16}/></button>
+        </div>
+
+        {/* Hero profile card */}
+        <div style={{margin:'6px 18px 0',padding:'22px 20px 20px',borderRadius:24,background:'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',border:`1px solid ${glass.border2}`,backdropFilter:'blur(18px)',position:'relative',overflow:'hidden'}}>
+          <div style={{position:'absolute',top:-40,right:-20,width:160,height:160,borderRadius:'50%',background:`radial-gradient(circle, ${glass.accentGlow}, transparent 65%)`,filter:'blur(20px)'}}/>
+          <div style={{display:'flex',alignItems:'center',gap:14,position:'relative'}}>
+            <div style={{width:64,height:64,borderRadius:20,background:`linear-gradient(135deg, ${glass.accent}, oklch(55% 0.18 260))`,border:`1px solid ${glass.border2}`,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:glass.display,fontSize:22,fontWeight:700,letterSpacing:-0.4,boxShadow:`0 0 20px ${glass.accentGlow}`}}>AR</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:glass.display,fontSize:19,fontWeight:600,letterSpacing:-0.3}}>Aarav Rao</div>
+              <div style={{fontFamily:glass.mono,fontSize:11,color:glass.ink2,marginTop:2,letterSpacing:0.4}}>22CSA117 · CSE (AI)</div>
+              <div style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,padding:'3px 8px',borderRadius:6,background:'rgba(255,255,255,0.06)',border:`1px solid ${glass.border}`,fontFamily:glass.mono,fontSize:9,letterSpacing:1.2,textTransform:'uppercase',color:glass.accent2}}><I.Star size={10} fill={glass.accent2} stroke={glass.accent2}/> Year 3 · Sem 6</div>
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginTop:18}}>
+            {[
+              {label:'Streak',value:'18',unit:'d', icon:I.Flame},
+              {label:'Attendance',value:'87',unit:'%', icon:I.Badge},
+              {label:'GPA',value:'8.4',unit:'/10', icon:I.Star},
+            ].map((s,i) => {
+              const Ico = s.icon;
+              return (
+                <div key={i} style={{padding:'10px 12px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:`1px solid ${glass.border}`}}>
+                  <div style={{display:'flex',alignItems:'center',gap:4,color:glass.muted}}><Ico size={10} stroke={glass.accent2}/><span style={{fontFamily:glass.mono,fontSize:8,letterSpacing:1.2,textTransform:'uppercase'}}>{s.label}</span></div>
+                  <div style={{fontFamily:glass.display,fontSize:20,fontWeight:600,marginTop:4,letterSpacing:-0.3}}>{s.value}<span style={{fontSize:11,color:glass.muted,fontWeight:400}}>{s.unit}</span></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section: schedule */}
+        <div style={{padding:'22px 18px 0'}}>
+          <div style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:glass.muted,padding:'0 4px 10px'}}>Schedule</div>
+          <div style={{background:glass.surface,border:`1px solid ${glass.border}`,borderRadius:18,backdropFilter:'blur(18px)',overflow:'hidden'}}>
+            <Row icon={I.Clock} accent={glass.accent2} title="Class reminders" meta="15 minutes before">
+              <Toggle on/>
+            </Row>
+            <Row icon={I.Wand} accent="oklch(72% 0.2 310)" title="Auto-sync" meta="MyCamu · 6:40 AM"/>
+            <Row icon={I.Pin} title="Default room map" meta="Main Block · 7th floor" last/>
+          </div>
+        </div>
+
+        <div style={{padding:'18px 18px 0'}}>
+          <div style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:glass.muted,padding:'0 4px 10px'}}>Appearance</div>
+          <div style={{background:glass.surface,border:`1px solid ${glass.border}`,borderRadius:18,backdropFilter:'blur(18px)',overflow:'hidden'}}>
+            <Row icon={I.Moon} accent={glass.accent} title="Dark mode" meta="Glass theme · Aurora"><Toggle on/></Row>
+            <Row icon={I.Grid} title="Home widget" meta="Now playing · Large"/>
+            <Row icon={I.Bell} title="In-class do-not-disturb" meta="Mutes during sessions" last><Toggle on/></Row>
+          </div>
+        </div>
+
+        <div style={{padding:'18px 18px 0'}}>
+          <div style={{fontFamily:glass.mono,fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:glass.muted,padding:'0 4px 10px'}}>Account</div>
+          <div style={{background:glass.surface,border:`1px solid ${glass.border}`,borderRadius:18,backdropFilter:'blur(18px)',overflow:'hidden'}}>
+            <Row icon={I.User} title="Edit profile"/>
+            <Row icon={I.Lock} title="Privacy & data"/>
+            <Row icon={I.Log} accent="oklch(65% 0.2 25)" title="Sign out" last><div style={{width:16}}/></Row>
+          </div>
+          <div style={{textAlign:'center',fontFamily:glass.mono,fontSize:10,color:glass.muted,marginTop:22,letterSpacing:0.5}}>ClassNow · v3.2.1</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { PaperSettings, GlassSettings });
+
+
+// ===== lib/widgets.jsx =====
+// Home-screen widgets — Paper + Glass, two sizes each
+
+// ─ Shared android homescreen wallpaper background ─
+function HomescreenBg({ dark, children }) {
+  const bg = dark
+    ? 'linear-gradient(160deg, #0a0614 0%, #1a0a2e 40%, #2a0e3a 70%, #0a0614 100%)'
+    : 'linear-gradient(160deg, #d7c9b5 0%, #e4d9c6 40%, #efe6d4 70%, #d2c3ac 100%)';
+  return (
+    <div style={{width:'100%',height:'100%',background:bg,position:'relative',overflow:'hidden',padding:'8px 10px'}}>
+      {/* Android clock widget */}
+      <div style={{position:'absolute',top:14,left:16,color:dark?'#fff':'#1a1a1a',fontFamily:'"Inter", sans-serif'}}>
+        <div style={{fontSize:52,fontWeight:200,letterSpacing:-2,lineHeight:1}}>10:42</div>
+        <div style={{fontSize:12,opacity:0.7,marginTop:2,letterSpacing:0.5}}>Tue, April 21 · 28° Partly cloudy</div>
+      </div>
+      <div style={{position:'absolute',top:130,left:10,right:10}}>{children}</div>
+
+      {/* Dock */}
+      <div style={{position:'absolute',bottom:16,left:10,right:10,display:'flex',justifyContent:'space-around',padding:'10px 14px',background:dark?'rgba(0,0,0,0.3)':'rgba(255,255,255,0.3)',backdropFilter:'blur(18px)',borderRadius:28}}>
+        {['#3B82F6','#10B981','#EC4899','#F59E0B','#8B5CF6'].map((c,i) => (
+          <div key={i} style={{width:44,height:44,borderRadius:12,background:c,boxShadow:'0 4px 8px rgba(0,0,0,0.2)'}}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─ Paper widget (medium) ─
+function PaperWidgetMedium() {
+  return (
+    <div style={{background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:24,padding:'16px 18px',boxShadow:'0 8px 20px rgba(0,0,0,0.08)',fontFamily:paper.sans}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <span style={{width:8,height:8,borderRadius:10,background:paper.accent,boxShadow:`0 0 0 3px ${paper.accentSoft}`}}/>
+          <span style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:paper.accentInk,fontWeight:700}}>In session</span>
+        </div>
+        <span style={{fontFamily:paper.mono,fontSize:10,color:paper.muted}}>28m left</span>
+      </div>
+      <div style={{fontFamily:paper.serif,fontSize:20,fontWeight:500,letterSpacing:-0.4,color:paper.ink,lineHeight:1.1}}>Discrete Mathematics</div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginTop:6,fontSize:11,color:paper.muted}}>
+        <span>Mrs. N. Subashini</span>
+        <span style={{color:paper.faint}}>·</span>
+        <span style={{fontFamily:paper.mono}}>Room 704</span>
+      </div>
+      {/* progress */}
+      <div style={{marginTop:12,height:3,borderRadius:3,background:paper.faint,position:'relative',overflow:'hidden'}}>
+        <div style={{width:'44%',height:'100%',background:paper.ink}}/>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontFamily:paper.mono,fontSize:9,color:paper.muted,letterSpacing:0.5}}>
+        <span>10:10</span><span>11:00</span>
+      </div>
+      {/* next */}
+      <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${paper.line}`,display:'flex',alignItems:'center',gap:8}}>
+        <span style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:paper.muted}}>Next</span>
+        <span style={{fontSize:11,fontWeight:500,color:paper.ink}}>Computational Intelligence</span>
+        <span style={{flex:1}}/>
+        <span style={{fontFamily:paper.mono,fontSize:10,color:paper.muted}}>11:15</span>
+      </div>
+    </div>
+  );
+}
+
+// ─ Paper widget (small) ─
+function PaperWidgetSmall() {
+  return (
+    <div style={{background:paper.paper,border:`1px solid ${paper.line}`,borderRadius:22,padding:'14px',fontFamily:paper.sans,height:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',boxShadow:'0 8px 20px rgba(0,0,0,0.08)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:5}}>
+        <span style={{width:6,height:6,borderRadius:10,background:paper.accent}}/>
+        <span style={{fontFamily:paper.mono,fontSize:8,letterSpacing:1.3,textTransform:'uppercase',color:paper.accentInk,fontWeight:700}}>Now · 28m</span>
+      </div>
+      <div>
+        <div style={{fontFamily:paper.serif,fontSize:14,fontWeight:500,color:paper.ink,letterSpacing:-0.2,lineHeight:1.1}}>Discrete Math</div>
+        <div style={{fontFamily:paper.mono,fontSize:9,color:paper.muted,marginTop:4}}>Rm 704 · 10:10–11:00</div>
+      </div>
+    </div>
+  );
+}
+
+// ─ Glass widget (medium) ─
+function GlassWidgetMedium() {
+  return (
+    <div style={{background:'linear-gradient(180deg, rgba(20,25,35,0.85), rgba(10,12,18,0.85))',border:`1px solid ${glass.border2}`,borderRadius:26,padding:'16px 18px',backdropFilter:'blur(20px)',fontFamily:glass.sans,color:glass.ink,position:'relative',overflow:'hidden',boxShadow:`0 16px 36px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset, 0 0 40px -10px ${glass.accentGlow}`}}>
+      {/* glow */}
+      <div style={{position:'absolute',top:-30,right:-30,width:140,height:140,borderRadius:'50%',background:`radial-gradient(circle, ${glass.accentGlow}, transparent 65%)`,filter:'blur(10px)'}}/>
+      <div style={{position:'relative'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{width:8,height:8,borderRadius:10,background:glass.accent,boxShadow:`0 0 8px ${glass.accent}`}}/>
+            <span style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1.8,textTransform:'uppercase',color:glass.accent2,fontWeight:700}}>In session</span>
+          </div>
+          <span style={{fontFamily:glass.mono,fontSize:10,color:glass.ink2}}>28m left</span>
+        </div>
+        <div style={{fontFamily:glass.display,fontSize:20,fontWeight:600,letterSpacing:-0.5,lineHeight:1.05}}>Discrete Mathematics</div>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6,fontSize:11,color:glass.ink2}}>
+          <span>Mrs. N. Subashini</span>
+          <span style={{color:glass.muted}}>·</span>
+          <span style={{fontFamily:glass.mono}}>Rm 704</span>
+        </div>
+        {/* progress */}
+        <div style={{marginTop:12,height:4,borderRadius:6,background:'rgba(255,255,255,0.08)',overflow:'hidden'}}>
+          <div style={{width:'44%',height:'100%',background:`linear-gradient(90deg, ${glass.accent}, ${glass.accent2})`,boxShadow:`0 0 12px ${glass.accentGlow}`}}/>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontFamily:glass.mono,fontSize:9,color:glass.muted,letterSpacing:0.5}}>
+          <span>10:10</span><span>11:00</span>
+        </div>
+        <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${glass.border}`,display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:glass.muted}}>Next</span>
+          <span style={{fontSize:11,fontWeight:500,color:glass.ink}}>Comp. Intelligence</span>
+          <span style={{flex:1}}/>
+          <span style={{fontFamily:glass.mono,fontSize:10,color:glass.ink2}}>11:15</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─ Glass widget (small) ─
+function GlassWidgetSmall() {
+  return (
+    <div style={{background:'linear-gradient(180deg, rgba(20,25,35,0.85), rgba(10,12,18,0.85))',border:`1px solid ${glass.border2}`,borderRadius:22,padding:'14px',fontFamily:glass.sans,color:glass.ink,height:'100%',display:'flex',flexDirection:'column',justifyContent:'space-between',position:'relative',overflow:'hidden',boxShadow:`0 10px 28px -8px rgba(0,0,0,0.6), 0 0 24px -8px ${glass.accentGlow}`}}>
+      <div style={{position:'absolute',top:-20,right:-20,width:90,height:90,borderRadius:'50%',background:`radial-gradient(circle, ${glass.accentGlow}, transparent 65%)`,filter:'blur(8px)'}}/>
+      <div style={{position:'relative',display:'flex',alignItems:'center',gap:5}}>
+        <span style={{width:6,height:6,borderRadius:10,background:glass.accent,boxShadow:`0 0 6px ${glass.accent}`}}/>
+        <span style={{fontFamily:glass.mono,fontSize:8,letterSpacing:1.3,textTransform:'uppercase',color:glass.accent2,fontWeight:700}}>Now · 28m</span>
+      </div>
+      <div style={{position:'relative'}}>
+        <div style={{fontFamily:glass.display,fontSize:14,fontWeight:600,letterSpacing:-0.3,lineHeight:1.1}}>Discrete Math</div>
+        <div style={{fontFamily:glass.mono,fontSize:9,color:glass.muted,marginTop:4}}>Rm 704 · 10:10–11:00</div>
+      </div>
+    </div>
+  );
+}
+
+// ─ Full widget screens (homescreen with app icons around) ─
+function PaperHomescreen() {
+  return (
+    <HomescreenBg dark={false}>
+      <div style={{marginBottom:14}}><PaperWidgetMedium/></div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,height:150}}>
+        <PaperWidgetSmall/>
+        <div style={{background:'rgba(255,255,255,0.28)',borderRadius:22,backdropFilter:'blur(18px)',padding:'14px',display:'flex',flexDirection:'column',gap:8,fontFamily:paper.sans}}>
+          <div style={{fontFamily:paper.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:'#3a3a3a',fontWeight:700}}>This week</div>
+          <div style={{flex:1,display:'flex',alignItems:'end',gap:4}}>
+            {[50,80,65,90,40].map((h,i) => (
+              <div key={i} style={{flex:1,height:`${h}%`,background:i===1?paper.ink:'rgba(0,0,0,0.35)',borderRadius:4}}/>
+            ))}
+          </div>
+          <div style={{fontFamily:paper.mono,fontSize:8,color:'#3a3a3a',display:'flex',justifyContent:'space-between'}}>
+            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span>
+          </div>
+        </div>
+      </div>
+    </HomescreenBg>
+  );
+}
+
+function GlassHomescreen() {
+  return (
+    <HomescreenBg dark={true}>
+      <div style={{marginBottom:14}}><GlassWidgetMedium/></div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,height:150}}>
+        <GlassWidgetSmall/>
+        <div style={{background:'rgba(20,25,35,0.6)',borderRadius:22,backdropFilter:'blur(18px)',border:`1px solid ${glass.border}`,padding:'14px',display:'flex',flexDirection:'column',gap:8,fontFamily:glass.sans,color:glass.ink,position:'relative',overflow:'hidden'}}>
+          <div style={{fontFamily:glass.mono,fontSize:9,letterSpacing:1.3,textTransform:'uppercase',color:glass.accent2,fontWeight:700}}>Streak</div>
+          <div style={{fontFamily:glass.display,fontSize:36,fontWeight:600,letterSpacing:-1,lineHeight:1}}>18<span style={{fontSize:14,color:glass.muted,fontWeight:400}}>d</span></div>
+          <div style={{flex:1,display:'flex',alignItems:'end',gap:3}}>
+            {Array.from({length:14}).map((_,i) => (
+              <div key={i} style={{flex:1,height:i===13?'100%':`${30+Math.random()*60}%`,background:i===13?glass.accent:`rgba(255,255,255,${0.15+i/40})`,borderRadius:3,boxShadow:i===13?`0 0 6px ${glass.accent}`:'none'}}/>
+            ))}
+          </div>
+        </div>
+      </div>
+    </HomescreenBg>
+  );
+}
+
+Object.assign(window, { PaperWidgetMedium, PaperWidgetSmall, GlassWidgetMedium, GlassWidgetSmall, PaperHomescreen, GlassHomescreen });
+
+
+
+function Artboard({ label, dark, children }) {
+  return (
+    <div className="art">
+      {label && <div className="lbl">{label}</div>}
+      <div className={'frame' + (dark ? ' dark' : '')}>{children}</div>
+    </div>
+  );
+}
+
+function PhoneWithNav({ children, nav }) {
+  return (
+    <div style={{position:'relative'}}>
+      <AndroidDevice width={360} height={780} dark={nav === 'glass'}>{children}</AndroidDevice>
+      <div style={{position:'absolute',left:10,right:10,bottom:30,zIndex:10}}>
+        {nav === 'paper' ? <PaperNav/> : <GlassNav/>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div>
+      <div className="page-block">
+        <div className="hero">
+          <h1>ClassNow — redesign</h1>
+          <p>Two fresh design systems for the student timetable. <b>Paper</b> is an editorial light theme — serif display, mono times, calm timeline. <b>Glass</b> is a dark premium UI with aurora glow, centered on the current class.</p>
+          <p style={{fontSize:12,color:'rgba(60,50,40,0.5)',marginTop:4}}>Three screens each: Dashboard · Home-screen Widget · Profile/Settings.</p>
+        </div>
+        <div style={{marginTop:48}}>
+          <div className="section-h">
+            <div className="t">Paper · editorial light</div>
+            <div className="s">Warm off-white, serif display, mono times, amber accent. Timeline view prioritises what's happening now.</div>
+          </div>
+          <div className="row">
+            <Artboard label="01 · Dashboard (today)"><PhoneWithNav nav="paper"><PaperDashboard/></PhoneWithNav></Artboard>
+            <Artboard label="02 · Home-screen widget"><AndroidDevice width={360} height={780} dark={false}><PaperHomescreen/></AndroidDevice></Artboard>
+            <Artboard label="03 · Profile & settings"><AndroidDevice width={360} height={780} dark={false}><PaperSettings/></AndroidDevice></Artboard>
+          </div>
+        </div>
+      </div>
+
+      <div className="page-block">
+        <div className="section-h">
+          <div className="t">Glass · dark premium</div>
+          <div className="s">Graphite black with aurora glow, glass cards, Geist display. Now-playing class is the hero.</div>
+        </div>
+        <div className="row">
+          <Artboard label="01 · Dashboard (today)" dark><PhoneWithNav nav="glass"><GlassDashboard/></PhoneWithNav></Artboard>
+          <Artboard label="02 · Home-screen widget" dark><AndroidDevice width={360} height={780} dark={true}><GlassHomescreen/></AndroidDevice></Artboard>
+          <Artboard label="03 · Profile & settings" dark><AndroidDevice width={360} height={780} dark={true}><GlassSettings/></AndroidDevice></Artboard>
+        </div>
+      </div>
+
+      <div className="page-block">
+        <div className="section-h">
+          <div className="t">System notes</div>
+          <div className="s">Tokens, typography, what changed vs. the current build.</div>
+        </div>
+        <div className="row">
+          <Artboard label="Paper tokens">
+            <div style={{width:360,height:440,background:'#FBF8F1',padding:24,borderRadius:22}}>
+              <div style={{fontFamily:'"Fraunces",serif',fontSize:24,fontWeight:500,letterSpacing:-0.5,color:'#15130F'}}>Paper</div>
+              <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:10,letterSpacing:1.2,textTransform:'uppercase',color:'#7D7668',marginTop:4}}>Editorial · warm · calm</div>
+              <div style={{marginTop:18,display:'flex',gap:6}}>
+                {['#F6F2EA','#FBF8F1','#E7E1D2','#D9D2C2','#15130F'].map(c=><div key={c} style={{flex:1,height:36,background:c,borderRadius:8,border:'1px solid rgba(0,0,0,0.06)'}}/>)}
+              </div>
+              <div style={{marginTop:8,display:'flex',gap:6}}>
+                <div style={{flex:1,height:36,background:'oklch(62% 0.18 48)',borderRadius:8}}/>
+                <div style={{flex:1,height:36,background:'oklch(94% 0.04 48)',borderRadius:8,border:'1px solid rgba(0,0,0,0.06)'}}/>
+                <div style={{flex:2,height:36,display:'flex',alignItems:'center',paddingLeft:8,fontFamily:'JetBrains Mono',fontSize:10,color:'#7D7668'}}>accent · oklch(62% 0.18 48)</div>
+              </div>
+              <div style={{marginTop:22,borderTop:'1px solid #E7E1D2',paddingTop:16,fontFamily:'Inter',fontSize:12,color:'#3C382F',lineHeight:1.6}}>
+                <div style={{fontFamily:'Fraunces',fontSize:26,letterSpacing:-0.4}}>Aa — Fraunces</div>
+                <div>Ab — Inter / UI &amp; body</div>
+                <div style={{fontFamily:'JetBrains Mono',fontSize:11,letterSpacing:0.3}}>10:10 — JetBrains Mono</div>
+              </div>
+            </div>
+          </Artboard>
+          <Artboard label="Glass tokens" dark>
+            <div style={{width:360,height:440,background:'#08090D',padding:24,position:'relative',overflow:'hidden',borderRadius:22}}>
+              <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle, oklch(72% 0.18 230 / 0.5), transparent 65%)',filter:'blur(20px)'}}/>
+              <div style={{position:'relative',color:'#F4F5F7'}}>
+                <div style={{fontFamily:'"Geist",sans-serif',fontSize:24,fontWeight:600,letterSpacing:-0.5}}>Glass</div>
+                <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:10,letterSpacing:1.2,textTransform:'uppercase',color:'#6C6F79',marginTop:4}}>Dark · premium · aurora</div>
+                <div style={{marginTop:18,display:'flex',gap:6}}>
+                  {['#08090D','#0E1016','rgba(255,255,255,0.06)','rgba(255,255,255,0.14)','#F4F5F7'].map((c,i)=><div key={i} style={{flex:1,height:36,background:c,borderRadius:8,border:'1px solid rgba(255,255,255,0.1)'}}/>)}
+                </div>
+                <div style={{marginTop:8,display:'flex',gap:6}}>
+                  <div style={{flex:1,height:36,background:'oklch(72% 0.18 230)',borderRadius:8,boxShadow:'0 0 14px oklch(72% 0.18 230 / 0.5)'}}/>
+                  <div style={{flex:1,height:36,background:'oklch(78% 0.22 210)',borderRadius:8}}/>
+                  <div style={{flex:2,height:36,display:'flex',alignItems:'center',paddingLeft:8,fontFamily:'JetBrains Mono',fontSize:10,color:'#B8BAC2'}}>aurora · oklch(72% 0.18 230)</div>
+                </div>
+                <div style={{marginTop:22,borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:16,fontFamily:'Inter',fontSize:12,color:'#B8BAC2',lineHeight:1.6}}>
+                  <div style={{fontFamily:'Geist',fontSize:26,fontWeight:600,letterSpacing:-0.5,color:'#F4F5F7'}}>Aa — Geist</div>
+                  <div>Ab — Inter / UI &amp; body</div>
+                  <div style={{fontFamily:'JetBrains Mono',fontSize:11,letterSpacing:0.3}}>10:10 — JetBrains Mono</div>
+                </div>
+              </div>
+            </div>
+          </Artboard>
+          <Artboard label="What changed">
+            <div style={{width:340,height:440,background:'#fff',padding:24,borderRadius:22}}>
+              <div style={{fontFamily:'Fraunces,serif',fontSize:22,fontWeight:500,letterSpacing:-0.4}}>What changed</div>
+              <div style={{marginTop:12,fontFamily:'Inter',fontSize:12,color:'#3C382F',lineHeight:1.65}}>
+                <p><b>Now-first.</b> The current class becomes the hero — countdown, live progress, quick actions.</p>
+                <p><b>Timeline over cards.</b> A vertical spine with mono times feels like a real day.</p>
+                <p><b>Calm palette.</b> Dropped the saturated purple for warm paper or graphite + aurora.</p>
+                <p><b>Earned signals.</b> Streak, attendance, GPA — restrained, not data slop.</p>
+                <p><b>Real widget.</b> Progress, next class, small &amp; medium sizes.</p>
+              </div>
+            </div>
+          </Artboard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+// Auto-print once fonts + JSX are ready
+(async () => {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+  await new Promise(r => setTimeout(r, 1200));
+  window.print();
+})();
+</script>
+</body>
+</html>

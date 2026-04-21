@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:home_widget/home_widget.dart';
@@ -11,7 +10,6 @@ import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/background_callbacks.dart';
 import 'package:flutter_firebase_test/splash_screen.dart';
-import 'package:flutter_firebase_test/notifiers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,9 +22,13 @@ void main() async {
     debugPrint("Firebase initialization error: $e");
   }
 
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: .env file not found or could not be loaded. $e");
+  }
 
-  HomeWidget.registerBackgroundCallback(homeWidgetBackgroundCallback);
+  HomeWidget.registerInteractivityCallback(homeWidgetBackgroundCallback);
 
   runApp(
     MultiProvider(

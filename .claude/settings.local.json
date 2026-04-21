@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '{print $9}')",
+      "Bash(flutter analyze *)",
+      "Bash(/c/Users/Dog/fvm/default/bin/flutter analyze *)",
+      "Bash(where flutter *)",
+      "Read(//c/Users/Dog/**)",
+      "Read(//c/Users/Dog/AppData/Local/**)",
+      "PowerShell(Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; ls $env:LOCALAPPDATA\\\\flutter\\\\bin\\\\flutter.bat -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

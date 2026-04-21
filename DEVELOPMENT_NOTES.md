@@ -44,9 +44,12 @@ Native Firebase initialization (`FirebaseApp.initializeApp(this)`) is **disabled
 - If you encounter `Unresolved reference: FirebaseApp`, ensure that no native Kotlin file is trying to import `com.google.firebase.FirebaseApp`.
 - The `compileSdk` is set to **35** to support the latest `home_widget` and `workmanager` plugins.
 
-## 5. Troubleshooting Circular Dependencies
+## 6. UI Compatibility & Design System
 
-If you see errors regarding `DashboardPage` not found or circular imports:
-1. Check if the file imports `main.dart`.
-2. Replace it with `import 'package:flutter_firebase_test/dashboard_page.dart';`.
-3. Ensure global state is accessed via `notifiers.dart`.
+### Color & Styling
+- **Color Methods:** Use `.withOpacity()` instead of `.withValues()`. The current environment/Flutter version does not support `.withValues()`.
+- **Material 3 Themes:** Use `CardTheme()` instead of `CardThemeData()` within `ThemeData` declarations.
+
+### Common Startup Issues
+- **Splash Screen Hang:** If the app hangs on the splash screen, check the `logcat` for `FileNotFoundError` related to `.env`. 
+  - **Fix:** Ensure `.env` is declared in `pubspec.yaml` assets and the load call in `main.dart` is wrapped in a `try-catch`.
