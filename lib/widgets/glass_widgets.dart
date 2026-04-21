@@ -19,7 +19,7 @@ class AuroraBackground extends StatelessWidget {
               right: -80,
               child: _blob(
                 size: 360,
-                color: AppTheme.glassAccent.withOpacity(0.45),
+                color: AppTheme.glassAccent.withValues(alpha: 0.45),
                 blur: 20,
               ),
             ),
@@ -29,7 +29,7 @@ class AuroraBackground extends StatelessWidget {
               left: -140,
               child: _blob(
                 size: 320,
-                color: const Color(0xFF9B59FF).withOpacity(0.35),
+                color: const Color(0xFF9B59FF).withValues(alpha: 0.35),
                 blur: 20,
               ),
             ),
@@ -39,7 +39,7 @@ class AuroraBackground extends StatelessWidget {
               right: -60,
               child: _blob(
                 size: 280,
-                color: const Color(0xFF00E5FF).withOpacity(0.25),
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.25),
                 blur: 20,
               ),
             ),
@@ -124,8 +124,8 @@ class GlassCard extends StatelessWidget {
 
     // Glass tokens for dark; Paper-surface tint for light
     final defaultColor = isDark
-        ? Colors.white.withOpacity(opacity.clamp(0.03, 0.08))
-        : AppTheme.paperSurface.withOpacity((opacity + 0.55).clamp(0.0, 1.0));
+        ? Colors.white.withValues(alpha: opacity.clamp(0.03, 0.08))
+        : AppTheme.paperSurface.withValues(alpha: (opacity + 0.55).clamp(0.0, 1.0));
 
     final borderColor = isDark
         ? AppTheme.glassBorder2
@@ -137,7 +137,7 @@ class GlassCard extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow: shadows ?? [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.35 : 0.10),
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.10),
             blurRadius: 24,
             offset: const Offset(0, 10),
             spreadRadius: -4,
@@ -159,12 +159,12 @@ class GlassCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: isDark
                     ? [
-                        Colors.white.withOpacity(0.07),
-                        Colors.white.withOpacity(0.01),
+                        Colors.white.withValues(alpha: 0.07),
+                        Colors.white.withValues(alpha: 0.01),
                       ]
                     : [
                         AppTheme.paperSurface,
-                        AppTheme.paperSurface.withOpacity(0.85),
+                        AppTheme.paperSurface.withValues(alpha: 0.85),
                       ],
               ),
             ),
@@ -232,7 +232,7 @@ class _GradientCardState extends State<GradientCard>
         borderRadius: widget.borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: widget.gradientColors.first.withOpacity(0.3),
+            color: widget.gradientColors.first.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
             spreadRadius: 0,
@@ -306,14 +306,14 @@ class NeumorphicCard extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withOpacity(0.5)
+                      ? Colors.black.withValues(alpha: 0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(2, 2),
                   blurRadius: 5,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
+                  color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
                   offset: const Offset(-2, -2),
                   blurRadius: 5,
                   spreadRadius: 1,
@@ -322,14 +322,14 @@ class NeumorphicCard extends StatelessWidget {
             : [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withOpacity(0.5)
+                      ? Colors.black.withValues(alpha: 0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(8, 8),
                   blurRadius: 15,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
                   offset: const Offset(-8, -8),
                   blurRadius: 15,
                   spreadRadius: 1,
@@ -368,12 +368,12 @@ class GlowingCard extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: glowColor.withOpacity(0.5),
+            color: glowColor.withValues(alpha: 0.5),
             blurRadius: glowRadius,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: glowColor.withOpacity(0.3),
+            color: glowColor.withValues(alpha: 0.3),
             blurRadius: glowRadius * 2,
             spreadRadius: 5,
           ),
@@ -384,7 +384,7 @@ class GlowingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: borderRadius ?? BorderRadius.circular(20),
-          border: Border.all(color: glowColor.withOpacity(0.5), width: 2),
+          border: Border.all(color: glowColor.withValues(alpha: 0.5), width: 2),
         ),
         child: child,
       ),
@@ -424,20 +424,20 @@ class GlassButton extends StatelessWidget {
                   padding ??
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
-                color: (color ?? Theme.of(context).primaryColor).withOpacity(
+                color: (color ?? Theme.of(context).primaryColor).withValues(alpha: 
                   0.2,
                 ),
                 borderRadius: borderRadius ?? BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.15),
-                    Colors.white.withOpacity(0.05),
+                    Colors.white.withValues(alpha: 0.15),
+                    Colors.white.withValues(alpha: 0.05),
                   ],
                 ),
               ),
