@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.flutter_firebase_test"
-    compileSdk = 36 // Required by latest plugins
+    compileSdk = 35 // Required by latest plugins like home_widget and workmanager
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -21,8 +21,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.flutter_firebase_test"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        minSdk = 23
+        targetSdk = 34
         multiDexEnabled = true
         versionCode = 1
         versionName = "1.0"

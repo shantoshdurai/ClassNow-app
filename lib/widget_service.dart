@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_firebase_test/firebase_options.dart';
 
 @pragma('vm:entry-point')
 class WidgetService {
@@ -18,7 +19,7 @@ class WidgetService {
   static Future<void> updateWidget({bool forceRefresh = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
     } catch (e) {
       print('⚠️ [WidgetService] Firebase init error: $e');
     }
@@ -264,7 +265,7 @@ class WidgetService {
     WidgetsFlutterBinding.ensureInitialized();
     print("⏰ [WidgetService] Alarm fired!");
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
     } catch (_) {}
     await updateWidget();
   }

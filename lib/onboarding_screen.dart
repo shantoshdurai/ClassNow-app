@@ -5,7 +5,7 @@ import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
-import 'main.dart';
+import 'package:flutter_firebase_test/dashboard_page.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
 
@@ -71,11 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .collection('departments')
           .get();
 
-      var matchingDocs = snapshot.docs.where((doc) {
-        return doc.id == 'school-of-engineering-and-technology';
-      }).toList();
-
-      final items = matchingDocs.map((doc) {
+      final items = snapshot.docs.map((doc) {
         final name = doc.data()['name'] ?? doc.id;
         return DropdownMenuItem(value: doc.id, child: Text(name));
       }).toList();
@@ -104,9 +100,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } catch (e) {
       if (mounted) {
         setState(() => isInitialLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching departments: $e')),
-        );
+        Future.delayed(Duration.zero, () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error fetching departments: $e')),
+            );
+          }
+        });
       }
     }
   }

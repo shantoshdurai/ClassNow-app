@@ -3,7 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_firebase_test/main.dart';
+import 'package:flutter_firebase_test/firebase_options.dart';
+import 'package:flutter_firebase_test/app_launcher.dart';
+import 'package:flutter_firebase_test/background_callbacks.dart';
 import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:provider/provider.dart';
@@ -60,7 +62,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     try {
       // 1. Initialize Firebase core FIRST (required for everything else)
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: PigeonFirebaseOptions.currentPlatform,
+      );
 
       // 2. Setup Firestore settings immediately
       FirebaseFirestore.instance.settings = const Settings(

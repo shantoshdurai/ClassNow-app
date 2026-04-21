@@ -12,7 +12,7 @@
 
     <application
         android:label="Class Now"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

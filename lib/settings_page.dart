@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_firebase_test/main.dart';
+import 'package:flutter_firebase_test/notifiers.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
