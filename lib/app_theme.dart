@@ -136,7 +136,7 @@ class AppTheme {
         textStyle: _textTheme.labelLarge,
       ),
     ),
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: _lightSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -201,7 +201,7 @@ class AppTheme {
         textStyle: _textTheme.labelLarge,
       ),
     ),
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: _darkSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
