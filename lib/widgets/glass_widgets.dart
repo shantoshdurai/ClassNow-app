@@ -1,5 +1,97 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
+
+// ── Aurora background — three radial gradient blobs + dot grid ───────────────
+// Used on the dark (Glass) theme for dashboard, settings, and login screens.
+class AuroraBackground extends StatelessWidget {
+  const AuroraBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            // Blue blob — top-right
+            Positioned(
+              top: -120,
+              right: -80,
+              child: _blob(
+                size: 360,
+                color: AppTheme.glassAccent.withOpacity(0.45),
+                blur: 20,
+              ),
+            ),
+            // Magenta blob — mid-left
+            Positioned(
+              top: 200,
+              left: -140,
+              child: _blob(
+                size: 320,
+                color: const Color(0xFF9B59FF).withOpacity(0.35),
+                blur: 20,
+              ),
+            ),
+            // Cyan blob — bottom-right
+            Positioned(
+              bottom: -80,
+              right: -60,
+              child: _blob(
+                size: 280,
+                color: const Color(0xFF00E5FF).withOpacity(0.25),
+                blur: 20,
+              ),
+            ),
+            // Subtle dot grid
+            Opacity(
+              opacity: 0.07,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _DotGridPainter(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _blob({required double size, required Color color, required double blur}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, Colors.transparent],
+          stops: const [0.0, 0.65],
+        ),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white..style = PaintingStyle.fill;
+    const spacing = 18.0;
+    const radius = 0.7;
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
 
 /// Premium glassmorphism card widget with Apple-inspired design
 class GlassCard extends StatelessWidget {
@@ -30,29 +122,27 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Improved colors for visibility
+    // Glass tokens for dark; Paper-surface tint for light
     final defaultColor = isDark
-        ? Colors.white.withOpacity(opacity)
-        : Colors.white.withOpacity(
-            opacity + 0.5,
-          ); // Increased opacity for Light Mode
+        ? Colors.white.withOpacity(opacity.clamp(0.03, 0.08))
+        : AppTheme.paperSurface.withOpacity((opacity + 0.55).clamp(0.0, 1.0));
+
+    final borderColor = isDark
+        ? AppTheme.glassBorder2
+        : AppTheme.paperLine;
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
         borderRadius: borderRadius ?? BorderRadius.circular(20),
-        boxShadow:
-            shadows ??
-            [
-              BoxShadow(
-                color: Colors.black.withOpacity(
-                  isDark ? 0.3 : 0.12,
-                ), // Stronger shadow for Light Mode
-                blurRadius: 25,
-                offset: const Offset(0, 10),
-                spreadRadius: -2,
-              ),
-            ],
+        boxShadow: shadows ?? [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.35 : 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+            spreadRadius: -4,
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.circular(20),
@@ -63,27 +153,19 @@ class GlassCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: color ?? defaultColor,
               borderRadius: borderRadius ?? BorderRadius.circular(20),
-              border:
-                  border ??
-                  Border.all(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12) // Subtle glow for dark
-                        : Colors.black.withOpacity(
-                            0.08,
-                          ), // Subtle dark border for light
-                    width: 1.5,
-                  ),
+              border: border ?? Border.all(color: borderColor, width: 1),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.4),
-                  isDark
-                      ? Colors.white.withOpacity(0.02)
-                      : Colors.white.withOpacity(0.1),
-                ],
+                colors: isDark
+                    ? [
+                        Colors.white.withOpacity(0.07),
+                        Colors.white.withOpacity(0.01),
+                      ]
+                    : [
+                        AppTheme.paperSurface,
+                        AppTheme.paperSurface.withOpacity(0.85),
+                      ],
               ),
             ),
             child: child,

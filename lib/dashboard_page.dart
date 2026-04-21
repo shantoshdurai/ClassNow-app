@@ -817,11 +817,11 @@ class _DashboardPageState extends State<DashboardPage>
 
     if (_showSelectionOverlay == true || !userSelection.hasSelection) {
       return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+        backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
         body: Stack(
           children: [
             Container(
-              color: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+              color: isDark ? AppTheme.glassBg : AppTheme.paperBg,
             ),
             SafeArea(
               child: Center(
@@ -843,7 +843,7 @@ class _DashboardPageState extends State<DashboardPage>
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
         child: Container(
@@ -871,10 +871,11 @@ class _DashboardPageState extends State<DashboardPage>
                       ),
                       Text(
                         isAdmin ? "Mentor Mode" : "Student View",
-                        style: AppTextStyles.interSubtitle.copyWith(
-                          color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10,
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: isAdmin
+                              ? (isDark ? AppTheme.glassAccent2 : AppTheme.paperAccentInk)
+                              : theme.hintColor,
+                          letterSpacing: 1.2,
                           height: 1.0,
                         ),
                       ),
@@ -928,61 +929,59 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       body: Stack(
         children: [
+          // ── Base background ─────────────────────────────────────────────
           Positioned.fill(
             child: Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 final customPath = themeProvider.customBackgroundPath;
                 if (customPath != null && File(customPath).existsSync()) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(
-                          sigmaX: themeProvider.backgroundBlur,
-                          sigmaY: themeProvider.backgroundBlur,
-                          tileMode: TileMode.decal,
-                        ),
-                        child: Image.file(File(customPath), fit: BoxFit.cover),
-                      ),
-                    ],
+                  return ImageFiltered(
+                    imageFilter: ImageFilter.blur(
+                      sigmaX: themeProvider.backgroundBlur,
+                      sigmaY: themeProvider.backgroundBlur,
+                      tileMode: TileMode.decal,
+                    ),
+                    child: Image.file(File(customPath), fit: BoxFit.cover),
                   );
                 }
                 return Container(
-                  color: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+                  color: isDark ? AppTheme.glassBg : AppTheme.paperBg,
                 );
               },
             ),
           ),
+          // ── Ambient background layer (Aurora / Paper blobs) ──────────────
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               final hasCustomBg = themeProvider.customBackgroundPath != null &&
                   File(themeProvider.customBackgroundPath!).existsSync();
               if (hasCustomBg) return const SizedBox.shrink();
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (isDark)
-                    Image.asset('assets/dark_mode_bg.jpeg', fit: BoxFit.cover)
-                  else ...[
-                    Positioned(
-                      top: -100,
-                      right: -50,
-                      child: Container(
-                        width: 300,
-                        height: 300,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.primaryBlue.withOpacity(0.08),
-                        ),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                          child: Container(color: Colors.transparent),
-                        ),
-                      ),
+              if (isDark) {
+                return const AuroraBackground();
+              }
+              // Light: single warm accent blob top-right
+              return Positioned(
+                top: -100,
+                right: -50,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppTheme.paperAccent.withOpacity(0.10),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.7],
                     ),
-                  ],
-                ],
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
               );
             },
           ),

@@ -76,9 +76,7 @@ class _IntroScreenState extends State<IntroScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
       body: Stack(
         children: [
           // Background Blobs

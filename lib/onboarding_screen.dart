@@ -232,9 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: isDark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
       body: Stack(
         children: [
           // Animated Background Blobs

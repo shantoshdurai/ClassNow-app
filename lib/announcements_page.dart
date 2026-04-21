@@ -24,9 +24,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: isDark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
         child: Container(
