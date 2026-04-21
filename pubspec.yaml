@@ -95,7 +95,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - .env
     - assets/dsu_logo.png
     - assets/dark_mode_bg.jpeg
 

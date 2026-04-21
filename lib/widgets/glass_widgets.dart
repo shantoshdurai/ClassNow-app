@@ -32,8 +32,8 @@ class GlassCard extends StatelessWidget {
 
     // Improved colors for visibility
     final defaultColor = isDark
-        ? Colors.white.withOpacity(opacity)
-        : Colors.white.withOpacity(
+        ? Colors.white.withValues(alpha: opacity)
+        : Colors.white.withValues(alpha: 
             opacity + 0.5,
           ); // Increased opacity for Light Mode
 
@@ -45,7 +45,7 @@ class GlassCard extends StatelessWidget {
             shadows ??
             [
               BoxShadow(
-                color: Colors.black.withOpacity(
+                color: Colors.black.withValues(alpha: 
                   isDark ? 0.3 : 0.12,
                 ), // Stronger shadow for Light Mode
                 blurRadius: 25,
@@ -67,8 +67,8 @@ class GlassCard extends StatelessWidget {
                   border ??
                   Border.all(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12) // Subtle glow for dark
-                        : Colors.black.withOpacity(
+                        ? Colors.white.withValues(alpha: 0.12) // Subtle glow for dark
+                        : Colors.black.withValues(alpha: 
                             0.08,
                           ), // Subtle dark border for light
                     width: 1.5,
@@ -78,11 +78,11 @@ class GlassCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.4),
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.white.withValues(alpha: 0.4),
                   isDark
-                      ? Colors.white.withOpacity(0.02)
-                      : Colors.white.withOpacity(0.1),
+                      ? Colors.white.withValues(alpha: 0.02)
+                      : Colors.white.withValues(alpha: 0.1),
                 ],
               ),
             ),
@@ -150,7 +150,7 @@ class _GradientCardState extends State<GradientCard>
         borderRadius: widget.borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: widget.gradientColors.first.withOpacity(0.3),
+            color: widget.gradientColors.first.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
             spreadRadius: 0,
@@ -224,14 +224,14 @@ class NeumorphicCard extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withOpacity(0.5)
+                      ? Colors.black.withValues(alpha: 0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(2, 2),
                   blurRadius: 5,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
+                  color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
                   offset: const Offset(-2, -2),
                   blurRadius: 5,
                   spreadRadius: 1,
@@ -240,14 +240,14 @@ class NeumorphicCard extends StatelessWidget {
             : [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withOpacity(0.5)
+                      ? Colors.black.withValues(alpha: 0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(8, 8),
                   blurRadius: 15,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
                   offset: const Offset(-8, -8),
                   blurRadius: 15,
                   spreadRadius: 1,
@@ -286,12 +286,12 @@ class GlowingCard extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: glowColor.withOpacity(0.5),
+            color: glowColor.withValues(alpha: 0.5),
             blurRadius: glowRadius,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: glowColor.withOpacity(0.3),
+            color: glowColor.withValues(alpha: 0.3),
             blurRadius: glowRadius * 2,
             spreadRadius: 5,
           ),
@@ -302,7 +302,7 @@ class GlowingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: borderRadius ?? BorderRadius.circular(20),
-          border: Border.all(color: glowColor.withOpacity(0.5), width: 2),
+          border: Border.all(color: glowColor.withValues(alpha: 0.5), width: 2),
         ),
         child: child,
       ),
@@ -342,20 +342,20 @@ class GlassButton extends StatelessWidget {
                   padding ??
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
-                color: (color ?? Theme.of(context).primaryColor).withOpacity(
+                color: (color ?? Theme.of(context).primaryColor).withValues(alpha: 
                   0.2,
                 ),
                 borderRadius: borderRadius ?? BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.15),
-                    Colors.white.withOpacity(0.05),
+                    Colors.white.withValues(alpha: 0.15),
+                    Colors.white.withValues(alpha: 0.05),
                   ],
                 ),
               ),
