@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -29,5 +29,5 @@ jobs:
         run: flutter test
 
       - name: Build APK (debug)
-        continue-on-error: true # Requires google-services.json which is not committed
+        continue-on-error: true
         run: flutter build apk --debug
