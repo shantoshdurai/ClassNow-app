@@ -12,6 +12,7 @@ import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_firebase_test/screens/mycamu_sync_screen.dart';
+import 'package:flutter_firebase_test/services/user_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,9 +23,12 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
-  bool _widgetsEnabled = true;
-  bool _retroDisplayEnabled = true;
+  bool _widgetsEnabled = false;
   bool _showAdvancedSettings = false;
+
+  UserData? _userData;
+  int _streak = 0;
+  String? _attendancePercent;
 
   @override
   void initState() {
@@ -34,20 +38,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    final userData = await UserService.getUserData();
+    final streak = await UserService.getStreak();
     if (!mounted) return;
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _widgetsEnabled = prefs.getBool('widgets_enabled') ?? true;
-      _retroDisplayEnabled = prefs.getBool('retro_display_enabled') ?? true;
+      _widgetsEnabled = prefs.getBool('widgets_enabled') ?? false;
+      _userData = userData;
+      _streak = streak;
+      _attendancePercent = prefs.getString('mycamu_attendance_percent');
     });
-  }
-
-  Future<void> _setRetroDisplayEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('retro_display_enabled', value);
-    if (!mounted) return;
-    setState(() => _retroDisplayEnabled = value);
-    retroDisplayEnabledNotifier.value = value;
   }
 
   Future<void> _setWidgetsEnabled(bool value) async {
@@ -164,6 +164,16 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                         const Spacer(),
+                        // Theme Toggle Button
+                        _iconBtn(
+                          icon: isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                          color: isDark ? Colors.orangeAccent : accent,
+                          border: border2,
+                          surface: surface,
+                          onTap: () => themeProvider.toggleTheme(!isDark),
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 10),
                         _iconBtn(
                           icon: isDark ? Icons.ios_share_rounded : Icons.settings_outlined,
                           color: inkColor,
@@ -229,7 +239,13 @@ class _SettingsPageState extends State<SettingsPage> {
                         isDark: isDark,
                         onTap: () => Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            transitionDuration: const Duration(milliseconds: 500),
+                          ),
                           (r) => false,
                         ),
                       ),
@@ -237,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       _settingsRow(
                         icon: Icons.sync_rounded,
                         iconColor: const Color(0xFF9B59FF),
-                        title: 'Sync MyCamu',
+                        title: 'Sign in Camu',
                         meta: 'Link attendance data',
                         inkColor: inkColor,
                         mutedColor: mutedColor,
@@ -247,7 +263,13 @@ class _SettingsPageState extends State<SettingsPage> {
                         isLast: true,
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const MyCamuSyncScreen()),
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const MyCamuSyncScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            transitionDuration: const Duration(milliseconds: 400),
+                          ),
                         ),
                       ),
                     ],
@@ -263,24 +285,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     border: border,
                     children: [
                       _settingsRow(
-                        icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                        iconColor: isDark ? accent : AppTheme.paperAccent,
-                        title: 'Dark Mode',
-                        meta: isDark ? 'Glass theme · Aurora' : 'Paper theme · Light',
-                        inkColor: inkColor,
-                        mutedColor: mutedColor,
-                        surface: surface,
-                        border: border,
-                        isDark: isDark,
-                        trailing: _toggle(
-                          on: isDark,
-                          accent: accent,
-                          isDark: isDark,
-                          onChanged: (v) => themeProvider.toggleTheme(v),
-                        ),
-                      ),
-                      _divider(border),
-                      _settingsRow(
                         icon: Icons.widgets_outlined,
                         iconColor: accent,
                         title: 'Home Widget',
@@ -291,19 +295,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         border: border,
                         isDark: isDark,
                         trailing: _toggle(on: _widgetsEnabled, accent: accent, isDark: isDark, onChanged: _setWidgetsEnabled),
-                      ),
-                      _divider(border),
-                      _settingsRow(
-                        icon: Icons.computer_outlined,
-                        iconColor: accent,
-                        title: '90s Retro Display',
-                        meta: 'Pixel-style class tracker',
-                        inkColor: inkColor,
-                        mutedColor: mutedColor,
-                        surface: surface,
-                        border: border,
-                        isDark: isDark,
-                        trailing: _toggle(on: _retroDisplayEnabled, accent: accent, isDark: isDark, onChanged: _setRetroDisplayEnabled),
                       ),
                       _divider(border),
                       _settingsRow(
@@ -516,148 +507,152 @@ class _SettingsPageState extends State<SettingsPage> {
     required Color border2,
     required ThemeProvider themeProvider,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: isDark
-                ? Colors.white.withOpacity(0.05)
-                : AppTheme.paperSurface,
-            border: Border.all(color: border2, width: 1),
-            gradient: isDark
-                ? LinearGradient(
+    return GlassCard(
+      blur: 40,
+      opacity: isDark ? 0.1 : 0.6,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        children: [
+          // Avatar + name row
+          Row(
+            children: [
+              // Avatar tile
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withOpacity(0.08),
-                      Colors.white.withOpacity(0.01),
-                    ],
-                  )
-                : null,
-            boxShadow: isDark
-                ? [
-                    BoxShadow(
-                      color: AppTheme.glassAccentGlow,
-                      blurRadius: 40,
-                      offset: const Offset(0, 16),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            children: [
-              // Avatar + name row
-              Row(
-                children: [
-                  // Avatar tile
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? [AppTheme.glassAccent, const Color(0xFF2979FF)]
-                            : [AppTheme.paperAccent, AppTheme.paperAccentInk],
-                      ),
-                      border: Border.all(color: border2, width: 1),
-                      boxShadow: isDark
-                          ? [
-                              BoxShadow(
-                                color: AppTheme.glassAccentGlow,
-                                blurRadius: 20,
-                                spreadRadius: 0,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'ME',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                    ),
+                    colors: isDark
+                        ? [AppTheme.glassAccent, const Color(0xFF2979FF)]
+                        : [AppTheme.paperAccent, AppTheme.paperAccentInk],
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'DSU Student',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w600,
-                            color: inkColor,
-                            letterSpacing: -0.3,
-                          ),
+                  boxShadow: isDark
+                      ? [
+                        BoxShadow(
+                          color: AppTheme.glassAccentGlow.withOpacity(0.4),
+                          blurRadius: 20,
+                          spreadRadius: -4,
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'B.Tech · CSE',
-                          style: AppTextStyles.monoLabel.copyWith(
-                            color: ink2,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: isDark
-                                ? Colors.white.withOpacity(0.06)
-                                : AppTheme.paperAccentSoft,
-                            border: Border.all(color: border, width: 1),
-                          ),
-                          child: Text(
-                            isDark ? 'GLASS · DARK' : 'PAPER · LIGHT',
-                            style: AppTextStyles.monoLabel.copyWith(
-                              color: accent,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
+                      ]
+                      : [
+                        BoxShadow(
+                          color: AppTheme.paperAccent.withOpacity(0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 4),
                         ),
                       ],
+                ),
+                child: Center(
+                  child: Text(
+                    _userData?.initials ?? 'ME',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: -0.4,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              // Stats strip
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: border, width: 1)),
                 ),
-                child: Row(
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _statCell(label: 'STREAK', value: '18', unit: 'd',
-                        inkColor: inkColor, mutedColor: mutedColor),
-                    _statDivider(border),
-                    _statCell(label: 'ATTENDANCE', value: '87', unit: '%',
-                        inkColor: isDark ? AppTheme.glassAccent2 : AppTheme.paperAccentInk,
-                        mutedColor: mutedColor),
-                    _statDivider(border),
-                    _statCell(label: 'YEAR', value: '3', unit: 'rd',
-                        inkColor: inkColor, mutedColor: mutedColor),
+                    Text(
+                      _userData?.name ?? 'DSU Student',
+                      style: AppTextStyles.interTitle.copyWith(
+                        fontSize: 20,
+                        color: inkColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _userData?.branch != null ? _userData!.branch : 'DSU · Student',
+                      style: AppTextStyles.monoLabel.copyWith(
+                        color: ink2,
+                        letterSpacing: 0.4,
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.06)
+                            : AppTheme.paperAccentSoft,
+                        border: Border.all(
+                          color: accent.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        isDark ? 'GLASS · DARK' : 'PAPER · LIGHT',
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: accent,
+                          letterSpacing: 1.2,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 20),
+          // Stats strip
+          Container(
+            padding: const EdgeInsets.only(top: 18),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? Colors.white10 : AppTheme.paperLine,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                _statCell(
+                  label: 'STREAK',
+                  value: '$_streak',
+                  unit: 'd',
+                  inkColor: inkColor,
+                  mutedColor: mutedColor,
+                ),
+                _statDivider(isDark ? Colors.white10 : AppTheme.paperLine),
+                _statCell(
+                  label: 'ATTENDANCE',
+                  value: _attendancePercent ?? '--',
+                  unit: _attendancePercent != null ? '%' : '',
+                  inkColor:
+                      isDark ? AppTheme.glassAccent2 : AppTheme.paperAccentInk,
+                  mutedColor: mutedColor,
+                ),
+                _statDivider(isDark ? Colors.white10 : AppTheme.paperLine),
+                _statCell(
+                  label: 'YEAR',
+                  value: _userData?.year ?? '--',
+                  unit: '',
+                  inkColor: inkColor,
+                  mutedColor: mutedColor,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

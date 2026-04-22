@@ -1,33 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   AppTheme._();
 
   // ── Glass (dark) tokens ──────────────────────────────────────────────────
-  static const Color glassBg        = Color(0xFF08090D);
-  static const Color glassBg2       = Color(0xFF0E1016);
-  static const Color glassSurface   = Color(0x0AFFFFFF); // rgba(255,255,255,0.04)
-  static const Color glassSurface2  = Color(0x0FFFFFFF); // rgba(255,255,255,0.06)
-  static const Color glassBorder    = Color(0x14FFFFFF); // rgba(255,255,255,0.08)
-  static const Color glassBorder2   = Color(0x24FFFFFF); // rgba(255,255,255,0.14)
-  static const Color glassInk       = Color(0xFFF4F5F7);
-  static const Color glassInk2      = Color(0xFFB8BAC2);
-  static const Color glassMuted     = Color(0xFF6C6F79);
-  static const Color glassAccent    = Color(0xFF3BA9FF); // oklch(72% 0.18 230)
-  static const Color glassAccent2   = Color(0xFF4FD1FF); // oklch(78% 0.22 210)
-  static const Color glassAccentGlow = Color(0x803BA9FF); // accent / 50%
+  static const Color glassBg        = Color(0xFF07080B);
+  static const Color glassBg2       = Color(0xFF0C0E14);
+  static const Color glassSurface   = Color(0x0DFFFFFF); // ~5%
+  static const Color glassSurface2  = Color(0x14FFFFFF); // ~8%
+  static const Color glassBorder    = Color(0x1AFFFFFF); // ~10%
+  static const Color glassBorder2   = Color(0x2BFFFFFF); // ~17%
+  static const Color glassInk       = Color(0xFFF8F9FB);
+  static const Color glassInk2      = Color(0xFFC5C7D0);
+  static const Color glassMuted     = Color(0xFF7A7D8A);
+  static const Color glassAccent    = Color(0xFF4DB6FF); // oklch(75% 0.16 235)
+  static const Color glassAccent2   = Color(0xFF63D9FF); // oklch(82% 0.14 215)
+  static const Color glassAccentGlow = Color(0x664DB6FF); // 40% glow
 
   // ── Paper (light) tokens ─────────────────────────────────────────────────
-  static const Color paperBg        = Color(0xFFF6F2EA);
-  static const Color paperSurface   = Color(0xFFFBF8F1);
-  static const Color paperInk       = Color(0xFF15130F);
-  static const Color paperInk2      = Color(0xFF3C382F);
-  static const Color paperMuted     = Color(0xFF7D7668);
-  static const Color paperFaint     = Color(0xFFD9D2C2);
-  static const Color paperLine      = Color(0xFFE7E1D2);
-  static const Color paperAccent    = Color(0xFFD97D3A); // oklch(62% 0.18 48)
-  static const Color paperAccentSoft = Color(0xFFF3E9DD);
-  static const Color paperAccentInk = Color(0xFF6E3510);
+  static const Color paperBg        = Color(0xFFF9F6F0); // Warmer, creamier
+  static const Color paperSurface   = Color(0xFFFEFDFC); // Near-white paper
+  static const Color paperInk       = Color(0xFF1A1714); // Deep charcoal ink
+  static const Color paperInk2      = Color(0xFF423D38); // Medium ink
+  static const Color paperMuted     = Color(0xFF8B8477); // Faded ink
+  static const Color paperFaint     = Color(0xFFE8E2D5);
+  static const Color paperLine      = Color(0xFFF0EAE0); // Very soft rule lines
+  static const Color paperAccent    = Color(0xFFCD6924); // oklch(58% 0.18 45) - Burnt Orange
+  static const Color paperAccentSoft = Color(0xFFF7ECE1);
+  static const Color paperAccentInk = Color(0xFF7A3E16);
 
   // ── Semantic aliases (used by widgets that don't know which theme is active)
   static const Color _accentPink    = Color(0xFFFF2D55);
@@ -42,23 +43,27 @@ class AppTheme {
   static Color get accentGreen  => _accentGreen;
 
   // ── Text theme ───────────────────────────────────────────────────────────
-  static const TextTheme _textTheme = TextTheme(
-    displayLarge:  TextStyle(fontSize: 57, fontWeight: FontWeight.bold),
-    displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.bold),
-    displaySmall:  TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-    headlineLarge:  TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-    headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-    headlineSmall:  TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-    titleLarge:  TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-    titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15),
-    titleSmall:  TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
-    bodyLarge:   TextStyle(fontSize: 16),
-    bodyMedium:  TextStyle(fontSize: 14),
-    bodySmall:   TextStyle(fontSize: 12),
-    labelLarge:  TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-    labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-    labelSmall:  TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-  );
+  // Fraunces → display / headline (editorial serif)
+  // Inter     → title / body / label (clean sans)
+  static TextTheme _buildTextTheme(Color displayColor, Color bodyColor) {
+    return TextTheme(
+      displayLarge:  GoogleFonts.fraunces(fontSize: 57, fontWeight: FontWeight.w600, color: displayColor),
+      displayMedium: GoogleFonts.fraunces(fontSize: 45, fontWeight: FontWeight.w600, color: displayColor),
+      displaySmall:  GoogleFonts.fraunces(fontSize: 36, fontWeight: FontWeight.w500, color: displayColor),
+      headlineLarge:  GoogleFonts.fraunces(fontSize: 32, fontWeight: FontWeight.w600, color: displayColor),
+      headlineMedium: GoogleFonts.fraunces(fontSize: 28, fontWeight: FontWeight.w500, color: displayColor),
+      headlineSmall:  GoogleFonts.fraunces(fontSize: 24, fontWeight: FontWeight.w500, color: displayColor),
+      titleLarge:  GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w600, color: bodyColor),
+      titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15, color: bodyColor),
+      titleSmall:  GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1, color: bodyColor),
+      bodyLarge:   GoogleFonts.inter(fontSize: 16, color: bodyColor),
+      bodyMedium:  GoogleFonts.inter(fontSize: 14, color: bodyColor),
+      bodySmall:   GoogleFonts.inter(fontSize: 12, color: bodyColor),
+      labelLarge:  GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: bodyColor),
+      labelMedium: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: bodyColor),
+      labelSmall:  GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: bodyColor),
+    );
+  }
 
   // ── Light theme — Paper ───────────────────────────────────────────────────
   static final ThemeData lightTheme = ThemeData(
@@ -76,13 +81,13 @@ class AppTheme {
       onSurface: paperInk,
       onError: Colors.white,
     ),
-    textTheme: _textTheme.apply(displayColor: paperInk, bodyColor: paperInk),
+    textTheme: _buildTextTheme(paperInk, paperInk),
     appBarTheme: AppBarTheme(
       backgroundColor: paperBg,
       elevation: 0,
       iconTheme: const IconThemeData(color: paperAccent),
-      titleTextStyle: _textTheme.headlineSmall?.copyWith(
-        color: paperInk, fontWeight: FontWeight.bold,
+      titleTextStyle: GoogleFonts.fraunces(
+        fontSize: 24, fontWeight: FontWeight.w500, color: paperInk,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -138,13 +143,13 @@ class AppTheme {
       onSurface: glassInk,
       onError: Colors.white,
     ),
-    textTheme: _textTheme.apply(displayColor: glassInk, bodyColor: glassInk),
+    textTheme: _buildTextTheme(glassInk, glassInk),
     appBarTheme: AppBarTheme(
       backgroundColor: glassBg,
       elevation: 0,
       iconTheme: const IconThemeData(color: glassAccent),
-      titleTextStyle: _textTheme.headlineSmall?.copyWith(
-        color: glassInk, fontWeight: FontWeight.bold,
+      titleTextStyle: GoogleFonts.fraunces(
+        fontSize: 24, fontWeight: FontWeight.w500, color: glassInk,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -188,37 +193,43 @@ class AppTheme {
 }
 
 // ── Typography helpers ────────────────────────────────────────────────────────
+// Fraunces  → editorial display / subject headings
+// JetBrains Mono → time stamps, badges, status labels
+// Inter     → body, mentor names, supporting text
 class AppTextStyles {
-  static TextStyle get interTitle => const TextStyle(
-    fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.5,
+  // Fraunces — large headings and subject names
+  static TextStyle get interTitle => GoogleFonts.fraunces(
+    fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5,
   );
-  static TextStyle get interSubtitle => const TextStyle(
+  static TextStyle get interSubject => GoogleFonts.fraunces(
+    fontSize: 22, fontWeight: FontWeight.w500, letterSpacing: -0.3,
+  );
+  static TextStyle get interNext => GoogleFonts.fraunces(
+    fontSize: 18, fontWeight: FontWeight.w500, letterSpacing: -0.2,
+  );
+
+  // Inter — body and supporting text
+  static TextStyle get interSubtitle => GoogleFonts.inter(
     fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.2,
   );
-  static TextStyle get interBadge => const TextStyle(
-    fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.3,
-  );
-  static TextStyle get interLiveNow => const TextStyle(
-    fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2,
-  );
-  static TextStyle get interSubject => const TextStyle(
-    fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.3,
-  );
-  static TextStyle get interProgress => const TextStyle(
+  static TextStyle get interProgress => GoogleFonts.inter(
     fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.1,
   );
-  static TextStyle get interMentor => const TextStyle(
+  static TextStyle get interMentor => GoogleFonts.inter(
     fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1,
   );
-  static TextStyle get interNext => const TextStyle(
-    fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: -0.2,
-  );
-  static TextStyle get interSmall => const TextStyle(
+  static TextStyle get interSmall => GoogleFonts.inter(
     fontSize: 13, fontWeight: FontWeight.w400, letterSpacing: 0.1,
   );
-  // Mono label style — mirrors JetBrains Mono usage in the design
-  static TextStyle get monoLabel => const TextStyle(
-    fontSize: 10, fontWeight: FontWeight.w500,
-    letterSpacing: 1.4,
+
+  // JetBrains Mono — times, badges, status chips
+  static TextStyle get monoLabel => GoogleFonts.jetBrainsMono(
+    fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 1.4,
+  );
+  static TextStyle get interLiveNow => GoogleFonts.jetBrainsMono(
+    fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2,
+  );
+  static TextStyle get interBadge => GoogleFonts.jetBrainsMono(
+    fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3,
   );
 }

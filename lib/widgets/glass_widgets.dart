@@ -9,46 +9,71 @@ class AuroraBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Positioned.fill(
       child: IgnorePointer(
         child: Stack(
           children: [
-            // Blue blob — top-right
-            Positioned(
-              top: -120,
-              right: -80,
-              child: _blob(
-                size: 360,
-                color: AppTheme.glassAccent.withOpacity(0.45),
-                blur: 20,
+            if (isDark) ...[
+              // Blue blob — top-right
+              Positioned(
+                top: -150,
+                right: -100,
+                child: _blob(
+                  size: 500,
+                  color: AppTheme.glassAccent.withOpacity(0.35),
+                  blur: 90,
+                ),
               ),
-            ),
-            // Magenta blob — mid-left
-            Positioned(
-              top: 200,
-              left: -140,
-              child: _blob(
-                size: 320,
-                color: const Color(0xFF9B59FF).withOpacity(0.35),
-                blur: 20,
+              // Magenta blob — mid-left
+              Positioned(
+                top: 200,
+                left: -200,
+                child: _blob(
+                  size: 450,
+                  color: const Color(0xFFB066FF).withOpacity(0.2),
+                  blur: 80,
+                ),
               ),
-            ),
-            // Cyan blob — bottom-right
-            Positioned(
-              bottom: -80,
-              right: -60,
-              child: _blob(
-                size: 280,
-                color: const Color(0xFF00E5FF).withOpacity(0.25),
-                blur: 20,
+              // Cyan blob — bottom-right
+              Positioned(
+                bottom: -150,
+                right: -100,
+                child: _blob(
+                  size: 400,
+                  color: const Color(0xFF00F0FF).withOpacity(0.15),
+                  blur: 70,
+                ),
               ),
-            ),
+            ] else ...[
+              // Paper mode: Soft warm amber blob
+              Positioned(
+                top: -100,
+                right: -50,
+                child: _blob(
+                  size: 400,
+                  color: AppTheme.paperAccent.withOpacity(0.08),
+                  blur: 100,
+                ),
+              ),
+              // Soft peach/cream blob bottom left
+              Positioned(
+                bottom: -50,
+                left: -50,
+                child: _blob(
+                  size: 350,
+                  color: const Color(0xFFF3E9DD).withOpacity(0.5),
+                  blur: 80,
+                ),
+              ),
+            ],
             // Subtle dot grid
             Opacity(
-              opacity: 0.07,
+              opacity: isDark ? 0.08 : 0.15,
               child: CustomPaint(
                 size: Size.infinite,
-                painter: _DotGridPainter(),
+                painter: _DotGridPainter(color: isDark ? Colors.white : AppTheme.paperMuted),
               ),
             ),
           ],
@@ -77,11 +102,14 @@ class AuroraBackground extends StatelessWidget {
 }
 
 class _DotGridPainter extends CustomPainter {
+  final Color color;
+  _DotGridPainter({this.color = Colors.white});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white..style = PaintingStyle.fill;
-    const spacing = 18.0;
-    const radius = 0.7;
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    const spacing = 20.0;
+    const radius = 0.6;
     for (double x = 0; x < size.width; x += spacing) {
       for (double y = 0; y < size.height; y += spacing) {
         canvas.drawCircle(Offset(x, y), radius, paint);
@@ -124,47 +152,53 @@ class GlassCard extends StatelessWidget {
 
     // Glass tokens for dark; Paper-surface tint for light
     final defaultColor = isDark
-        ? Colors.white.withOpacity(opacity.clamp(0.03, 0.08))
-        : AppTheme.paperSurface.withOpacity((opacity + 0.55).clamp(0.0, 1.0));
+        ? Colors.white.withOpacity(opacity.clamp(0.01, 0.06))
+        : AppTheme.paperSurface.withOpacity((opacity + 0.45).clamp(0.0, 1.0));
 
     final borderColor = isDark
-        ? AppTheme.glassBorder2
-        : AppTheme.paperLine;
+        ? AppTheme.glassBorder2.withOpacity(0.12)
+        : AppTheme.paperLine.withOpacity(0.6);
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        borderRadius: borderRadius ?? BorderRadius.circular(24),
         boxShadow: shadows ?? [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.35 : 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-            spreadRadius: -4,
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.06),
+            blurRadius: 32,
+            offset: const Offset(0, 12),
+            spreadRadius: -8,
           ),
+          if (!isDark)
+            BoxShadow(
+              color: AppTheme.paperAccent.withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        borderRadius: borderRadius ?? BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: Container(
-            padding: padding ?? const EdgeInsets.all(16),
+            padding: padding ?? const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: color ?? defaultColor,
-              borderRadius: borderRadius ?? BorderRadius.circular(20),
-              border: border ?? Border.all(color: borderColor, width: 1),
+              borderRadius: borderRadius ?? BorderRadius.circular(24),
+              border: border ?? Border.all(color: borderColor, width: 0.8),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: isDark
                     ? [
-                        Colors.white.withOpacity(0.07),
-                        Colors.white.withOpacity(0.01),
+                        Colors.white.withOpacity(0.08),
+                        Colors.white.withOpacity(0.02),
                       ]
                     : [
-                        AppTheme.paperSurface,
-                        AppTheme.paperSurface.withOpacity(0.85),
+                        AppTheme.paperSurface.withOpacity(0.9),
+                        AppTheme.paperSurface.withOpacity(0.7),
                       ],
               ),
             ),

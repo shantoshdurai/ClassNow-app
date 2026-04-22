@@ -24,86 +24,62 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(100),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
-          child: GlassCard(
-            blur: 25,
-            opacity: 0.1,
-            borderRadius: BorderRadius.circular(20),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: SizedBox(
-              height: 70,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(
-                    'Announcements',
-                    style: AppTextStyles.interTitle.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 18,
-                      height: 1.0,
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: theme.primaryColor,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.smart_toy_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      tooltip: 'AI Assistant',
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => const ChatbotInterface(),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
       body: Stack(
         children: [
-          if (isDark)
-            Positioned(
-              top: -100,
-              right: -50,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.primaryBlue.withOpacity(0.15),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
-
+          const AuroraBackground(),
           SafeArea(
             child: Column(
               children: [
+                // Custom App Bar
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: GlassCard(
+                    blur: 40,
+                    opacity: 0.1,
+                    borderRadius: BorderRadius.circular(24),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: SizedBox(
+                      height: 72,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: theme.colorScheme.onSurface,
+                              size: 20,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'ANNOUNCEMENTS',
+                                  style: AppTextStyles.monoLabel.copyWith(
+                                    color: theme.primaryColor,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Latest Updates',
+                                  style: AppTextStyles.interTitle.copyWith(
+                                    fontSize: 18,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 48), // Balances the back button
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
@@ -142,7 +118,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                       }
 
                       return ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: docs.length,
                         itemBuilder: (context, index) {
                           final data =
@@ -152,77 +128,84 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
                           return GlassCard(
                             margin: const EdgeInsets.only(bottom: 12),
-                            blur: 15,
-                            opacity: 0.08,
-                            padding: EdgeInsets.zero,
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      (isSystem
-                                              ? theme.primaryColor
-                                              : theme.colorScheme.secondary)
-                                          .withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  isSystem
-                                      ? Icons.info_outline
-                                      : Icons.campaign_outlined,
-                                  color: isSystem
-                                      ? theme.primaryColor
-                                      : theme.colorScheme.secondary,
-                                  size: 20,
-                                ),
-                              ),
-                              title: RichText(
-                                text: TextSpan(
+                            blur: 20,
+                            opacity: isDark ? 0.05 : 0.4,
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    TextSpan(
-                                      text: '${data['author'] ?? 'Mentor'} - ',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.primaryColor,
-                                          ),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: (isSystem
+                                                ? theme.primaryColor
+                                                : theme.colorScheme.secondary)
+                                            .withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isSystem
+                                            ? Icons.info_outline
+                                            : Icons.campaign_outlined,
+                                        color: isSystem
+                                            ? theme.primaryColor
+                                            : theme.colorScheme.secondary,
+                                        size: 16,
+                                      ),
                                     ),
-                                    TextSpan(
-                                      text: '"${data['message'] ?? ''}"',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontStyle: FontStyle.italic,
-                                            color: theme.colorScheme.onSurface,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              subtitle: timestamp != null
-                                  ? Text(
-                                      DateFormat(
-                                        'MMM dd, hh:mm a',
-                                      ).format(timestamp.toDate()),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: theme.hintColor.withOpacity(
-                                              0.7,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            (data['author'] ?? 'Mentor')
+                                                .toUpperCase(),
+                                            style: AppTextStyles.monoLabel.copyWith(
+                                              color: theme.primaryColor,
+                                              fontSize: 9,
                                             ),
                                           ),
-                                    )
-                                  : null,
-                              trailing: widget.isAdmin
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 18,
-                                        color: theme.colorScheme.error
-                                            .withOpacity(0.7),
+                                          if (timestamp != null)
+                                            Text(
+                                              DateFormat('MMM dd, hh:mm a')
+                                                  .format(timestamp.toDate()),
+                                              style: AppTextStyles.interSmall
+                                                  .copyWith(
+                                                color: theme.hintColor,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      onPressed: () =>
-                                          docs[index].reference.delete(),
-                                    )
-                                  : null,
+                                    ),
+                                    if (widget.isAdmin)
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 18,
+                                          color: theme.colorScheme.error
+                                              .withOpacity(0.7),
+                                        ),
+                                        onPressed: () =>
+                                            docs[index].reference.delete(),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  data['message'] ?? '',
+                                  style: AppTextStyles.interSmall.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontSize: 15,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -234,7 +217,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                     child: GlassCard(
-                      blur: 20,
+                      blur: 30,
                       opacity: 0.1,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -253,6 +236,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                 ),
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                filled: false,
                               ),
                             ),
                           ),
@@ -266,11 +251,11 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                 FirebaseFirestore.instance
                                     .collection('announcements')
                                     .add({
-                                      'message': messageController.text.trim(),
-                                      'author': 'Mentor', // Added Author
-                                      'timestamp': FieldValue.serverTimestamp(),
-                                      'isSystemMessage': false,
-                                    });
+                                  'message': messageController.text.trim(),
+                                  'author': 'Mentor',
+                                  'timestamp': FieldValue.serverTimestamp(),
+                                  'isSystemMessage': false,
+                                });
                                 messageController.clear();
                               }
                             },
