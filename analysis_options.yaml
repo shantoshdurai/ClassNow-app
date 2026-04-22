@@ -11,3 +11,8 @@ analyzer:
     deprecated_member_use_from_same_package: ignore
     include_file_not_found: ignore
     unnecessary_non_null_assertion: ignore
+
+linter:
+  rules:
+    avoid_print: false
+    prefer_const_constructors: false
