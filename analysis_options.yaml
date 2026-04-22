@@ -9,8 +9,5 @@ analyzer:
   errors:
     deprecated_member_use: ignore
     deprecated_member_use_from_same_package: ignore
-
-linter:
-  rules:
-    avoid_print: false
-    prefer_const_constructors: false
+    include_file_not_found: ignore
+    unnecessary_non_null_assertion: ignore
