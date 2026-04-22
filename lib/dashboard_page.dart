@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:workmanager/workmanager.dart';
 
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';

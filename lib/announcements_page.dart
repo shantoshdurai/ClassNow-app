@@ -1,10 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
-import 'package:flutter_firebase_test/widgets/chatbot_interface.dart';
 
 class AnnouncementsPage extends StatefulWidget {
   final bool isAdmin;

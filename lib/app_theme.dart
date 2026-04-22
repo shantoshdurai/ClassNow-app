@@ -74,7 +74,7 @@ class AppTheme {
       primary: paperAccent,
       secondary: paperAccentInk,
       surface: paperSurface,
-      surfaceVariant: paperBg,
+      surfaceContainerHighest: paperBg,
       error: _accentPink,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
@@ -136,7 +136,7 @@ class AppTheme {
       primary: glassAccent,
       secondary: glassAccent2,
       surface: Color(0xFF0E1016),   // glassBg2
-      surfaceVariant: Color(0x14FFFFFF), // glassBorder
+      surfaceContainerHighest: Color(0x14FFFFFF), // glassBorder
       error: _accentPink,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
