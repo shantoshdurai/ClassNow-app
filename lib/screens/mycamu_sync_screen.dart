@@ -237,7 +237,6 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
 
       // --- LOGIC: Force Identity Sync ---
       if (data['name'] != null && !['password', 'dsu student', 'guest student'].contains(data['name'].toLowerCase())) {
-         final prefs = await SharedPreferences.getInstance();
          final userData = UserData(
             name: data['name'],
             rollNumber: data['rollNumber'] ?? 'N/A',

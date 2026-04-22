@@ -25,11 +25,6 @@ class _RobotEyesWidgetState extends State<RobotEyesWidget>
   late Animation<Offset> _moveAnimation;
   late Animation<double> _moodAnimation;
   
-  Offset _leftEyePosition = const Offset(-0.3, 0.0);
-  Offset _rightEyePosition = const Offset(0.3, 0.0);
-  double _leftEyeHeight = 1.0;
-  double _rightEyeHeight = 1.0;
-  
   EyeMood _currentMood = EyeMood.normal;
   final Random _random = Random();
   

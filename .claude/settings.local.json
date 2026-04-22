@@ -16,7 +16,12 @@
       "Bash(adb devices *)",
       "Bash(flutter --version)",
       "Read(//c/flutter/**)",
-      "Read(//c/src/flutter/**)"
+      "Read(//c/src/flutter/**)",
+      "Read(//c/src/flutter_windows_3.24.3-stable/flutter/**)",
+      "Bash(./bin/flutter analyze *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

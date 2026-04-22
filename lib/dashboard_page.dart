@@ -413,7 +413,6 @@ class _DashboardPageState extends State<DashboardPage>
 
   Widget _buildExamModeBanner() {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: GlassCard(
@@ -1278,7 +1277,7 @@ class _DashboardPageState extends State<DashboardPage>
         child: Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.35),
           child: Padding(
             padding: const EdgeInsets.all(18.0),
             child: Column(

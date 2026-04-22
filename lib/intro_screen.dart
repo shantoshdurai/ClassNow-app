@@ -7,7 +7,6 @@ import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
-import 'dart:ui';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
