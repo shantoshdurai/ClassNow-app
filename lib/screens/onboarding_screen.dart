@@ -183,7 +183,6 @@ class _GuideScreenState extends State<GuideScreen> {
   }
 
   Widget _buildActionButton(bool isDark) {
-    final page = _pages[_currentPage];
     final isLast = _currentPage == _pages.length - 1;
 
     return AnimatedContainer(

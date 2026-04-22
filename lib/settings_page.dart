@@ -6,7 +6,6 @@ import 'package:flutter_firebase_test/notifiers.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
-import 'package:flutter_firebase_test/notification_settings_page.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:image_picker/image_picker.dart';

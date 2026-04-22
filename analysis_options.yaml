@@ -6,10 +6,11 @@ analyzer:
     - "bin/**"
     - "test/mock_firebase.dart"
     - "lib/widgets/files/**"
+  errors:
+    deprecated_member_use: ignore
+    deprecated_member_use_from_same_package: ignore
 
 linter:
   rules:
-    # Adding some basic rules but keeping it loose for now
-    - avoid_print: false # The user has many prints
-    - prefer_const_constructors: false
-    - deprecated_member_use: false
+    avoid_print: false
+    prefer_const_constructors: false
