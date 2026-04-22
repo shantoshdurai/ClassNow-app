@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ClassNow · Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:"Inter",system-ui,sans-serif;color:#1a1a1a}
+  *{box-sizing:border-box}
+  button{font-family:inherit}
+  .page{max-width:1400px;margin:0 auto;padding:48px 32px 80px}
+  .hero h1{font-family:"Fraunces",Georgia,serif;font-size:44px;font-weight:500;letter-spacing:-1px;margin:0 0 8px;color:#15130F}
+  .hero p{font-size:14px;color:#5a5245;max-width:680px;line-height:1.5;margin:0 0 8px}
+  .section-h{margin:48px 0 24px;display:flex;flex-direction:column;gap:4px}
+  .section-h .t{font-family:"Fraunces",serif;font-size:22px;font-weight:600;color:rgba(40,30,20,0.85);letter-spacing:-0.3px}
+  .section-h .s{font-size:13px;color:rgba(60,50,40,0.6)}
+  .row{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start}
+  .art{display:flex;flex-direction:column;gap:8px}
+  .art .lbl{font-size:11px;font-weight:500;color:rgba(60,50,40,0.7);letter-spacing:0.3px}
+  .frame{background:#fff;border-radius:22px;box-shadow:0 30px 60px -20px rgba(0,0,0,0.25),0 1px 3px rgba(0,0,0,0.08)}
+  .frame.dark{box-shadow:0 30px 60px -20px rgba(0,0,0,0.6),0 1px 3px rgba(0,0,0,0.12)}
+  .tweaks{position:fixed;right:20px;bottom:20px;z-index:50;background:#111;color:#fff;border-radius:18px;padding:14px 16px;font-family:"Inter",sans-serif;font-size:12px;width:240px;box-shadow:0 20px 50px rgba(0,0,0,0.3);display:none}
+  .tweaks.on{display:block}
+  .tweaks h4{margin:0 0 10px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#888;font-weight:600}
+  .tweaks label{display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:10px;color:#ccc}
+  .tweaks select{background:#222;border:1px solid #333;color:#fff;border-radius:8px;padding:4px 8px;font-size:11px}
+</style>
+</head>
+<body>
+<div id="root"><div style="padding:60px;font-family:serif;font-size:18px;color:#888">Loading ClassNow redesign…</div></div>
+
+<div id="tweaks-panel" class="tweaks">
+  <h4>Tweaks</h4>
+  <label>View <select id="tw-view">
+    <option value="all">Both variations</option>
+    <option value="paper">Paper only</option>
+    <option value="glass">Glass only</option>
+  </select></label>
+  <div style="margin-top:10px;font-size:10px;color:#666;line-height:1.4">Paper = editorial light · Glass = dark premium with aurora.</div>
+</div>
+
+<script type="application/json" id="tweak-defaults">
+/*EDITMODE-BEGIN*/{ "view": "all" }/*EDITMODE-END*/
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="lib/icons.jsx"></script>
+<script type="text/babel" src="lib/data.jsx"></script>
+<script type="text/babel" src="lib/android-frame.jsx"></script>
+<script type="text/babel" src="lib/paper-dashboard.jsx"></script>
+<script type="text/babel" src="lib/glass-dashboard.jsx"></script>
+<script type="text/babel" src="lib/settings.jsx"></script>
+<script type="text/babel" src="lib/widgets.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+function Artboard({ label, dark, children }) {
+  return (
+    <div className="art">
+      {label && <div className="lbl">{label}</div>}
+      <div className={'frame' + (dark ? ' dark' : '')} style={{padding:0,overflow:'hidden',borderRadius:22}}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PhoneWithNav({ children, nav }) {
+  return (
+    <div style={{position:'relative'}}>
+      <AndroidDevice width={360} height={780} dark={nav === 'glass'}>
+        {children}
+      </AndroidDevice>
+      <div style={{position:'absolute',left:10,right:10,bottom:30,zIndex:10}}>
+        {nav === 'paper' ? <PaperNav/> : <GlassNav/>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = React.useState('all');
+
+  React.useEffect(() => {
+    const panel = document.getElementById('tweaks-panel');
+    const vSel = document.getElementById('tw-view');
+    vSel.onchange = e => { setView(e.target.value); try { window.parent.postMessage({type:'__edit_mode_set_keys', edits:{view: e.target.value}}, '*'); } catch(e){} };
+    function onMsg(ev) {
+      const d = ev.data; if (!d) return;
+      if (d.type === '__activate_edit_mode') panel.classList.add('on');
+      if (d.type === '__deactivate_edit_mode') panel.classList.remove('on');
+    }
+    window.addEventListener('message', onMsg);
+    try { window.parent.postMessage({type:'__edit_mode_available'}, '*'); } catch(e){}
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const showPaper = view === 'all' || view === 'paper';
+  const showGlass = view === 'all' || view === 'glass';
+
+  return (
+    <div className="page">
+      <div className="hero">
+        <h1>ClassNow — redesign</h1>
+        <p>Two fresh design systems for the student timetable. <b>Paper</b> is an editorial light theme — serif display, mono times, a calm timeline. <b>Glass</b> is a dark premium UI with aurora glow, centered on the current class.</p>
+        <p style={{fontSize:12,color:'rgba(60,50,40,0.5)',marginTop:4}}>Three screens each: Dashboard · Home-screen Widget · Profile/Settings.</p>
+      </div>
+
+      {showPaper && (
+        <>
+          <div className="section-h">
+            <div className="t">Paper · editorial light</div>
+            <div className="s">Warm off-white, serif display, mono times, amber accent. Timeline view prioritises what's happening now.</div>
+          </div>
+          <div className="row">
+            <Artboard label="01 · Dashboard (today)"><PhoneWithNav nav="paper"><PaperDashboard/></PhoneWithNav></Artboard>
+            <Artboard label="02 · Home-screen widget"><AndroidDevice width={360} height={780} dark={false}><PaperHomescreen/></AndroidDevice></Artboard>
+            <Artboard label="03 · Profile & settings"><AndroidDevice width={360} height={780} dark={false}><PaperSettings/></AndroidDevice></Artboard>
+          </div>
+        </>
+      )}
+
+      {showGlass && (
+        <>
+          <div className="section-h">
+            <div className="t">Glass · dark premium</div>
+            <div className="s">Graphite black with aurora glow, glass cards, Geist display. Now-playing class is the hero.</div>
+          </div>
+          <div className="row">
+            <Artboard label="01 · Dashboard (today)" dark><PhoneWithNav nav="glass"><GlassDashboard/></PhoneWithNav></Artboard>
+            <Artboard label="02 · Home-screen widget" dark><AndroidDevice width={360} height={780} dark={true}><GlassHomescreen/></AndroidDevice></Artboard>
+            <Artboard label="03 · Profile & settings" dark><AndroidDevice width={360} height={780} dark={true}><GlassSettings/></AndroidDevice></Artboard>
+          </div>
+        </>
+      )}
+
+      <div className="section-h">
+        <div className="t">System notes</div>
+        <div className="s">Tokens, typography, what changed vs. the current build.</div>
+      </div>
+      <div className="row">
+        <Artboard label="Paper tokens">
+          <div style={{width:360,height:440,background:'#FBF8F1',padding:24,borderRadius:22}}>
+            <div style={{fontFamily:'"Fraunces",serif',fontSize:24,fontWeight:500,letterSpacing:-0.5,color:'#15130F'}}>Paper</div>
+            <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:10,letterSpacing:1.2,textTransform:'uppercase',color:'#7D7668',marginTop:4}}>Editorial · warm · calm</div>
+            <div style={{marginTop:18,display:'flex',gap:6}}>
+              {['#F6F2EA','#FBF8F1','#E7E1D2','#D9D2C2','#15130F'].map(c=><div key={c} style={{flex:1,height:36,background:c,borderRadius:8,border:'1px solid rgba(0,0,0,0.06)'}}/>)}
+            </div>
+            <div style={{marginTop:8,display:'flex',gap:6}}>
+              <div style={{flex:1,height:36,background:'oklch(62% 0.18 48)',borderRadius:8}}/>
+              <div style={{flex:1,height:36,background:'oklch(94% 0.04 48)',borderRadius:8,border:'1px solid rgba(0,0,0,0.06)'}}/>
+              <div style={{flex:2,height:36,display:'flex',alignItems:'center',paddingLeft:8,fontFamily:'JetBrains Mono',fontSize:10,color:'#7D7668'}}>accent · oklch(62% 0.18 48)</div>
+            </div>
+            <div style={{marginTop:22,borderTop:'1px solid #E7E1D2',paddingTop:16,fontFamily:'Inter',fontSize:12,color:'#3C382F',lineHeight:1.6}}>
+              <div style={{fontFamily:'Fraunces',fontSize:26,letterSpacing:-0.4}}>Aa — Fraunces</div>
+              <div>Ab — Inter / UI &amp; body</div>
+              <div style={{fontFamily:'JetBrains Mono',fontSize:11,letterSpacing:0.3}}>10:10 — JetBrains Mono</div>
+            </div>
+          </div>
+        </Artboard>
+        <Artboard label="Glass tokens" dark>
+          <div style={{width:360,height:440,background:'#08090D',padding:24,position:'relative',overflow:'hidden',borderRadius:22}}>
+            <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle, oklch(72% 0.18 230 / 0.5), transparent 65%)',filter:'blur(20px)'}}/>
+            <div style={{position:'relative',color:'#F4F5F7'}}>
+              <div style={{fontFamily:'"Geist",sans-serif',fontSize:24,fontWeight:600,letterSpacing:-0.5}}>Glass</div>
+              <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:10,letterSpacing:1.2,textTransform:'uppercase',color:'#6C6F79',marginTop:4}}>Dark · premium · aurora</div>
+              <div style={{marginTop:18,display:'flex',gap:6}}>
+                {['#08090D','#0E1016','rgba(255,255,255,0.06)','rgba(255,255,255,0.14)','#F4F5F7'].map((c,i)=><div key={i} style={{flex:1,height:36,background:c,borderRadius:8,border:'1px solid rgba(255,255,255,0.1)'}}/>)}
+              </div>
+              <div style={{marginTop:8,display:'flex',gap:6}}>
+                <div style={{flex:1,height:36,background:'oklch(72% 0.18 230)',borderRadius:8,boxShadow:'0 0 14px oklch(72% 0.18 230 / 0.5)'}}/>
+                <div style={{flex:1,height:36,background:'oklch(78% 0.22 210)',borderRadius:8}}/>
+                <div style={{flex:2,height:36,display:'flex',alignItems:'center',paddingLeft:8,fontFamily:'JetBrains Mono',fontSize:10,color:'#B8BAC2'}}>aurora · oklch(72% 0.18 230)</div>
+              </div>
+              <div style={{marginTop:22,borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:16,fontFamily:'Inter',fontSize:12,color:'#B8BAC2',lineHeight:1.6}}>
+                <div style={{fontFamily:'Geist',fontSize:26,fontWeight:600,letterSpacing:-0.5,color:'#F4F5F7'}}>Aa — Geist</div>
+                <div>Ab — Inter / UI &amp; body</div>
+                <div style={{fontFamily:'JetBrains Mono',fontSize:11,letterSpacing:0.3}}>10:10 — JetBrains Mono</div>
+              </div>
+            </div>
+          </div>
+        </Artboard>
+        <Artboard label="What changed">
+          <div style={{width:340,height:440,background:'#fff',padding:24,borderRadius:22}}>
+            <div style={{fontFamily:'Fraunces,serif',fontSize:22,fontWeight:500,letterSpacing:-0.4}}>What changed</div>
+            <div style={{marginTop:12,fontFamily:'Inter',fontSize:12,color:'#3C382F',lineHeight:1.65}}>
+              <p><b>Now-first.</b> The current class becomes the hero — countdown, live progress, quick actions.</p>
+              <p><b>Timeline over cards.</b> A vertical spine with mono times feels like a real day.</p>
+              <p><b>Calm palette.</b> Dropped the saturated purple for warm paper or graphite + aurora.</p>
+              <p><b>Earned signals.</b> Streak, attendance, GPA — restrained, not data slop.</p>
+              <p><b>Real widget.</b> Progress, next class, small &amp; medium sizes.</p>
+            </div>
+          </div>
+        </Artboard>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

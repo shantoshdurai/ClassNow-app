@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-class PigeonFirebaseOptions {
+class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       throw UnsupportedError('Web is not configured. Use FlutterFire CLI.');
@@ -16,7 +16,7 @@ class PigeonFirebaseOptions {
         throw UnsupportedError('macOS is not configured. Use FlutterFire CLI.');
       default:
         throw UnsupportedError(
-          'PigeonFirebaseOptions are not supported for this platform.',
+          'DefaultFirebaseOptions are not supported for this platform.',
         );
     }
   }

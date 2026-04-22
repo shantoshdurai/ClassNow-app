@@ -12,6 +12,8 @@ import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_firebase_test/screens/mycamu_sync_screen.dart';
+import 'package:flutter_firebase_test/services/user_service.dart';
+import 'package:flutter_firebase_test/notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -21,66 +23,61 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _notificationsEnabled = true;
-  bool _widgetsEnabled = true;
-  bool _retroDisplayEnabled = true;
-  bool _showAdvancedSettings = false; // NEW: For collapsible section
+  bool _notificationsEnabled = false;
+  bool _hasNotificationPermission = false;
+  bool _widgetsEnabled = false;
+  bool _showAdvancedSettings = false;
+
+  UserData? _userData;
+  int _streak = 0;
+  String? _attendancePercent;
 
   @override
   void initState() {
     super.initState();
     _loadPrefs();
+    attendanceUpdateNotifier.addListener(_loadPrefs);
+  }
+
+  @override
+  void dispose() {
+    attendanceUpdateNotifier.removeListener(_loadPrefs);
+    super.dispose();
   }
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    final userData = await UserService.getUserData();
+    final streak = await UserService.getStreak();
+    final hasPermission = await NotificationService.hasPermission();
     if (!mounted) return;
     setState(() {
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _widgetsEnabled = prefs.getBool('widgets_enabled') ?? true;
-      _retroDisplayEnabled = prefs.getBool('retro_display_enabled') ?? true;
+      _hasNotificationPermission = hasPermission;
+      _notificationsEnabled = (prefs.getBool('notifications_enabled') ?? false) && hasPermission;
+      _widgetsEnabled = prefs.getBool('widgets_enabled') ?? false;
+      _userData = userData;
+      _streak = streak;
+      _attendancePercent = prefs.getString('mycamu_attendance_percent');
     });
-  }
-
-  Future<void> _setRetroDisplayEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('retro_display_enabled', value);
-    if (!mounted) return;
-    setState(() {
-      _retroDisplayEnabled = value;
-    });
-    // Update the global notifier to trigger immediate UI update
-    retroDisplayEnabledNotifier.value = value;
   }
 
   Future<void> _setWidgetsEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('widgets_enabled', value);
     if (!mounted) return;
-    setState(() {
-      _widgetsEnabled = value;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(value ? 'Widgets enabled' : 'Widgets disabled'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    setState(() => _widgetsEnabled = value);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(value ? 'Widgets enabled' : 'Widgets disabled'),
+      duration: const Duration(seconds: 2),
+    ));
   }
 
   Future<void> _pickBackgroundImage() async {
     final picker = ImagePicker();
     try {
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (pickedFile != null && mounted) {
-        final themeProvider = Provider.of<ThemeProvider>(
-          context,
-          listen: false,
-        );
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
         await themeProvider.setCustomBackground(pickedFile.path);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -90,9 +87,9 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
       }
     }
   }
@@ -122,677 +119,582 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(100),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
-          child: GlassCard(
-            blur: 25,
-            opacity: 0.1,
-            borderRadius: BorderRadius.circular(20),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: SizedBox(
-              height: 70,
-              child: Stack(
-                alignment: Alignment.center,
+    final bg       = isDark ? AppTheme.glassBg       : AppTheme.paperBg;
+    final surface  = isDark ? AppTheme.glassBg2      : AppTheme.paperSurface;
+    final inkColor = isDark ? AppTheme.glassInk      : AppTheme.paperInk;
+    final ink2     = isDark ? AppTheme.glassInk2     : AppTheme.paperInk2;
+    final mutedColor = isDark ? AppTheme.glassMuted  : AppTheme.paperMuted;
+    final accent   = isDark ? AppTheme.glassAccent   : AppTheme.paperAccent;
+    final border   = isDark ? AppTheme.glassBorder   : AppTheme.paperLine;
+    final border2  = isDark ? AppTheme.glassBorder2  : AppTheme.paperLine;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark
+          ? SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent)
+          : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        backgroundColor: bg,
+        body: Stack(
+          children: [
+            // ── Background ─────────────────────────────────────────────────
+            if (isDark) ...[
+              Container(color: AppTheme.glassBg),
+              const AuroraBackground(),
+            ] else
+              Container(color: AppTheme.paperBg),
+
+            // ── Content ────────────────────────────────────────────────────
+            SafeArea(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 48),
                 children: [
-                  Text(
-                    'Settings',
-                    style: AppTextStyles.interTitle.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 20,
-                      height: 1.0,
+                  // ── Top bar ───────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+                    child: Row(
+                      children: [
+                        _iconBtn(
+                          icon: Icons.arrow_back_ios_new_rounded,
+                          color: inkColor,
+                          border: border2,
+                          surface: surface,
+                          onTap: () => Navigator.pop(context),
+                          isDark: isDark,
+                        ),
+                        const Spacer(),
+                        Text(
+                          'PROFILE',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.monoLabel.copyWith(
+                            color: mutedColor,
+                            letterSpacing: 1.8,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Theme Toggle Button
+                        _iconBtn(
+                          icon: isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                          color: isDark ? Colors.orangeAccent : accent,
+                          border: border2,
+                          surface: surface,
+                          onTap: () => themeProvider.toggleTheme(!isDark),
+                          isDark: isDark,
+                        ),
+                        const SizedBox(width: 10),
+                        _iconBtn(
+                          icon: Icons.ios_share_rounded,
+                          color: inkColor,
+                          border: border2,
+                          surface: surface,
+                          onTap: () async {
+                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app');
+                            if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not open GitHub link')),
+                                );
+                              }
+                            }
+                          },
+                          isDark: isDark,
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: theme.primaryColor,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Profile hero card ─────────────────────────────────────
+                  _profileHero(
+                    isDark: isDark,
+                    inkColor: inkColor,
+                    ink2: ink2,
+                    mutedColor: mutedColor,
+                    accent: accent,
+                    surface: surface,
+                    border: border,
+                    border2: border2,
+                    themeProvider: themeProvider,
                   ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: Stack(
-        children: [
-          // Background Layer
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF000000)
-                    : const Color(0xFFF2F2F7),
-              ),
-            ),
-          ),
-          if (isDark)
-            Positioned(
-              top: -100,
-              right: -50,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.primaryBlue.withOpacity(0.15),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.accentPurple.withOpacity(0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
 
-          // Content
-          SafeArea(
-            child: ListView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-              children: [
-                // 🎯 PRIORITY 1: Academic - Primary Purpose
-                _buildSettingsGroup(
-                  context,
-                  title: 'Academic',
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.school_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'My Class',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Change section or year',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OnboardingScreen(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
-                    const Divider(
-                      height: 1,
-                      indent: 56,
-                      endIndent: 16,
-                      color: Colors.white10,
-                    ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.notifications_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'Class Alerts',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Manage notification preferences',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationSettingsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
-                // 🎨 PRIORITY 2: Appearance - Basic Visual Settings
-                _buildSettingsGroup(
-                  context,
-                  title: 'Appearance',
-                  children: [
-                    SwitchListTile(
-                      title: Text(
-                        'Dark Mode',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Comfortable viewing for nighttime',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      value: themeProvider.themeMode == ThemeMode.dark,
-                      onChanged: (value) {
-                        themeProvider.toggleTheme(value);
-                      },
-                      activeColor: theme.colorScheme.primary,
-                      secondary: Icon(
-                        Icons.brightness_6_outlined,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // ADVANCED SETTINGS - Collapsible
-                GlassCard(
-                  padding: EdgeInsets.zero,
-                  opacity: 0.05,
-                  borderRadius: BorderRadius.circular(24),
-                  child: Column(
+                  // ── Schedule section ──────────────────────────────────────
+                  _sectionLabel('SCHEDULE', mutedColor),
+                  _settingsGroup(
+                    isDark: isDark,
+                    surface: surface,
+                    border: border,
                     children: [
-                      ListTile(
-                        leading: Icon(
-                          _showAdvancedSettings
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          color: theme.primaryColor,
+                      _settingsRow(
+                        icon: Icons.notifications_outlined,
+                        iconColor: accent,
+                        title: 'Class Alerts',
+                        meta: _hasNotificationPermission
+                            ? '15 min before each class'
+                            : 'Permission required',
+                        inkColor: inkColor,
+                        mutedColor: _hasNotificationPermission ? mutedColor : Colors.orange,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        trailing: _toggle(on: _notificationsEnabled, accent: accent, isDark: isDark, onChanged: (v) async {
+                          if (v && !_hasNotificationPermission) {
+                            final granted = await NotificationService.requestPermissions();
+                            if (!mounted) return;
+                            if (granted) {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('notifications_enabled', true);
+                              if (mounted) {
+                                setState(() {
+                                  _hasNotificationPermission = true;
+                                  _notificationsEnabled = true;
+                                });
+                              }
+                            } else {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Enable notifications in Settings > Apps > ClassNow > Notifications'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('notifications_enabled', v);
+                            if (mounted) setState(() => _notificationsEnabled = v);
+                          }
+                        }),
+                      ),
+                      _divider(border),
+                      _settingsRow(
+                        icon: Icons.school_outlined,
+                        iconColor: accent,
+                        title: 'My Class',
+                        meta: 'Change section or year',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        onTap: () => Navigator.pushAndRemoveUntil(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            transitionDuration: const Duration(milliseconds: 500),
+                          ),
+                          (r) => false,
                         ),
-                        title: Text(
-                          'Advanced Features',
-                          style: AppTextStyles.interMentor.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.primaryColor,
+                      ),
+                      _divider(border),
+                      _settingsRow(
+                        icon: Icons.sync_rounded,
+                        iconColor: const Color(0xFF9B59FF),
+                        title: 'Sign in Camu',
+                        meta: 'Link attendance data',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        isLast: true,
+                        onTap: () => Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const MyCamuSyncScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            transitionDuration: const Duration(milliseconds: 400),
                           ),
                         ),
-                        subtitle: Text(
-                          _showAdvancedSettings
-                              ? 'Hide additional options'
-                              : 'Show widgets, retro display, etc.',
-                          style: AppTextStyles.interSmall.copyWith(
-                            color: theme.hintColor,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // ── Appearance section ────────────────────────────────────
+                  _sectionLabel('APPEARANCE', mutedColor),
+                  _settingsGroup(
+                    isDark: isDark,
+                    surface: surface,
+                    border: border,
+                    children: [
+                      _settingsRow(
+                        icon: Icons.widgets_outlined,
+                        iconColor: accent,
+                        title: 'Home Widget',
+                        meta: 'Next class · Medium',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        trailing: _toggle(on: _widgetsEnabled, accent: accent, isDark: isDark, onChanged: _setWidgetsEnabled),
+                      ),
+                      _divider(border),
+                      _settingsRow(
+                        icon: Icons.image_outlined,
+                        iconColor: accent,
+                        title: 'Custom Background',
+                        meta: themeProvider.customBackgroundPath != null
+                            ? 'Tap to change'
+                            : 'Personalize your dashboard',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        isLast: true,
+                        onTap: _pickBackgroundImage,
+                        trailing: themeProvider.customBackgroundPath != null
+                            ? GestureDetector(
+                                onTap: _clearBackgroundImage,
+                                child: Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent, size: 18),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // ── Advanced (collapsible) ────────────────────────────────
+                  _settingsGroup(
+                    isDark: isDark,
+                    surface: surface,
+                    border: border,
+                    children: [
+                      InkWell(
+                        onTap: () => setState(() => _showAdvancedSettings = !_showAdvancedSettings),
+                        borderRadius: BorderRadius.circular(18),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          child: Row(
+                            children: [
+                              _iconTile(
+                                icon: _showAdvancedSettings
+                                    ? Icons.expand_less_rounded
+                                    : Icons.expand_more_rounded,
+                                color: accent,
+                                surface: surface,
+                                border: border,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Advanced Features',
+                                        style: AppTextStyles.interMentor.copyWith(
+                                          color: accent,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                                    Text(
+                                      _showAdvancedSettings
+                                          ? 'Hide additional options'
+                                          : 'Blur, widgets & more',
+                                      style: AppTextStyles.interSmall
+                                          .copyWith(color: mutedColor, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        onTap: () {
-                          setState(() {
-                            _showAdvancedSettings = !_showAdvancedSettings;
-                          });
-                        },
                       ),
                       if (_showAdvancedSettings) ...[
-                        const Divider(
-                          height: 1,
-                          indent: 16,
-                          endIndent: 16,
-                          color: Colors.white10,
+                        _divider(border),
+                        // Glass blur slider
+                        _blurSlider(
+                          icon: Icons.blur_on,
+                          title: 'UI Glass Blur',
+                          subtitle: 'Frostiness of cards',
+                          value: themeProvider.glassBlur,
+                          max: 50,
+                          accent: accent,
+                          inkColor: inkColor,
+                          mutedColor: mutedColor,
+                          onChanged: themeProvider.setGlassBlur,
                         ),
-                        ListTile(
-                          leading: Icon(
-                            Icons.image_outlined,
-                            color: theme.primaryColor,
-                          ),
-                          title: Text(
-                            'Custom Background',
-                            style: AppTextStyles.interMentor.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            themeProvider.customBackgroundPath != null
-                                ? 'Tap to change image'
-                                : 'Personalize your dashboard',
-                            style: AppTextStyles.interSmall.copyWith(
-                              color: theme.hintColor,
-                            ),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (themeProvider.customBackgroundPath != null)
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    color: Colors.redAccent,
-                                    size: 20,
-                                  ),
-                                  onPressed: _clearBackgroundImage,
-                                  tooltip: 'Reset to default',
-                                ),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 14,
-                                color: theme.hintColor,
-                              ),
-                            ],
-                          ),
-                          onTap: _pickBackgroundImage,
+                        _divider(border),
+                        // Background blur slider
+                        _blurSlider(
+                          icon: Icons.blur_circular,
+                          title: 'Background Blur',
+                          subtitle: 'Blur custom background image',
+                          value: themeProvider.backgroundBlur,
+                          max: 20,
+                          accent: accent,
+                          inkColor: inkColor,
+                          mutedColor: mutedColor,
+                          onChanged: themeProvider.setBackgroundBlur,
                         ),
-                        const Divider(
-                          height: 1,
-                          indent: 56,
-                          endIndent: 16,
-                          color: Colors.white10,
-                        ),
-                        // UI Glass Blur Control
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 4,
-                                  bottom: 8,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.blur_on,
-                                      color: theme.primaryColor,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'UI Glass Blur',
-                                            style: AppTextStyles.interMentor
-                                                .copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          Text(
-                                            'Control the frostiness of cards and UI elements',
-                                            style: AppTextStyles.interSmall
-                                                .copyWith(
-                                                  color: theme.hintColor,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  activeTrackColor: theme.primaryColor,
-                                  inactiveTrackColor: theme.primaryColor
-                                      .withOpacity(0.2),
-                                  thumbColor: Colors.white,
-                                  overlayColor: theme.primaryColor.withOpacity(
-                                    0.2,
-                                  ),
-                                  trackHeight: 4.0,
-                                ),
-                                child: Slider(
-                                  value: themeProvider.glassBlur,
-                                  min: 0.0,
-                                  max: 50.0,
-                                  divisions: 50,
-                                  label: themeProvider.glassBlur
-                                      .round()
-                                      .toString(),
-                                  onChanged: (value) {
-                                    themeProvider.setGlassBlur(value);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(
-                          height: 1,
-                          indent: 56,
-                          endIndent: 16,
-                          color: Colors.white10,
-                        ),
-                        // Background Blur Control
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 4,
-                                  bottom: 8,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.blur_circular,
-                                      color: theme.primaryColor,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Background Blur',
-                                            style: AppTextStyles.interMentor
-                                                .copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          Text(
-                                            'Blur the background image for better readability',
-                                            style: AppTextStyles.interSmall
-                                                .copyWith(
-                                                  color: theme.hintColor,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  activeTrackColor: theme.primaryColor,
-                                  inactiveTrackColor: theme.primaryColor
-                                      .withOpacity(0.2),
-                                  thumbColor: Colors.white,
-                                  overlayColor: theme.primaryColor.withOpacity(
-                                    0.2,
-                                  ),
-                                  trackHeight: 4.0,
-                                ),
-                                child: Slider(
-                                  value: themeProvider.backgroundBlur,
-                                  min: 0.0,
-                                  max: 20.0,
-                                  divisions: 40,
-                                  label: themeProvider.backgroundBlur
-                                      .toStringAsFixed(1),
-                                  onChanged: (value) {
-                                    themeProvider.setBackgroundBlur(value);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(
-                          height: 1,
-                          indent: 56,
-                          endIndent: 16,
-                          color: Colors.white10,
-                        ),
-                        SwitchListTile(
-                          title: Text(
-                            'Home Screen Widgets',
-                            style: AppTextStyles.interMentor.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Auto-update timetable widget',
-                            style: AppTextStyles.interSmall.copyWith(
-                              color: theme.hintColor,
-                            ),
-                          ),
-                          value: _widgetsEnabled,
-                          onChanged: _setWidgetsEnabled,
-                          activeColor: theme.colorScheme.primary,
-                          secondary: Icon(
-                            Icons.widgets_outlined,
-                            color: theme.primaryColor,
-                          ),
-                        ),
-                        const Divider(
-                          height: 1,
-                          indent: 56,
-                          endIndent: 16,
-                          color: Colors.white10,
-                        ),
-                        SwitchListTile(
-                          title: Text(
-                            '90s Retro Display',
-                            style: AppTextStyles.interMentor.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Pixel-style class tracker',
-                            style: AppTextStyles.interSmall.copyWith(
-                              color: theme.hintColor,
-                            ),
-                          ),
-                          value: _retroDisplayEnabled,
-                          onChanged: _setRetroDisplayEnabled,
-                          activeColor: theme.colorScheme.primary,
-                          secondary: Icon(
-                            Icons.computer_outlined,
-                            color: theme.primaryColor,
-                          ),
-                        ),
-                        const Divider(
-                          height: 1,
-                          indent: 56,
-                          endIndent: 16,
-                          color: Colors.white10,
-                        ),
-                        ListTile(
-                          leading: Icon(
-                            Icons.info_outline_rounded,
-                            color: theme.primaryColor,
-                          ),
-                          title: Text(
-                            'Widget Setup Guide',
-                            style: AppTextStyles.interMentor.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Learn how to add widgets',
-                            style: AppTextStyles.interSmall.copyWith(
-                              color: theme.hintColor,
-                            ),
-                          ),
-                          trailing: Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: theme.hintColor,
-                          ),
+                        _divider(border),
+                        _settingsRow(
+                          icon: Icons.info_outline_rounded,
+                          iconColor: accent,
+                          title: 'Widget Setup Guide',
+                          meta: 'Learn how to add home widgets',
+                          inkColor: inkColor,
+                          mutedColor: mutedColor,
+                          surface: surface,
+                          border: border,
+                          isDark: isDark,
+                          isLast: true,
                           onTap: () => _showWidgetInfoDialog(context),
                         ),
                       ],
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 40),
-                // App Info Footer
-                Center(
-                  child: Column(
+                  const SizedBox(height: 22),
+
+                  // ── Support section ───────────────────────────────────────
+                  _sectionLabel('SUPPORT', mutedColor),
+                  _settingsGroup(
+                    isDark: isDark,
+                    surface: surface,
+                    border: border,
                     children: [
-                      Text(
-                        'Class Now',
-                        style: AppTextStyles.interTitle.copyWith(
-                          color: theme.hintColor.withOpacity(0.5),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'DSU Timetable Management System',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor.withOpacity(0.4),
-                          fontSize: 11,
-                        ),
+                      _settingsRow(
+                        icon: Icons.feedback_outlined,
+                        iconColor: accent,
+                        title: 'Feedback & Contributions',
+                        meta: 'Report issues or share materials',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        isLast: true,
+                        onTap: _launchFeedback,
+                        trailing: Icon(Icons.open_in_new_rounded, size: 14, color: mutedColor),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 32),
 
-                // 🗣️ PRIORITY 3: Support & Feedback
-                _buildSettingsGroup(
-                  context,
-                  title: 'Support',
+                  const SizedBox(height: 22),
+
+                  // ── Experimental section ──────────────────────────────────
+                  _sectionLabel('EXPERIMENTAL', mutedColor),
+                  _settingsGroup(
+                    isDark: isDark,
+                    surface: surface,
+                    border: border,
+                    children: [
+                      _settingsRow(
+                        icon: Icons.delete_sweep_outlined,
+                        iconColor: Colors.redAccent,
+                        title: 'Clear Attendance Data',
+                        meta: 'Remove synced attendance data',
+                        inkColor: inkColor,
+                        mutedColor: mutedColor,
+                        surface: surface,
+                        border: border,
+                        isDark: isDark,
+                        isLast: true,
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.remove('mycamu_attendance_percent');
+                          await prefs.remove('mycamu_subject_attendance');
+                          await prefs.remove('mycamu_last_sync');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Attendance data cleared!')),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  // ── Footer ────────────────────────────────────────────────
+                  Center(
+                    child: Text(
+                      'ClassNow · v3.2.1',
+                      style: AppTextStyles.monoLabel.copyWith(color: mutedColor),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _profileHero({
+    required bool isDark,
+    required Color inkColor,
+    required Color ink2,
+    required Color mutedColor,
+    required Color accent,
+    required Color surface,
+    required Color border,
+    required Color border2,
+    required ThemeProvider themeProvider,
+  }) {
+    return GlassCard(
+      blur: 40,
+      opacity: isDark ? 0.1 : 0.6,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+      borderRadius: BorderRadius.circular(28),
+      child: Column(
+        children: [
+          // Avatar + name row
+          Row(
+            children: [
+              // Avatar tile
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [AppTheme.glassAccent, const Color(0xFF2979FF)]
+                        : [AppTheme.paperAccent, AppTheme.paperAccentInk],
+                  ),
+                  boxShadow: isDark
+                      ? [
+                        BoxShadow(
+                          color: AppTheme.glassAccentGlow.withOpacity(0.4),
+                          blurRadius: 20,
+                          spreadRadius: -4,
+                        ),
+                      ]
+                      : [
+                        BoxShadow(
+                          color: AppTheme.paperAccent.withOpacity(0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                ),
+                child: Center(
+                  child: Text(
+                    _userData?.initials ?? 'ME',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.feedback_outlined,
-                        color: theme.primaryColor,
+                    Text(
+                      _userData?.name ?? 'DSU Student',
+                      style: AppTextStyles.interTitle.copyWith(
+                        fontSize: 20,
+                        color: inkColor,
                       ),
-                      title: Text(
-                        'Feedback & Contributions',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _userData?.branch != null ? _userData!.branch : 'DSU · Student',
+                      style: AppTextStyles.monoLabel.copyWith(
+                        color: ink2,
+                        letterSpacing: 0.4,
+                        fontSize: 10,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.06)
+                            : AppTheme.paperAccentSoft,
+                        border: Border.all(
+                          color: accent.withOpacity(0.2),
+                          width: 1,
                         ),
                       ),
-                      subtitle: Text(
-                        'Report issues or share materials',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
+                      child: Text(
+                        isDark ? 'GLASS · DARK' : 'PAPER · LIGHT',
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: accent,
+                          letterSpacing: 1.2,
+                          fontSize: 9,
                         ),
                       ),
-                      trailing: Icon(
-                        Icons.open_in_new_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: _launchFeedback,
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
-
-                // 🧪 PRIORITY 4: Experimental - Beta Features
-                _buildSettingsGroup(
-                  context,
-                  title: 'Experimental',
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        Icons.science_outlined,
-                        color: theme.primaryColor,
-                      ),
-                      title: Text(
-                        'Sync MyCamu Attendance',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Link your MyCamu account to see attendance',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      trailing: Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
-                        color: theme.hintColor,
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MyCamuSyncScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(
-                      height: 1,
-                      indent: 56,
-                      endIndent: 16,
-                      color: Colors.white10,
-                    ),
-                    ListTile(
-                      leading: Icon(
-                        Icons.delete_sweep_outlined,
-                        color: Colors.redAccent,
-                      ),
-                      title: Text(
-                        'Clear Attendance Data',
-                        style: AppTextStyles.interMentor.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Remove synced attendance data',
-                        style: AppTextStyles.interSmall.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                      onTap: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.remove('mycamu_attendance_percent');
-                        await prefs.remove('mycamu_subject_attendance');
-                        await prefs.remove('mycamu_last_sync');
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Attendance data cleared!'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Stats strip
+          Container(
+            padding: const EdgeInsets.only(top: 18),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? Colors.white10 : AppTheme.paperLine,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                _statCell(
+                  label: 'STREAK',
+                  value: '$_streak',
+                  unit: 'd',
+                  inkColor: inkColor,
+                  mutedColor: mutedColor,
+                ),
+                _statDivider(isDark ? Colors.white10 : AppTheme.paperLine),
+                _statCell(
+                  label: 'ATTENDANCE',
+                  value: _attendancePercent ?? '--',
+                  unit: _attendancePercent != null ? '%' : '',
+                  inkColor:
+                      isDark ? AppTheme.glassAccent2 : AppTheme.paperAccentInk,
+                  mutedColor: mutedColor,
+                ),
+                _statDivider(isDark ? Colors.white10 : AppTheme.paperLine),
+                _statCell(
+                  label: 'YEAR',
+                  value: _userData?.year ?? '--',
+                  unit: '',
+                  inkColor: inkColor,
+                  mutedColor: mutedColor,
                 ),
               ],
             ),
@@ -802,32 +704,276 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSettingsGroup(
-    BuildContext context, {
-    required String title,
+  Widget _statCell({
+    required String label,
+    required String value,
+    required String unit,
+    required Color inkColor,
+    required Color mutedColor,
+  }) {
+    return Expanded(
+      child: Column(
+        children: [
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: inkColor,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                TextSpan(
+                  text: unit,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: mutedColor,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: AppTextStyles.monoLabel.copyWith(
+              color: mutedColor, fontSize: 9,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statDivider(Color border) {
+    return Container(width: 1, height: 36, color: border);
+  }
+
+  Widget _sectionLabel(String text, Color mutedColor) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        text,
+        style: AppTextStyles.monoLabel.copyWith(color: mutedColor, letterSpacing: 1.5),
+      ),
+    );
+  }
+
+  Widget _settingsGroup({
+    required bool isDark,
+    required Color surface,
+    required Color border,
     required List<Widget> children,
   }) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
-          child: Text(
-            title.toUpperCase(),
-            style: AppTextStyles.interBadge.copyWith(
-              color: theme.primaryColor,
-              fontWeight: FontWeight.w900,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            color: isDark
+                ? Colors.white.withOpacity(0.04)
+                : AppTheme.paperSurface,
+            border: Border.all(color: border, width: 1),
+          ),
+          child: Column(children: children),
+        ),
+      ),
+    );
+  }
+
+  Widget _settingsRow({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String meta,
+    required Color inkColor,
+    required Color mutedColor,
+    required Color surface,
+    required Color border,
+    required bool isDark,
+    bool isLast = false,
+    VoidCallback? onTap,
+    Widget? trailing,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            _iconTile(icon: icon, color: iconColor, surface: surface, border: border),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: AppTextStyles.interMentor.copyWith(
+                        color: inkColor, fontWeight: FontWeight.w600,
+                      )),
+                  const SizedBox(height: 2),
+                  Text(meta,
+                      style: AppTextStyles.interSmall.copyWith(
+                        color: mutedColor, fontSize: 12,
+                      )),
+                ],
+              ),
+            ),
+            if (trailing != null)
+              trailing
+            else if (onTap != null)
+              Icon(Icons.arrow_forward_ios_rounded, size: 13, color: mutedColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _iconTile({
+    required IconData icon,
+    required Color color,
+    required Color surface,
+    required Color border,
+  }) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: surface,
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Icon(icon, size: 17, color: color),
+    );
+  }
+
+  Widget _toggle({
+    required bool on,
+    required Color accent,
+    required bool isDark,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return GestureDetector(
+      onTap: () => onChanged(!on),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 38,
+        height: 22,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: on
+              ? accent
+              : (isDark ? Colors.white.withOpacity(0.10) : AppTheme.paperFaint),
+          boxShadow: on && isDark
+              ? [BoxShadow(color: AppTheme.glassAccentGlow, blurRadius: 10)]
+              : null,
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 200),
+          alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 18,
+            height: 18,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
             ),
           ),
         ),
-        GlassCard(
-          padding: EdgeInsets.zero,
-          opacity: 0.05,
-          borderRadius: BorderRadius.circular(24),
-          child: Column(children: children),
+      ),
+    );
+  }
+
+  Widget _divider(Color border) {
+    return Divider(height: 1, color: border, indent: 60, endIndent: 14);
+  }
+
+  Widget _iconBtn({
+    required IconData icon,
+    required Color color,
+    required Color border,
+    required Color surface,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isDark ? Colors.white.withOpacity(0.04) : surface,
+          border: Border.all(color: border, width: 1),
         ),
-      ],
+        child: Icon(icon, size: 17, color: color),
+      ),
+    );
+  }
+
+  Widget _blurSlider({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required double value,
+    required double max,
+    required Color accent,
+    required Color inkColor,
+    required Color mutedColor,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 17, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: AppTextStyles.interMentor.copyWith(
+                          color: inkColor, fontWeight: FontWeight.w600,
+                        )),
+                    Text(subtitle,
+                        style: AppTextStyles.interSmall
+                            .copyWith(color: mutedColor, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: accent,
+              inactiveTrackColor: accent.withOpacity(0.2),
+              thumbColor: Colors.white,
+              overlayColor: accent.withOpacity(0.15),
+              trackHeight: 3.5,
+            ),
+            child: Slider(
+              value: value,
+              min: 0,
+              max: max,
+              divisions: max.toInt(),
+              label: value.round().toString(),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -854,7 +1000,7 @@ class _SettingsPageState extends State<SettingsPage> {
               Text('On iOS:', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
-                '1. Long-press on a blank space on your home screen until the apps jiggle.\n'
+                '1. Long-press on a blank space on your home screen.\n'
                 '2. Tap the "+" button in the top-left corner.\n'
                 '3. Search for "Class Now".\n'
                 '4. Choose a widget size and tap "Add Widget".',

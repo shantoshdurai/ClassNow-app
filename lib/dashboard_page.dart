@@ -14,7 +14,6 @@ import 'package:workmanager/workmanager.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/widgets/skeleton_loader.dart';
-import 'package:flutter_firebase_test/retro_digital_display.dart';
 import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
@@ -26,6 +25,8 @@ import 'package:flutter_firebase_test/widgets/class_selection_widget.dart';
 import 'package:flutter_firebase_test/login_screen.dart';
 import 'package:flutter_firebase_test/settings_page.dart';
 import 'package:flutter_firebase_test/announcements_page.dart';
+import 'package:flutter_firebase_test/services/user_service.dart';
+import 'package:flutter_firebase_test/screens/profile_page.dart';
 
 class DashboardPage extends StatefulWidget {
   final bool forceSelectionMode;
@@ -40,9 +41,9 @@ class _DashboardPageState extends State<DashboardPage>
     with WidgetsBindingObserver {
   String selectedDay = DateFormat('EEEE').format(DateTime.now());
   bool isAdmin = false;
+  bool isLoggedInViaMyCamu = false;
   bool notificationsEnabled = true;
   bool widgetsEnabled = true;
-  bool retroDisplayEnabled = true;
   bool isOnline = true;
   Timer? _connectivityTimer;
   Timer? _widgetUpdateTimer;
@@ -86,6 +87,7 @@ class _DashboardPageState extends State<DashboardPage>
       }
     });
     _loadAnnouncementStatus();
+    _checkMyCamuLogin();
     NotificationService.scheduleTimetableNotifications();
     _startConnectivityMonitoring();
     _startWidgetUpdateTimer();
@@ -164,6 +166,15 @@ class _DashboardPageState extends State<DashboardPage>
     });
 
     _checkConnectivity();
+  }
+
+  Future<void> _checkMyCamuLogin() async {
+    final loggedIn = await UserService.isLoggedIn();
+    if (mounted) {
+      setState(() {
+        isLoggedInViaMyCamu = loggedIn;
+      });
+    }
   }
 
   Future<void> _loadAnnouncementStatus() async {
@@ -403,6 +414,7 @@ class _DashboardPageState extends State<DashboardPage>
 
   Widget _buildExamModeBanner() {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: GlassCard(
@@ -445,143 +457,6 @@ class _DashboardPageState extends State<DashboardPage>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRetroDisplayCard() {
-    final now = DateTime.now();
-    final currentDay = DateFormat('EEEE').format(now);
-    final currentTime = DateFormat('HH:mm').format(now);
-
-    return Consumer<UserSelectionProvider>(
-      builder: (context, userSelection, child) {
-        if (!userSelection.hasSelection) {
-          return Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1a1a1a),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFF333333),
-                      width: 2,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: RetroDigitalDisplay(
-                      enabled: true,
-                      currentClass: null,
-                      nextClass: null,
-                      currentEndTime: null,
-                      nextStartTime: null,
-                      room: 'N/A',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('departments')
-              .doc(userSelection.departmentId)
-              .collection('years')
-              .doc(userSelection.yearId)
-              .collection('sections')
-              .doc(userSelection.sectionId)
-              .collection('schedule')
-              .where('day', isEqualTo: currentDay)
-              .orderBy('startTime')
-              .snapshots(),
-          builder: (context, snapshot) {
-            Map<String, dynamic>? currentClass;
-            Map<String, dynamic>? nextClass;
-
-            if (snapshot.hasData) {
-              final classes = snapshot.data!.docs;
-              for (var doc in classes) {
-                final data = doc.data() as Map<String, dynamic>;
-                final startTime = data['startTime'] as String;
-                final endTime = data['endTime'] as String;
-
-                final start = _parseTime(startTime);
-                final end = _parseTime(endTime);
-                final current = DateFormat('HH:mm').parse(currentTime);
-
-                if (current.isAfter(start) && current.isBefore(end)) {
-                  currentClass = data;
-                } else if (current.isBefore(start)) {
-                  nextClass = data;
-                  break;
-                }
-              }
-            }
-
-            return Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1a1a1a),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: const Color(0xFF333333),
-                        width: 2,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: RetroDigitalDisplay(
-                        enabled: true,
-                        currentClass: currentClass?['subject'],
-                        nextClass: nextClass?['subject'],
-                        currentEndTime: currentClass?['endTime'],
-                        nextStartTime: nextClass?['startTime'],
-                        room:
-                            currentClass?['room'] ??
-                            nextClass?['room'] ??
-                            'N/A',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -660,12 +535,9 @@ class _DashboardPageState extends State<DashboardPage>
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
-      final retroEnabled = prefs.getBool('retro_display_enabled') ?? false;
       setState(() {
         notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
         widgetsEnabled = prefs.getBool('widgets_enabled') ?? true;
-        retroDisplayEnabled = retroEnabled;
-        retroDisplayEnabledNotifier.value = retroEnabled;
       });
     }
   }
@@ -692,9 +564,6 @@ class _DashboardPageState extends State<DashboardPage>
 
   void _startWidgetUpdateTimer() {
     print('⏰ [Timer] Starting foreground update timer (30 mins)');
-    try {
-      Workmanager().cancelByUniqueName("updateWidgetTask");
-    } catch (_) {}
 
     _widgetUpdateTimer?.cancel();
     _widgetUpdateTimer = Timer.periodic(const Duration(minutes: 30), (
@@ -817,11 +686,11 @@ class _DashboardPageState extends State<DashboardPage>
 
     if (_showSelectionOverlay == true || !userSelection.hasSelection) {
       return Scaffold(
-        backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+        backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
         body: Stack(
           children: [
             Container(
-              color: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+              color: isDark ? AppTheme.glassBg : AppTheme.paperBg,
             ),
             SafeArea(
               child: Center(
@@ -843,7 +712,7 @@ class _DashboardPageState extends State<DashboardPage>
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
         child: Container(
@@ -855,70 +724,93 @@ class _DashboardPageState extends State<DashboardPage>
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: SizedBox(
               height: 70,
-              child: Stack(
-                alignment: Alignment.center,
+              child: Row(
                 children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Class Now',
-                        style: AppTextStyles.interTitle.copyWith(
-                          color: theme.colorScheme.onSurface,
-                          fontSize: 20,
-                          height: 1.0,
-                        ),
-                      ),
-                      Text(
-                        isAdmin ? "Mentor Mode" : "Student View",
-                        style: AppTextStyles.interSubtitle.copyWith(
-                          color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10,
-                          height: 1.0,
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon: Icon(
+                      isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                      color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
+                    ),
+                    onPressed: _showLoginDialog,
                   ),
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: Icon(
-                        isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-                        color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
-                      ),
-                      onPressed: _showLoginDialog,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Class Now',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.interTitle.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            fontSize: 22,
+                            height: 1.1,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        Text(
+                          isAdmin ? "MENTOR MODE" : "STUDENT VIEW",
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.monoLabel.copyWith(
+                            color: isAdmin
+                                ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+                                : theme.hintColor.withOpacity(0.8),
+                            letterSpacing: 1.5,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    right: 0,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isAdmin)
-                          IconButton(
-                            icon: Icon(
-                              Icons.add_circle_outline_rounded,
-                              color: theme.primaryColor,
-                            ),
-                            onPressed: () => _showClassDialog(context),
-                          ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLoggedInViaMyCamu)
                         IconButton(
                           icon: Icon(
-                            Icons.settings_outlined,
+                            Icons.person_rounded,
                             color: theme.primaryColor,
                           ),
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsPage(),
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) => const ProfilePage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                                transitionDuration: const Duration(milliseconds: 400),
                               ),
                             );
                           },
                         ),
-                      ],
-                    ),
+                      if (isAdmin)
+                        IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: theme.primaryColor,
+                          ),
+                          onPressed: () => _showClassDialog(context),
+                        ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.settings_outlined,
+                          color: theme.primaryColor,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                return FadeTransition(opacity: animation, child: child);
+                              },
+                              transitionDuration: const Duration(milliseconds: 400),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -928,62 +820,35 @@ class _DashboardPageState extends State<DashboardPage>
       ),
       body: Stack(
         children: [
+          // ── Base background ─────────────────────────────────────────────
           Positioned.fill(
             child: Consumer<ThemeProvider>(
               builder: (context, themeProvider, child) {
                 final customPath = themeProvider.customBackgroundPath;
                 if (customPath != null && File(customPath).existsSync()) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ImageFiltered(
-                        imageFilter: ImageFilter.blur(
-                          sigmaX: themeProvider.backgroundBlur,
-                          sigmaY: themeProvider.backgroundBlur,
-                          tileMode: TileMode.decal,
-                        ),
-                        child: Image.file(File(customPath), fit: BoxFit.cover),
-                      ),
-                    ],
+                  return ImageFiltered(
+                    imageFilter: ImageFilter.blur(
+                      sigmaX: themeProvider.backgroundBlur,
+                      sigmaY: themeProvider.backgroundBlur,
+                      tileMode: TileMode.decal,
+                    ),
+                    child: Image.file(File(customPath), fit: BoxFit.cover),
                   );
                 }
                 return Container(
-                  color: isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7),
+                  color: isDark ? AppTheme.glassBg : AppTheme.paperBg,
                 );
               },
             ),
           ),
+          // ── Ambient background layer (Aurora / Paper blobs) ──────────────
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               final hasCustomBg = themeProvider.customBackgroundPath != null &&
                   File(themeProvider.customBackgroundPath!).existsSync();
               if (hasCustomBg) return const SizedBox.shrink();
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (isDark)
-                    Image.asset('assets/dark_mode_bg.jpeg', fit: BoxFit.cover)
-                  else ...[
-                    Positioned(
-                      top: -100,
-                      right: -50,
-                      child: Container(
-                        width: 300,
-                        height: 300,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.primaryBlue.withOpacity(0.08),
-                        ),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                          child: Container(color: Colors.transparent),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              );
+              return const AuroraBackground();
             },
           ),
           SafeArea(
@@ -1040,18 +905,6 @@ class _DashboardPageState extends State<DashboardPage>
                               return Column(
                                 children: [
                                   _buildAttendanceCard(),
-                                  ValueListenableBuilder<bool>(
-                                    valueListenable: retroDisplayEnabledNotifier,
-                                    builder: (context, retroEnabled, child) {
-                                      if (retroEnabled && !isExamMode) {
-                                        return Padding(
-                                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                                          child: _buildRetroDisplayCard(),
-                                        );
-                                      }
-                                      return const SizedBox.shrink();
-                                    },
-                                  ),
                                   if (isExamMode) ...[
                                     _buildExamModeBanner(),
                                   ] else ...[
@@ -1090,7 +943,7 @@ class _DashboardPageState extends State<DashboardPage>
               builder: (context, themeProvider, child) {
                 return GlassCard(
                   blur: themeProvider.glassBlur,
-                  opacity: 0.25,
+                  opacity: isDark ? 0.2 : 0.5,
                   borderRadius: BorderRadius.circular(30),
                   padding: EdgeInsets.zero,
                   child: FloatingActionButton(
@@ -1106,7 +959,7 @@ class _DashboardPageState extends State<DashboardPage>
                       );
                     },
                     child: Icon(
-                      Icons.psychology_rounded,
+                      Icons.auto_awesome_rounded,
                       color: theme.primaryColor,
                       size: 28,
                     ),
@@ -1119,7 +972,7 @@ class _DashboardPageState extends State<DashboardPage>
               builder: (context, themeProvider, child) {
                 return GlassCard(
                   blur: themeProvider.glassBlur,
-                  opacity: 0.25,
+                  opacity: isDark ? 0.2 : 0.5,
                   borderRadius: BorderRadius.circular(30),
                   padding: EdgeInsets.zero,
                   child: FloatingActionButton(
@@ -1139,11 +992,17 @@ class _DashboardPageState extends State<DashboardPage>
                         });
                       }
                       Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AnnouncementsPage(isAdmin: isAdmin),
-                        ),
-                      );
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            AnnouncementsPage(isAdmin: isAdmin),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                        transitionDuration: const Duration(milliseconds: 400),
+                      ),
+                    );
                     },
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
@@ -1210,14 +1069,17 @@ class _DashboardPageState extends State<DashboardPage>
   Widget _buildDaySelector() {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final now = DateTime.now();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 54,
+      height: 72,
       child: GlassCard(
         blur: themeProvider.glassBlur,
-        opacity: 0.3,
-        borderRadius: BorderRadius.circular(20),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        opacity: isDark ? 0.2 : 0.4,
+        borderRadius: BorderRadius.circular(22),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
@@ -1225,46 +1087,71 @@ class _DashboardPageState extends State<DashboardPage>
           itemBuilder: (context, index) {
             final day = weekDays[index];
             final isSelected = day == selectedDay;
+
+            final daysFromMonday = index;
+            final currentDayOfWeek = now.weekday - 1; 
+            final daysUntilDay = (daysFromMonday - currentDayOfWeek);
+            final dayDate = now.add(Duration(days: daysUntilDay));
+            final dateStr = DateFormat('d').format(dayDate);
+
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: () {
                   setState(() {
                     selectedDay = day;
                   });
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutExpo,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? LinearGradient(
-                            colors: [AppTheme.primaryBlue, AppTheme.accentPurple],
+                            colors: isDark 
+                                ? [AppTheme.glassAccent, AppTheme.glassAccent2]
+                                : [AppTheme.paperAccent, AppTheme.paperAccent.withOpacity(0.8)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           )
                         : null,
-                    borderRadius: BorderRadius.circular(16),
+                    color: !isSelected && !isDark ? Colors.black.withOpacity(0.03) : null,
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppTheme.primaryBlue.withOpacity(0.3),
-                              blurRadius: 10,
+                              color: (isDark ? AppTheme.glassAccent : AppTheme.paperAccent).withOpacity(0.3),
+                              blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ]
                         : [],
                   ),
                   child: Center(
-                    child: Text(
-                      day.substring(0, 3).toUpperCase(),
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        letterSpacing: 0.5,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                        color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          day.substring(0, 3).toUpperCase(),
+                          style: AppTextStyles.monoLabel.copyWith(
+                            letterSpacing: 1.0,
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dateStr,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? Colors.white.withOpacity(0.9) : theme.colorScheme.onSurface.withOpacity(0.3),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1510,30 +1397,78 @@ class _DashboardPageState extends State<DashboardPage>
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return GlassCard(
-          margin: const EdgeInsets.only(bottom: 16),
-          blur: themeProvider.glassBlur + 10,
-          opacity: 0.35,
-          borderRadius: BorderRadius.circular(24),
+          margin: const EdgeInsets.only(bottom: 20),
+          blur: themeProvider.glassBlur + 15,
+          opacity: 0.4,
+          borderRadius: BorderRadius.circular(28),
           padding: EdgeInsets.zero,
-          border: Border.all(color: theme.primaryColor.withOpacity(0.3), width: 1.5),
+          border: Border.all(
+            color: theme.primaryColor.withOpacity(isDark ? 0.4 : 0.2),
+            width: 1.2,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [theme.primaryColor.withOpacity(0.15), theme.primaryColor.withOpacity(0.05)]),
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.primaryColor.withOpacity(0.18),
+                      theme.primaryColor.withOpacity(0.02),
+                    ],
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 4, spreadRadius: 2)]),
-                    ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: const Duration(seconds: 1)),
+                    ClipOval(
+                      child: Container(
+                        width: 16, height: 16,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.transparent,
+                        ),
+                        child: Container(
+                          width: 8, height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.redAccent.withOpacity(0.7),
+                                blurRadius: 8,
+                                spreadRadius: 3,
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                    ).animate(onPlay: (c) => c.repeat(reverse: true))
+                     .scale(begin: const Offset(1, 1), end: const Offset(1.4, 1.4), duration: 800.ms)
+                     .shimmer(delay: 400.ms, duration: 1200.ms, color: Colors.white70),
                     const SizedBox(width: 8),
-                    Text('LIVE NOW', style: AppTextStyles.interLiveNow.copyWith(color: Colors.red, fontSize: 11)),
+                    Text('LIVE NOW', style: AppTextStyles.interLiveNow.copyWith(
+                      color: Colors.redAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    )),
                     const Spacer(),
-                    Text("$start - $end", style: AppTextStyles.interProgress.copyWith(color: isDark ? Colors.white70 : theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        "$start - $end",
+                        style: AppTextStyles.interProgress.copyWith(
+                          color: theme.primaryColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1608,14 +1543,14 @@ class _DashboardPageState extends State<DashboardPage>
         return GlassCard(
           margin: const EdgeInsets.only(bottom: 12),
           blur: themeProvider.glassBlur,
-          opacity: 0.25,
-          borderRadius: BorderRadius.circular(18),
+          opacity: isDark ? 0.2 : 0.4,
+          borderRadius: BorderRadius.circular(22),
           padding: EdgeInsets.zero,
           child: InkWell(
             onLongPress: (isAdmin && item.doc != null) ? () => _showEditOptions(item.doc!) : null,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(22),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1623,34 +1558,70 @@ class _DashboardPageState extends State<DashboardPage>
                     children: [
                       if (isFirst)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: theme.primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                          child: Text('UP NEXT', style: AppTextStyles.interLiveNow.copyWith(color: theme.primaryColor, fontSize: 10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.1), 
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+                          ),
+                          child: Text('UP NEXT', style: AppTextStyles.interLiveNow.copyWith(color: theme.primaryColor, fontSize: 10, fontWeight: FontWeight.w900)),
                         ),
                       const Spacer(),
-                      Text("$start - $end", style: theme.textTheme.labelSmall?.copyWith(color: isDark ? Colors.white70 : theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "$start - $end", 
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.8), 
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      Icon(SubjectUtils.getSubjectIcon(data['subject']), size: 20, color: theme.colorScheme.onSurface.withOpacity(0.7)),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(data['subject'] ?? 'No Subject', style: AppTextStyles.interNext.copyWith(color: theme.colorScheme.onSurface, fontSize: 18))),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurface.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(SubjectUtils.getSubjectIcon(data['subject']), size: 22, color: theme.colorScheme.onSurface.withOpacity(0.8)),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          data['subject'] ?? 'No Subject', 
+                          style: AppTextStyles.interNext.copyWith(
+                            color: theme.colorScheme.onSurface, 
+                            fontSize: 19,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                      ),
                       if (isAdmin)
                         IconButton(icon: const Icon(Icons.edit_note_rounded), onPressed: () => _showEditOptions(item.doc!), color: theme.primaryColor, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  Divider(color: theme.dividerColor.withOpacity(0.1), height: 1),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.person_outline_rounded, size: 14, color: isDark ? Colors.white60 : theme.colorScheme.onSurface.withOpacity(0.6)),
-                      const SizedBox(width: 4),
-                      Text(data['mentor'] ?? 'Unknown', style: theme.textTheme.bodySmall?.copyWith(color: isDark ? Colors.white60 : theme.colorScheme.onSurface.withOpacity(0.6))),
+                      Icon(Icons.person_outline_rounded, size: 14, color: theme.hintColor),
+                      const SizedBox(width: 6),
+                      Text(data['mentor'] ?? 'Unknown', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w500)),
                       const Spacer(),
-                      Icon(Icons.location_on_outlined, size: 14, color: isDark ? Colors.white60 : theme.colorScheme.onSurface.withOpacity(0.6)),
-                      const SizedBox(width: 4),
-                      Text("Room ${data['room'] ?? 'TBD'}", style: theme.textTheme.bodySmall?.copyWith(color: isDark ? Colors.white60 : theme.colorScheme.onSurface.withOpacity(0.6))),
+                      Icon(Icons.location_on_outlined, size: 14, color: theme.hintColor),
+                      const SizedBox(width: 6),
+                      Text("Room ${data['room'] ?? 'TBD'}", style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
@@ -1688,9 +1659,23 @@ class _DashboardPageState extends State<DashboardPage>
                 children: [
                   Row(
                     children: [
-                      Text('FINISHED', style: theme.textTheme.labelSmall?.copyWith(color: mutedColor, letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 9)),
+                      Text('FINISHED', 
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: mutedColor, 
+                          letterSpacing: 1.5, 
+                          fontWeight: FontWeight.w900, 
+                          fontSize: 9
+                        )
+                      ),
                       const Spacer(),
-                      Text("$start - $end", style: theme.textTheme.bodySmall?.copyWith(color: mutedColor, fontWeight: FontWeight.bold)),
+                      Text("$start - $end", 
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: mutedColor, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1701,12 +1686,13 @@ class _DashboardPageState extends State<DashboardPage>
                       Expanded(
                         child: Text(
                           data['subject'] ?? 'No Subject',
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: AppTextStyles.interNext.copyWith(
                             decoration: TextDecoration.lineThrough,
                             decorationColor: mutedColor.withOpacity(0.5),
                             decorationThickness: 2,
                             color: mutedColor,
                             fontWeight: FontWeight.w500,
+                            fontSize: 16,
                           ),
                         ),
                       ),
@@ -1887,6 +1873,8 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildAttendanceCard() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return ValueListenableBuilder<int>(
       valueListenable: attendanceUpdateNotifier,
       builder: (context, _, child) {
@@ -1932,7 +1920,7 @@ class _DashboardPageState extends State<DashboardPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Overall Attendance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                              Text('$percentStr%', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: percent < 75 ? Colors.redAccent : Colors.greenAccent, fontSize: 24)),
+                              Text('$percentStr%', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: percent < 75 ? Colors.redAccent : (isDark ? Colors.greenAccent : Colors.black), fontSize: 24)),
                               if (countStr != null) Text('$countStr periods', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, fontSize: 12)),
                             ],
                           ),

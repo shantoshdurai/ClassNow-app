@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:home_widget/home_widget.dart';
+import 'package:home_widget/home_widget.dart' hide callbackDispatcher;
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'package:flutter_firebase_test/firebase_options.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
@@ -13,18 +14,51 @@ import 'package:flutter_firebase_test/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // 1. Firebase - MUST BE FIRST
   try {
     await Firebase.initializeApp(
-      options: PigeonFirebaseOptions.currentPlatform,
+      options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (e) {
-    debugPrint("Firebase initialization error: $e");
+    debugPrint("✅ Firebase initialized successfully");
+  } catch (e, stack) {
+    debugPrint("❌ Firebase initialization error: $e");
+    debugPrint("Stack trace: $stack");
   }
 
-  await dotenv.load(fileName: ".env");
+  // 2. Dotenv - Silent fail
+  try {
+    // Explicitly check for .env in assets
+    await dotenv.load(fileName: "assets/.env");
+    debugPrint("✅ .env loaded from assets/.env");
+  } catch (e) {
+    try {
+      await dotenv.load(fileName: ".env");
+      debugPrint("✅ .env loaded from .env");
+    } catch (e2) {
+      debugPrint("⚠️ Warning: .env file not found or load failed: $e2");
+    }
+  }
 
-  HomeWidget.registerBackgroundCallback(homeWidgetBackgroundCallback);
+  // 3. HomeWidget Interactivity
+  try {
+    HomeWidget.registerInteractivityCallback(homeWidgetBackgroundCallback);
+  } catch (e) {
+    debugPrint("⚠️ HomeWidget callback registration warning: $e");
+  }
+
+  // 4. Workmanager - Initialize but don't crash if native fails
+  try {
+    await Workmanager().initialize(
+      callbackDispatcher,
+      isInDebugMode: false,
+    );
+    // Cancel any stale tasks to prevent race conditions during boot
+    await Workmanager().cancelByUniqueName("updateWidgetTask");
+    print("✅ Workmanager initialized");
+  } catch (e) {
+    debugPrint("⚠️ Workmanager initialization warning: $e");
+  }
 
   runApp(
     MultiProvider(

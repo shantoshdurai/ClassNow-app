@@ -1,5 +1,125 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
+
+// ── Aurora background — three radial gradient blobs + dot grid ───────────────
+// Used on the dark (Glass) theme for dashboard, settings, and login screens.
+class AuroraBackground extends StatelessWidget {
+  const AuroraBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            if (isDark) ...[
+              // Blue blob — top-right
+              Positioned(
+                top: -150,
+                right: -100,
+                child: _blob(
+                  size: 500,
+                  color: AppTheme.glassAccent.withOpacity(0.35),
+                  blur: 90,
+                ),
+              ),
+              // Magenta blob — mid-left
+              Positioned(
+                top: 200,
+                left: -200,
+                child: _blob(
+                  size: 450,
+                  color: const Color(0xFFB066FF).withOpacity(0.2),
+                  blur: 80,
+                ),
+              ),
+              // Cyan blob — bottom-right
+              Positioned(
+                bottom: -150,
+                right: -100,
+                child: _blob(
+                  size: 400,
+                  color: const Color(0xFF00F0FF).withOpacity(0.15),
+                  blur: 70,
+                ),
+              ),
+            ] else ...[
+              // Paper mode: Soft warm amber blob
+              Positioned(
+                top: -100,
+                right: -50,
+                child: _blob(
+                  size: 400,
+                  color: AppTheme.paperAccent.withOpacity(0.08),
+                  blur: 100,
+                ),
+              ),
+              // Soft peach/cream blob bottom left
+              Positioned(
+                bottom: -50,
+                left: -50,
+                child: _blob(
+                  size: 350,
+                  color: const Color(0xFFF3E9DD).withOpacity(0.5),
+                  blur: 80,
+                ),
+              ),
+            ],
+            // Subtle dot grid
+            Opacity(
+              opacity: isDark ? 0.08 : 0.15,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _DotGridPainter(color: isDark ? Colors.white : AppTheme.paperMuted),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _blob({required double size, required Color color, required double blur}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, Colors.transparent],
+          stops: const [0.0, 0.65],
+        ),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  final Color color;
+  _DotGridPainter({this.color = Colors.white});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
+    const spacing = 20.0;
+    const radius = 0.6;
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
 
 /// Premium glassmorphism card widget with Apple-inspired design
 class GlassCard extends StatelessWidget {
@@ -30,60 +150,56 @@ class GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Improved colors for visibility
+    // Glass tokens for dark; Paper-surface tint for light
     final defaultColor = isDark
-        ? Colors.white.withValues(alpha: opacity)
-        : Colors.white.withValues(alpha: 
-            opacity + 0.5,
-          ); // Increased opacity for Light Mode
+        ? Colors.white.withOpacity(opacity.clamp(0.01, 0.06))
+        : AppTheme.paperSurface.withOpacity((opacity + 0.45).clamp(0.0, 1.0));
+
+    final borderColor = isDark
+        ? AppTheme.glassBorder2.withOpacity(0.12)
+        : AppTheme.paperLine.withOpacity(0.6);
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
-        boxShadow:
-            shadows ??
-            [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 
-                  isDark ? 0.3 : 0.12,
-                ), // Stronger shadow for Light Mode
-                blurRadius: 25,
-                offset: const Offset(0, 10),
-                spreadRadius: -2,
-              ),
-            ],
+        borderRadius: borderRadius ?? BorderRadius.circular(24),
+        boxShadow: shadows ?? [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.06),
+            blurRadius: 32,
+            offset: const Offset(0, 12),
+            spreadRadius: -8,
+          ),
+          if (!isDark)
+            BoxShadow(
+              color: AppTheme.paperAccent.withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        borderRadius: borderRadius ?? BorderRadius.circular(24),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
           child: Container(
-            padding: padding ?? const EdgeInsets.all(16),
+            padding: padding ?? const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: color ?? defaultColor,
-              borderRadius: borderRadius ?? BorderRadius.circular(20),
-              border:
-                  border ??
-                  Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.12) // Subtle glow for dark
-                        : Colors.black.withValues(alpha: 
-                            0.08,
-                          ), // Subtle dark border for light
-                    width: 1.5,
-                  ),
+              borderRadius: borderRadius ?? BorderRadius.circular(24),
+              border: border ?? Border.all(color: borderColor, width: 0.8),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.4),
-                  isDark
-                      ? Colors.white.withValues(alpha: 0.02)
-                      : Colors.white.withValues(alpha: 0.1),
-                ],
+                colors: isDark
+                    ? [
+                        Colors.white.withOpacity(0.08),
+                        Colors.white.withOpacity(0.02),
+                      ]
+                    : [
+                        AppTheme.paperSurface.withOpacity(0.9),
+                        AppTheme.paperSurface.withOpacity(0.7),
+                      ],
               ),
             ),
             child: child,
@@ -150,7 +266,7 @@ class _GradientCardState extends State<GradientCard>
         borderRadius: widget.borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: widget.gradientColors.first.withValues(alpha: 0.3),
+            color: widget.gradientColors.first.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
             spreadRadius: 0,
@@ -224,14 +340,14 @@ class NeumorphicCard extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withValues(alpha: 0.5)
+                      ? Colors.black.withOpacity(0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(2, 2),
                   blurRadius: 5,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                  color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
                   offset: const Offset(-2, -2),
                   blurRadius: 5,
                   spreadRadius: 1,
@@ -240,14 +356,14 @@ class NeumorphicCard extends StatelessWidget {
             : [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withValues(alpha: 0.5)
+                      ? Colors.black.withOpacity(0.5)
                       : const Color(0xFFA3B1C6),
                   offset: const Offset(8, 8),
                   blurRadius: 15,
                   spreadRadius: 1,
                 ),
                 BoxShadow(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
                   offset: const Offset(-8, -8),
                   blurRadius: 15,
                   spreadRadius: 1,
@@ -286,12 +402,12 @@ class GlowingCard extends StatelessWidget {
         borderRadius: borderRadius ?? BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: glowColor.withValues(alpha: 0.5),
+            color: glowColor.withOpacity(0.5),
             blurRadius: glowRadius,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: glowColor.withValues(alpha: 0.3),
+            color: glowColor.withOpacity(0.3),
             blurRadius: glowRadius * 2,
             spreadRadius: 5,
           ),
@@ -302,7 +418,7 @@ class GlowingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: borderRadius ?? BorderRadius.circular(20),
-          border: Border.all(color: glowColor.withValues(alpha: 0.5), width: 2),
+          border: Border.all(color: glowColor.withOpacity(0.5), width: 2),
         ),
         child: child,
       ),
@@ -342,20 +458,18 @@ class GlassButton extends StatelessWidget {
                   padding ??
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
-                color: (color ?? Theme.of(context).primaryColor).withValues(alpha: 
-                  0.2,
-                ),
+                color: (color ?? Theme.of(context).primaryColor).withOpacity(0.2),
                 borderRadius: borderRadius ?? BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white.withOpacity(0.2),
                   width: 1.5,
                 ),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.15),
-                    Colors.white.withValues(alpha: 0.05),
+                    Colors.white.withOpacity(0.15),
+                    Colors.white.withOpacity(0.05),
                   ],
                 ),
               ),

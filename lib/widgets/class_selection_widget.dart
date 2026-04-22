@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 
 class ClassSelectionWidget extends StatefulWidget {
   final VoidCallback? onSelectionComplete;
@@ -70,121 +71,159 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Logo
-            Image.asset('assets/dsu_logo.png', height: 120),
+            // Logo with subtle glow in Glass mode
+            Center(
+              child: Container(
+                decoration: isDark ? BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.glassAccent.withOpacity(0.15),
+                      blurRadius: 40,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                ) : null,
+                child: Image.asset('assets/dsu_logo.png', height: 100),
+              ),
+            ),
             const SizedBox(height: 32),
             Text(
               'Welcome to Class Now',
-              style: AppTextStyles.interTitle.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
+              style: (isDark ? AppTextStyles.interTitle.copyWith(color: AppTheme.glassInk) : AppTextStyles.interTitle.copyWith(color: AppTheme.paperInk)).copyWith(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               'Let\'s get you set up with your timetable.',
               style: AppTextStyles.interSmall.copyWith(
-                color: theme.hintColor,
-                fontSize: 16,
+                color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                fontSize: 15,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
 
-            // Department Selection
-            _buildSelectionCard(
-              label: 'Department',
-              value: _selectedDeptName,
-              placeholder: 'Select Department',
-              icon: Icons.business_rounded,
-              onTap: () => _showSelectionSheet(
-                title: 'Select Department',
-                collection: 'departments',
-                orderBy: 'name',
-                currentValue: _selectedDeptId,
-                onSelected: (id, name) {
-                  setState(() {
-                    _selectedDeptId = id;
-                    _selectedDeptName = name;
-                    _selectedYearId = null;
-                    _selectedYearName = null;
-                    _selectedSectionId = null;
-                    _selectedSectionName = null;
-                  });
-                },
+            // Selection Section
+            GlassCard(
+              padding: const EdgeInsets.all(24),
+              opacity: isDark ? 0.05 : 0.4,
+              blur: isDark ? 40 : 10,
+              borderRadius: BorderRadius.circular(32),
+              child: Column(
+                children: [
+                  // Department Selection
+                  _buildSelectionField(
+                    label: 'DEPARTMENT',
+                    value: _selectedDeptName,
+                    placeholder: 'Select Department',
+                    icon: Icons.business_rounded,
+                    onTap: () => _showSelectionSheet(
+                      title: 'Select Department',
+                      collection: 'departments',
+                      orderBy: 'name',
+                      currentValue: _selectedDeptId,
+                      onSelected: (id, name) {
+                        setState(() {
+                          _selectedDeptId = id;
+                          _selectedDeptName = name;
+                          _selectedYearId = null;
+                          _selectedYearName = null;
+                          _selectedSectionId = null;
+                          _selectedSectionName = null;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Year Selection
+                  _buildSelectionField(
+                    label: 'YEAR',
+                    value: _selectedYearName,
+                    placeholder: 'Select Year',
+                    icon: Icons.calendar_today_rounded,
+                    enabled: _selectedDeptId != null,
+                    onTap: () => _showSelectionSheet(
+                      title: 'Select Year',
+                      collection: 'departments/$_selectedDeptId/years',
+                      currentValue: _selectedYearId,
+                      onSelected: (id, name) {
+                        setState(() {
+                          _selectedYearId = id;
+                          _selectedYearName = name;
+                          _selectedSectionId = null;
+                          _selectedSectionName = null;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section Selection
+                  _buildSelectionField(
+                    label: 'SECTION',
+                    value: _selectedSectionName,
+                    placeholder: 'Select Section',
+                    icon: Icons.class_rounded,
+                    enabled: _selectedYearId != null,
+                    onTap: () => _showSelectionSheet(
+                      title: 'Select Section',
+                      collection:
+                          'departments/$_selectedDeptId/years/$_selectedYearId/sections',
+                      currentValue: _selectedSectionId,
+                      onSelected: (id, name) {
+                        setState(() {
+                          _selectedSectionId = id;
+                          _selectedSectionName = name;
+                        });
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Year Selection
-            if (_selectedDeptId != null)
-              _buildSelectionCard(
-                label: 'Year',
-                value: _selectedYearName,
-                placeholder: 'Select Year',
-                icon: Icons.calendar_today_rounded,
-                onTap: () => _showSelectionSheet(
-                  title: 'Select Year',
-                  collection: 'departments/$_selectedDeptId/years',
-                  currentValue: _selectedYearId,
-                  onSelected: (id, name) {
-                    setState(() {
-                      _selectedYearId = id;
-                      _selectedYearName = name;
-                      _selectedSectionId = null;
-                      _selectedSectionName = null;
-                    });
-                  },
-                ),
-              ),
-            if (_selectedDeptId != null) const SizedBox(height: 16),
-
-            // Section Selection
-            if (_selectedYearId != null)
-              _buildSelectionCard(
-                label: 'Section',
-                value: _selectedSectionName,
-                placeholder: 'Select Section',
-                icon: Icons.class_rounded,
-                onTap: () => _showSelectionSheet(
-                  title: 'Select Section',
-                  collection:
-                      'departments/$_selectedDeptId/years/$_selectedYearId/sections',
-                  currentValue: _selectedSectionId,
-                  onSelected: (id, name) {
-                    setState(() {
-                      _selectedSectionId = id;
-                      _selectedSectionName = name;
-                    });
-                  },
-                ),
-              ),
-            if (_selectedYearId != null) const SizedBox(height: 32),
+            
+            const SizedBox(height: 40),
 
             // Save Button
-            if (_selectedSectionId != null)
-              SizedBox(
-                height: 56,
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _selectedSectionId != null ? 1.0 : 0.0,
+              child: _selectedSectionId != null ? Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isDark ? AppTheme.glassAccent : AppTheme.paperAccent).withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveSelection,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
+                    backgroundColor: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    elevation: 8,
-                    shadowColor: theme.primaryColor.withOpacity(0.5),
+                    elevation: 0,
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -195,93 +234,104 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Continue',
-                          style: TextStyle(
-                            fontSize: 16,
+                      : Text(
+                          'CONTINUE TO DASHBOARD',
+                          style: AppTextStyles.monoLabel.copyWith(
+                            color: Colors.white,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
                           ),
                         ),
                 ),
-              ),
+              ) : const SizedBox(height: 64),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSelectionCard({
+  Widget _buildSelectionField({
     required String label,
     required String? value,
     required String placeholder,
     required IconData icon,
     required VoidCallback onTap,
+    bool enabled = true,
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: theme.hintColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? const Color(0xFF2C2C2E)
-                  : Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: value != null
-                    ? theme.primaryColor.withOpacity(0.5)
-                    : Colors.transparent,
-                width: 1.5,
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              label,
+              style: AppTextStyles.monoLabel.copyWith(
+                color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            child: Row(
-              children: [
-                Icon(icon, color: theme.primaryColor, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    value ?? placeholder,
-                    style: TextStyle(
-                      color: value != null
-                          ? theme.colorScheme.onSurface
-                          : theme.hintColor,
-                      fontSize: 15,
-                      fontWeight: value != null
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          ),
+          InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withOpacity(0.03)
+                    : AppTheme.paperBg.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: value != null
+                      ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent).withOpacity(0.5)
+                      : (isDark ? Colors.white.withOpacity(0.05) : AppTheme.paperLine),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    icon, 
+                    color: value != null 
+                        ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+                        : (isDark ? AppTheme.glassMuted : AppTheme.paperMuted), 
+                    size: 20
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: theme.hintColor,
-                  size: 20,
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      value ?? placeholder,
+                      style: TextStyle(
+                        color: value != null
+                            ? (isDark ? AppTheme.glassInk : AppTheme.paperInk)
+                            : (isDark ? AppTheme.glassMuted : AppTheme.paperMuted),
+                        fontSize: 16,
+                        fontWeight: value != null
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                    size: 20,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -302,8 +352,9 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          color: isDark ? AppTheme.glassBg2 : AppTheme.paperBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: isDark ? Border(top: BorderSide(color: AppTheme.glassBorder, width: 1)) : null,
         ),
         child: Column(
           children: [
@@ -311,32 +362,30 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.hintColor.withOpacity(0.3),
+                  color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
               child: Row(
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: (isDark ? AppTextStyles.interTitle.copyWith(color: AppTheme.glassInk) : AppTextStyles.interTitle.copyWith(color: AppTheme.paperInk)).copyWith(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
                     onPressed: () => Navigator.pop(context),
-                    color: theme.hintColor,
+                    color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
                   ),
                 ],
               ),
@@ -363,7 +412,11 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                   }
 
                   if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
+                      ),
+                    );
                   }
 
                   final docs = collection == 'departments'
@@ -380,13 +433,13 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                     return Center(
                       child: Text(
                         'No options found',
-                        style: TextStyle(color: theme.hintColor),
+                        style: TextStyle(color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted),
                       ),
                     );
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     physics: const BouncingScrollPhysics(),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
@@ -402,20 +455,21 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                             onSelected(doc.id, name);
                             Navigator.pop(context);
                           },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
+                          borderRadius: BorderRadius.circular(20),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? theme.primaryColor.withOpacity(0.1)
+                                  ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent).withOpacity(0.1)
                                   : (isDark
                                         ? Colors.white.withOpacity(0.05)
-                                        : Colors.grey.withOpacity(0.05)),
-                              borderRadius: BorderRadius.circular(16),
+                                        : AppTheme.paperSurface),
+                              borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: isSelected
-                                    ? theme.primaryColor
-                                    : Colors.transparent,
+                                    ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+                                    : (isDark ? AppTheme.glassBorder : AppTheme.paperLine),
                                 width: 1.5,
                               ),
                             ),
@@ -430,16 +484,16 @@ class _ClassSelectionWidgetState extends State<ClassSelectionWidget> {
                                           ? FontWeight.bold
                                           : FontWeight.w500,
                                       color: isSelected
-                                          ? theme.primaryColor
-                                          : theme.colorScheme.onSurface,
+                                          ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+                                          : (isDark ? AppTheme.glassInk : AppTheme.paperInk),
                                     ),
                                   ),
                                 ),
                                 if (isSelected)
                                   Icon(
                                     Icons.check_circle_rounded,
-                                    color: theme.primaryColor,
-                                    size: 20,
+                                    color: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
+                                    size: 22,
                                   ),
                               ],
                             ),

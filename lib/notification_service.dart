@@ -33,6 +33,17 @@ class NotificationService {
     );
   }
 
+  static Future<bool> hasPermission() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        _notifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+
+    final bool? granted = await androidImplementation?.areNotificationsEnabled();
+    return granted ?? false;
+  }
+
   static Future<bool> requestPermissions() async {
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _notifications

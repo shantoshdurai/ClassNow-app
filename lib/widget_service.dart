@@ -19,7 +19,7 @@ class WidgetService {
   static Future<void> updateWidget({bool forceRefresh = false}) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } catch (e) {
       print('⚠️ [WidgetService] Firebase init error: $e');
     }
@@ -265,7 +265,7 @@ class WidgetService {
     WidgetsFlutterBinding.ensureInitialized();
     print("⏰ [WidgetService] Alarm fired!");
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } catch (_) {}
     await updateWidget();
   }

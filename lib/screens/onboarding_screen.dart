@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
-import 'package:flutter_firebase_test/onboarding_screen.dart'
-    as ClassSelectionScreen;
+import 'package:flutter_firebase_test/screens/profile_setup_screen.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 /// A screen that guides the user through the key features of the application.
-/// It displays a series of onboarding pages and handles navigation to the main app flow.
 class GuideScreen extends StatefulWidget {
   const GuideScreen({super.key});
 
@@ -20,41 +21,41 @@ class _GuideScreenState extends State<GuideScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
+  final List<OnboardingPageData> _pages = [
+    OnboardingPageData(
       icon: Icons.schedule_rounded,
-      title: 'Welcome to Class Now',
+      title: 'Welcome to\nClass Now',
       description:
           'Your smart companion for managing class schedules and staying on top of your academic life.',
-      color: Colors.blue,
+      accent: AppTheme.primaryBlue,
     ),
-    OnboardingPage(
+    OnboardingPageData(
       icon: Icons.notifications_active_rounded,
-      title: 'Never Miss a Class',
+      title: 'Never Miss\na Class',
       description:
           'Get timely notifications before each class starts. Customize reminder timing in settings.',
-      color: Colors.orange,
+      accent: AppTheme.accentOrange,
     ),
-    OnboardingPage(
+    OnboardingPageData(
       icon: Icons.widgets_rounded,
-      title: 'Home Screen Widgets',
+      title: 'Home Screen\nWidgets',
       description:
           'Add widgets to your home screen to see your current and upcoming classes at a glance.',
-      color: Colors.purple,
+      accent: AppTheme.accentPurple,
     ),
-    OnboardingPage(
-      icon: Icons.psychology_rounded,
+    OnboardingPageData(
+      icon: Icons.auto_awesome_rounded,
       title: 'AI Assistant',
       description:
           'Ask our AI chatbot about your schedule, classes, and staff. It\'s like having a personal academic assistant!',
-      color: Colors.teal,
+      accent: AppTheme.paperAccent,
     ),
-    OnboardingPage(
+    OnboardingPageData(
       icon: Icons.check_circle_outline_rounded,
       title: 'All Set!',
       description:
           'Select your department, year, and section to get started. Your schedule will sync automatically.',
-      color: Colors.green,
+      accent: Colors.green,
     ),
   ];
 
@@ -65,17 +66,20 @@ class _GuideScreenState extends State<GuideScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    // 1. Mark intro as shown in provider
     await Provider.of<UserSelectionProvider>(
       context,
       listen: false,
     ).setIntroShown();
 
     if (mounted) {
-      // 2. Navigate to Class Selection Screen (Root OnboardingScreen)
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const ClassSelectionScreen.OnboardingScreen(),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const ProfileSetupScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 600),
         ),
       );
     }
@@ -88,12 +92,11 @@ class _GuideScreenState extends State<GuideScreen> {
       if (plugin != null) {
         await plugin
             .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >()
+                AndroidFlutterLocalNotificationsPlugin>()
             ?.requestNotificationsPermission();
       }
     } catch (e) {
-      print('Error requesting notification permission: $e');
+      debugPrint('Error requesting notification permission: $e');
     }
   }
 
@@ -106,153 +109,198 @@ class _GuideScreenState extends State<GuideScreen> {
       _completeOnboarding();
     } else {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutQuart,
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inkColor = isDark ? AppTheme.glassInk : AppTheme.paperInk;
+    final mutedColor = isDark ? AppTheme.glassMuted : AppTheme.paperMuted;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
+        body: Stack(
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _completeOnboarding,
-                child: Text(
-                  'SKIP',
-                  style: TextStyle(
-                    color: theme.hintColor,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pages.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return _buildPage(_pages[index]);
-                },
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _pages.length,
-                (index) => _buildIndicator(index == _currentPage),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _handleNextButton,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _pages[_currentPage].color,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+            if (isDark) const AuroraBackground(),
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: TextButton(
+                        onPressed: _completeOnboarding,
+                        child: Text(
+                          'SKIP',
+                          style: AppTextStyles.monoLabel.copyWith(
+                            color: mutedColor,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _pages.length,
+                      onPageChanged: (index) =>
+                          setState(() => _currentPage = index),
+                      itemBuilder: (context, index) {
+                        return _buildPage(_pages[index], isDark, inkColor, mutedColor);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _pages.length,
+                      (index) => _buildIndicator(index == _currentPage, isDark),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    child: _buildActionButton(isDark),
+                  ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPage(OnboardingPage page) {
+  Widget _buildActionButton(bool isDark) {
+    final page = _pages[_currentPage];
+    final isLast = _currentPage == _pages.length - 1;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: double.infinity,
+      height: 58,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [AppTheme.glassAccent, AppTheme.glassAccent2]
+              : [AppTheme.paperAccent, AppTheme.paperAccentInk],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+                .withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: _handleNextButton,
+          child: Center(
+            child: Text(
+              isLast ? 'GET STARTED' : 'CONTINUE',
+              style: AppTextStyles.monoLabel.copyWith(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPage(OnboardingPageData page, bool isDark, Color inkColor, Color mutedColor) {
     return Padding(
-      padding: const EdgeInsets.all(40.0),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
-              shape: BoxShape.circle,
+          GlassCard(
+            blur: 30,
+            opacity: isDark ? 0.08 : 0.6,
+            padding: const EdgeInsets.all(40),
+            borderRadius: BorderRadius.circular(32),
+            child: Icon(
+              page.icon,
+              size: 80,
+              color: isDark ? page.accent.withOpacity(0.9) : page.accent,
             ),
-            child: Icon(page.icon, size: 80, color: page.color),
-          ),
-          const SizedBox(height: 48),
+          ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack).fadeIn(),
+          const SizedBox(height: 56),
           Text(
             page.title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: page.color,
+            style: AppTextStyles.interTitle.copyWith(
+              fontSize: 34,
+              fontWeight: FontWeight.w800,
+              color: inkColor,
+              height: 1.1,
+              letterSpacing: -1.0,
             ),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            page.description,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).hintColor,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
+          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              page.description,
+              style: AppTextStyles.interSmall.copyWith(
+                color: mutedColor,
+                fontSize: 16,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildIndicator(bool isActive) {
+  Widget _buildIndicator(bool isActive, bool isDark) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      height: 8,
-      width: isActive ? 24 : 8,
+      height: 6,
+      width: isActive ? 24 : 6,
       decoration: BoxDecoration(
         color: isActive
-            ? _pages[_currentPage].color
-            : Theme.of(context).hintColor.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(4),
+            ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
+            : (isDark ? Colors.white24 : Colors.black12),
+        borderRadius: BorderRadius.circular(3),
       ),
     );
   }
 }
 
-/// A data model representing a single page in the onboarding flow.
-class OnboardingPage {
+class OnboardingPageData {
   final IconData icon;
   final String title;
   final String description;
-  final Color color;
+  final Color accent;
 
-  OnboardingPage({
+  OnboardingPageData({
     required this.icon,
     required this.title,
     required this.description,
-    required this.color,
+    required this.accent,
   });
 }
+

@@ -1,0 +1,12 @@
+.env
+.env.local
+firebase_options.dart
+google-services.json
+.gradle
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+*.lock
+node_modules/

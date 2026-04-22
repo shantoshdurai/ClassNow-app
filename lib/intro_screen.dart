@@ -6,6 +6,7 @@ import 'package:flutter_firebase_test/notification_service.dart';
 import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
 import 'package:flutter_firebase_test/onboarding_screen.dart';
 
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'dart:ui';
 
 class IntroScreen extends StatefulWidget {
@@ -76,46 +77,12 @@ class _IntroScreenState extends State<IntroScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF000000)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Background Blobs
-          if (isDark) ...[
-            Positioned(
-              top: -100,
-              right: -50,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.primaryBlue.withOpacity(0.15),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -50,
-              left: -50,
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.accentPurple.withOpacity(0.15),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
-          ],
+          // Background
+          const AuroraBackground(),
 
           SafeArea(
             child: Padding(
@@ -136,15 +103,18 @@ class _IntroScreenState extends State<IntroScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: theme.primaryColor.withOpacity(0.3),
-                          blurRadius: 30,
+                          color: theme.primaryColor.withOpacity(isDark ? 0.3 : 0.1),
+                          blurRadius: 40,
                           spreadRadius: 5,
                         ),
                       ],
                     ),
-                    child: Image.asset(
-                      'assets/dsu_logo.png',
-                    ), // Using existing asset
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(60),
+                      child: Image.asset(
+                        'assets/dsu_logo.png',
+                      ),
+                    ),
                   ).animate().scale(
                     duration: 800.ms,
                     curve: Curves.easeOutBack,
@@ -157,60 +127,79 @@ class _IntroScreenState extends State<IntroScreen> {
                     'Welcome to\nClass Now',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.interTitle.copyWith(
-                      fontSize: 32,
-                      color: theme.colorScheme.onSurface,
-                      height: 1.1,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 40,
+                      color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
+                      height: 1.0,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.5,
                     ),
                   ).animate().fadeIn(delay: 300.ms).moveY(begin: 20, end: 0),
 
                   const SizedBox(height: 16),
 
-                  Text(
-                    'Your smart academic companion.\nStay updated with your timetable and never miss a class.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.hintColor,
-                      height: 1.5,
-                      fontSize: 16,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Your smart academic companion.\nStay updated with your timetable and never miss a class.',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.interSmall.copyWith(
+                        color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                        height: 1.5,
+                        fontSize: 16,
+                      ),
                     ),
                   ).animate().fadeIn(delay: 500.ms).moveY(begin: 20, end: 0),
 
                   const Spacer(),
 
-                  // Feature Highlights (Optional, keeping it clean for now)
-
                   // Get Started Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleGetStarted,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Container(
+                      width: double.infinity,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? [AppTheme.glassAccent, AppTheme.glassAccent2]
+                              : [AppTheme.paperAccent, AppTheme.paperAccentInk],
                         ),
-                        elevation: 8,
-                        shadowColor: theme.primaryColor.withOpacity(0.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.primaryColor.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Get Started',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: _isLoading ? null : _handleGetStarted,
+                          child: Center(
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'GET STARTED',
+                                    style: AppTextStyles.monoLabel.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ).animate().fadeIn(delay: 800.ms).moveY(begin: 40, end: 0),
 
