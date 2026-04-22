@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -26,12 +26,12 @@ jobs:
         run: flutter pub get
 
       - name: Check formatting
-        continue-on-error: true # Formatting differences shouldn't block CI
+        continue-on-error: true
         run: dart format --output=none --set-exit-if-changed lib/
 
       - name: Run analyzer
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Check for outdated packages
-        continue-on-error: true # Outdated packages are informational, not blocking
+        continue-on-error: true
         run: flutter pub outdated
