@@ -739,6 +739,7 @@ class _DashboardPageState extends State<DashboardPage>
                       children: [
                         Text(
                           'Class Now',
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.interTitle.copyWith(
                             color: theme.colorScheme.onSurface,
                             fontSize: 22,
@@ -748,6 +749,7 @@ class _DashboardPageState extends State<DashboardPage>
                         ),
                         Text(
                           isAdmin ? "MENTOR MODE" : "STUDENT VIEW",
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.monoLabel.copyWith(
                             color: isAdmin
                                 ? (isDark ? AppTheme.glassAccent : AppTheme.paperAccent)
@@ -957,7 +959,7 @@ class _DashboardPageState extends State<DashboardPage>
                       );
                     },
                     child: Icon(
-                      Icons.psychology_rounded,
+                      Icons.auto_awesome_rounded,
                       color: theme.primaryColor,
                       size: 28,
                     ),
@@ -1657,9 +1659,23 @@ class _DashboardPageState extends State<DashboardPage>
                 children: [
                   Row(
                     children: [
-                      Text('FINISHED', style: theme.textTheme.labelSmall?.copyWith(color: mutedColor, letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 9)),
+                      Text('FINISHED', 
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: mutedColor, 
+                          letterSpacing: 1.5, 
+                          fontWeight: FontWeight.w900, 
+                          fontSize: 9
+                        )
+                      ),
                       const Spacer(),
-                      Text("$start - $end", style: theme.textTheme.bodySmall?.copyWith(color: mutedColor, fontWeight: FontWeight.bold)),
+                      Text("$start - $end", 
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: mutedColor, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -1670,12 +1686,13 @@ class _DashboardPageState extends State<DashboardPage>
                       Expanded(
                         child: Text(
                           data['subject'] ?? 'No Subject',
-                          style: theme.textTheme.bodyMedium?.copyWith(
+                          style: AppTextStyles.interNext.copyWith(
                             decoration: TextDecoration.lineThrough,
                             decorationColor: mutedColor.withOpacity(0.5),
                             decorationThickness: 2,
                             color: mutedColor,
                             fontWeight: FontWeight.w500,
+                            fontSize: 16,
                           ),
                         ),
                       ),
@@ -1903,7 +1920,7 @@ class _DashboardPageState extends State<DashboardPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Overall Attendance', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                              Text('$percentStr%', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: percent < 75 ? Colors.redAccent : Colors.greenAccent, fontSize: 24)),
+                              Text('$percentStr%', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: percent < 75 ? Colors.redAccent : (isDark ? Colors.greenAccent : Colors.black), fontSize: 24)),
                               if (countStr != null) Text('$countStr periods', style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor, fontSize: 12)),
                             ],
                           ),

@@ -15,7 +15,8 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _isLoading = true;
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;
+  bool _hasPermission = false;
   bool _allSubjects = true;
   List<String> _subjects = [];
   List<String> _selectedSubjects = [];
@@ -31,17 +32,22 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     setState(() => _isLoading = true);
 
     final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('notifications_enabled') ?? true;
+    final enabled = prefs.getBool('notifications_enabled') ?? false;
     final all = prefs.getBool('notifications_all_subjects') ?? true;
     final selected =
         prefs.getStringList('notification_selected_subjects') ?? [];
     final leadTime = prefs.getInt('notifications_lead_time') ?? 15;
 
+    // Check actual OS permission
+    final hasPermission = await NotificationService.hasPermission();
+
     final uniqueSubjects = await NotificationService.getUniqueSubjects();
 
     if (mounted) {
       setState(() {
-        _notificationsEnabled = enabled;
+        _hasPermission = hasPermission;
+        // Only enable if both preference AND permission are true
+        _notificationsEnabled = enabled && hasPermission;
         _allSubjects = all;
         _selectedSubjects = selected;
         _subjects = uniqueSubjects;
@@ -94,9 +100,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         child: Container(
           margin: const EdgeInsets.fromLTRB(16, 45, 16, 0),
           child: GlassCard(
-            blur: 25,
-            opacity: 0.1,
-            borderRadius: BorderRadius.circular(20),
+            blur: 40,
+            opacity: isDark ? 0.05 : 0.7,
+            borderRadius: BorderRadius.circular(24),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: SizedBox(
               height: 70,
@@ -104,11 +110,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 alignment: Alignment.center,
                 children: [
                   Text(
-                    'Notifications',
-                    style: AppTextStyles.interTitle.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 18,
-                      height: 1.0,
+                    'NOTIFICATIONS',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.monoLabel.copyWith(
+                      color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
+                      fontSize: 14,
+                      letterSpacing: 1.5,
                     ),
                   ),
                   Positioned(
@@ -117,6 +124,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       icon: Icon(
                         Icons.arrow_back_ios_new_rounded,
                         color: theme.primaryColor,
+                        size: 18,
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -129,23 +137,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       ),
       body: Stack(
         children: [
-          if (isDark)
-            Positioned(
-              top: -80,
-              left: -40,
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.primaryBlue.withOpacity(0.12),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 70, sigmaY: 70),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
+          const AuroraBackground(),
 
           SafeArea(
             child: _isLoading
@@ -158,26 +150,64 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       const SizedBox(height: 24),
 
                       GlassCard(
-                        blur: 15,
-                        opacity: 0.08,
+                        blur: 40,
+                        opacity: isDark ? 0.05 : 0.7,
                         padding: EdgeInsets.zero,
                         child: SwitchListTile(
                           title: Text(
                             'Enable Notifications',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                            style: AppTextStyles.interTitle.copyWith(
+                              fontSize: 18,
+                              color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
                             ),
                           ),
                           subtitle: Text(
-                            'Turn on/off all class reminders',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.hintColor,
+                            _hasPermission
+                                ? 'Turn on/off all class reminders'
+                                : 'Permission required - tap to enable',
+                            style: AppTextStyles.interSmall.copyWith(
+                              color: _hasPermission
+                                  ? (isDark ? AppTheme.glassMuted : AppTheme.paperMuted)
+                                  : Colors.orange,
+                              fontWeight: _hasPermission ? FontWeight.normal : FontWeight.w600,
                             ),
                           ),
                           value: _notificationsEnabled,
-                          onChanged: (val) {
-                            setState(() => _notificationsEnabled = val);
-                            _saveSettings();
+                          onChanged: (val) async {
+                            if (val && !_hasPermission) {
+                              // User wants to enable but doesn't have permission
+                              final granted = await NotificationService.requestPermissions();
+                              if (!mounted) return;
+                              if (granted) {
+                                setState(() {
+                                  _hasPermission = true;
+                                  _notificationsEnabled = true;
+                                });
+                                await _saveSettings();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('✓ Notification permission granted'),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('✗ Permission denied. Enable in Settings > Apps > ClassNow > Notifications'),
+                                      backgroundColor: Colors.orange,
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              }
+                            } else {
+                              setState(() => _notificationsEnabled = val);
+                              await _saveSettings();
+                            }
                           },
                           secondary: Container(
                             padding: const EdgeInsets.all(8),
@@ -192,7 +222,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                             ),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 20,
                             vertical: 8,
                           ),
                         ),
@@ -202,8 +232,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         const SizedBox(height: 16),
                         // Premium Glassmorphism Notification Timing Card
                         GlassCard(
-                          blur: 15,
-                          opacity: 0.08,
+                          blur: 40,
+                          opacity: isDark ? 0.05 : 0.7,
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,16 +245,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
-                                        colors: [
-                                          AppTheme.primaryBlue,
-                                          AppTheme.accentPurple,
-                                        ],
+                                        colors: isDark 
+                                          ? [AppTheme.glassAccent, AppTheme.glassAccent2]
+                                          : [AppTheme.paperAccent, AppTheme.paperAccentInk],
                                       ),
                                       borderRadius: BorderRadius.circular(14),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppTheme.primaryBlue
-                                              .withOpacity(0.4),
+                                          color: theme.primaryColor.withOpacity(0.3),
                                           blurRadius: 12,
                                           offset: const Offset(0, 4),
                                         ),
@@ -244,22 +272,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                       children: [
                                         Text(
                                           'Notification Timing',
-                                          style: theme.textTheme.titleLarge
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: -0.5,
-                                                height: 1.0,
-                                              ),
+                                          style: AppTextStyles.interTitle.copyWith(
+                                            fontSize: 20,
+                                            color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
+                                            height: 1.0,
+                                          ),
                                         ),
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 6),
                                         Text(
                                           'Remind me before class starts',
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                color: theme.hintColor
-                                                    .withOpacity(0.8),
-                                                height: 1.0,
-                                              ),
+                                          style: AppTextStyles.interSmall.copyWith(
+                                            color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                                            height: 1.0,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -361,20 +386,21 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         const SizedBox(height: 16),
 
                         GlassCard(
-                          blur: 15,
-                          opacity: 0.08,
+                          blur: 40,
+                          opacity: isDark ? 0.05 : 0.7,
                           padding: EdgeInsets.zero,
                           child: SwitchListTile(
                             title: Text(
                               'All Classes',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.interTitle.copyWith(
+                                fontSize: 18,
+                                color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
                               ),
                             ),
                             subtitle: Text(
                               'Get notified for every class in your schedule',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.hintColor,
+                              style: AppTextStyles.interSmall.copyWith(
+                                color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
                               ),
                             ),
                             value: _allSubjects,
@@ -395,7 +421,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               ),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
+                              horizontal: 20,
                               vertical: 8,
                             ),
                           ),
@@ -433,25 +459,26 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                             );
                             return GlassCard(
                               margin: const EdgeInsets.only(bottom: 8),
-                              blur: 10,
-                              opacity: 0.05,
+                              blur: 40,
+                              opacity: isDark ? 0.03 : 0.6,
                               padding: EdgeInsets.zero,
                               child: CheckboxListTile(
                                 title: Text(
                                   subject,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                  style: AppTextStyles.interSmall.copyWith(
                                     fontWeight: FontWeight.bold,
+                                    color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
                                   ),
                                 ),
                                 value: isSelected,
                                 onChanged: (val) =>
                                     _toggleSubject(subject, val),
-                                activeColor: AppTheme.primaryBlue,
+                                activeColor: theme.primaryColor,
                                 checkboxShape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
+                                  horizontal: 20,
                                   vertical: 4,
                                 ),
                               ),
@@ -469,9 +496,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Widget _buildExperimentCard(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
     return GlassCard(
-      blur: 20,
-      opacity: 0.12,
+      blur: 40,
+      opacity: isDark ? 0.05 : 0.7,
       border: Border.all(
         color: theme.primaryColor.withOpacity(0.3),
         width: 1.5,
@@ -495,16 +523,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   children: [
                     Text(
                       'Test Notifications',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      style: AppTextStyles.interTitle.copyWith(
+                        fontSize: 18,
+                        color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
                         height: 1.0,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       'Send a test alert to check if working.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.hintColor,
+                      style: AppTextStyles.interSmall.copyWith(
+                        color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
                         height: 1.0,
                       ),
                     ),

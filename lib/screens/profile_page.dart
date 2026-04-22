@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_firebase_test/app_theme.dart';
 import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
 import 'package:flutter_firebase_test/services/user_service.dart';
+import 'package:flutter_firebase_test/screens/mycamu_sync_screen.dart';
+import 'package:flutter_firebase_test/notifiers.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -21,6 +23,19 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadData();
+    attendanceUpdateNotifier.addListener(_onAttendanceUpdated);
+  }
+
+  @override
+  void dispose() {
+    attendanceUpdateNotifier.removeListener(_onAttendanceUpdated);
+    super.dispose();
+  }
+
+  void _onAttendanceUpdated() {
+    if (mounted) {
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -81,6 +96,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   Text('No Profile Data', style: AppTextStyles.interTitle),
                   const SizedBox(height: 8),
                   Text('Please sync with MyCAMU first', style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MyCamuSyncScreen()),
+                    ),
+                    icon: const Icon(Icons.sync_rounded),
+                    label: const Text('Sign in Camu'),
+                  ),
                 ],
               ),
             ),
@@ -217,7 +241,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 32),
                 // Academic Info Section
-                _buildSectionTitle(context, 'Academic Information'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildSectionTitle(context, 'Academic Information'),
+                    IconButton(
+                      onPressed: () => _showEditProfileDialog(context),
+                      icon: const Icon(Icons.edit_note_rounded),
+                      color: theme.primaryColor,
+                      tooltip: 'Edit Information',
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 GlassCard(
                   blur: 15,
@@ -245,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           context,
                           icon: Icons.calendar_today_rounded,
                           label: 'Year',
-                          value: _userData!.year!,
+                          value: 'Year ${_userData!.year}',
                         ),
                       ],
                       if (_userData!.section != null) ...[
@@ -261,25 +296,49 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                // Attendance Details Button
-                if (_attendancePercent != null)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showAttendanceDetails(context),
-                      icon: const Icon(Icons.bar_chart_rounded),
-                      label: const Text('View Detailed Breakdown'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                // Attendance Sync Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MyCamuSyncScreen()),
+                    ),
+                    icon: const Icon(Icons.sync_rounded),
+                    label: const Text('Update Attendance'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
+                      elevation: 0,
                     ),
                   ),
+                ),
                 const SizedBox(height: 32),
+                // Privacy Note
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_outline_rounded, size: 12, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Your data is stored locally & kept private.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 // Last Sync Info
                 FutureBuilder<SharedPreferences>(
                   future: SharedPreferences.getInstance(),
@@ -407,11 +466,72 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showAttendanceDetails(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Detailed attendance breakdown'),
-        duration: Duration(seconds: 2),
+  void _showEditProfileDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final nameController = TextEditingController(text: _userData?.name);
+    final rollController = TextEditingController(text: _userData?.rollNumber == 'N/A' ? '' : _userData?.rollNumber);
+    final branchController = TextEditingController(text: _userData?.branch);
+    final yearController = TextEditingController(text: _userData?.year);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: isDark ? const Color(0xFF1A1D24) : theme.scaffoldBackgroundColor,
+        title: Text('Edit Profile', style: AppTextStyles.interTitle),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildEditField(nameController, 'Full Name', Icons.person_rounded, isDark),
+              const SizedBox(height: 16),
+              _buildEditField(rollController, 'Roll Number', Icons.badge_rounded, isDark),
+              const SizedBox(height: 16),
+              _buildEditField(branchController, 'Branch', Icons.school_rounded, isDark),
+              const SizedBox(height: 16),
+              _buildEditField(yearController, 'Year (e.g. 1, 2, 3, 4)', Icons.calendar_today_rounded, isDark, keyboardType: TextInputType.number),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.hintColor)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedUser = _userData!.copyWith(
+                name: nameController.text.trim(),
+                rollNumber: rollController.text.trim().isEmpty ? 'N/A' : rollController.text.trim(),
+                branch: branchController.text.trim(),
+                year: yearController.text.trim(),
+              );
+              await UserService.saveUserData(updatedUser);
+              if (context.mounted) {
+                Navigator.pop(context);
+                _loadData();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully')));
+              }
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditField(TextEditingController controller, String label, IconData icon, bool isDark, {TextInputType? keyboardType}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+        filled: true,
+        fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       ),
     );
   }

@@ -11,7 +11,7 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     print("Native called background task: $task");
     try {
-      await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       await dotenv.load(fileName: ".env");
       await WidgetService.updateWidget(forceRefresh: true);
     } catch (e) {
@@ -25,9 +25,9 @@ void callbackDispatcher() {
 @pragma('vm:entry-point')
 Future<void> homeWidgetBackgroundCallback(Uri? uri) async {
   print("HomeWidget background click: $uri");
-  if (uri?.host == 'update' || uri?.path == '/update') {
+  if (uri?.host == 'update' || uri?.path == '/update' || uri?.scheme == 'timetable') {
     try {
-      await Firebase.initializeApp(options: PigeonFirebaseOptions.currentPlatform);
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       await dotenv.load(fileName: ".env");
       await WidgetService.updateWidget(
         forceRefresh: true,

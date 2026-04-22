@@ -4,12 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_firebase_test/firebase_options.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
+import 'package:flutter_firebase_test/widget_service.dart';
 import 'package:flutter_firebase_test/app_launcher.dart';
 import 'package:flutter_firebase_test/background_callbacks.dart';
 import 'package:flutter_firebase_test/notification_service.dart';
-import 'package:flutter_firebase_test/widget_service.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_firebase_test/providers/user_selection_provider.dart';
+import 'package:flutter_firebase_test/services/user_service.dart';
+import 'package:flutter_firebase_test/widgets/glass_widgets.dart';
+import 'package:flutter_firebase_test/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,15 +31,14 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Setup animations
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
 
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
+      begin: 0.9,
+      end: 1.1,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -46,7 +48,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Start initialization
     _initializeApp();
   }
 
@@ -57,44 +58,36 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Minimal delay - just enough for animation to show
-    final minDelay = Future.delayed(const Duration(milliseconds: 400));
+    final minDelay = Future.delayed(const Duration(milliseconds: 1500));
 
     try {
-      // 1. Initialize Firebase core FIRST (required for everything else)
-      await Firebase.initializeApp(
-        options: PigeonFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
 
-      // 2. Setup Firestore settings immediately
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: true,
       );
 
-      // 3. Run remaining init tasks in parallel (these don't block each other)
       await Future.wait([
         _initNotifications(),
         _initWidgetService(),
         _initAuth(),
+        UserService.updateAndGetStreak(),
       ]);
 
-      // 4. Ensure User Selection is loaded before navigating
-      // This prevents the "Guide Screen loop" by ensuring we know the state
       if (mounted) {
         await Provider.of<UserSelectionProvider>(
           context,
           listen: false,
         ).loadSelection();
       }
-
-      // 5. Defer Workmanager to after splash (non-critical)
-      _deferredWorkmanagerInit();
     } catch (e) {
-      print('Error during initialization: $e');
-      // Continue anyway - app might work in offline mode
+      debugPrint('Error during initialization: $e');
     }
 
-    // Wait for minimum animation time
     await minDelay;
 
     if (mounted) {
@@ -105,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 200),
+          transitionDuration: const Duration(milliseconds: 600),
         ),
       );
     }
@@ -115,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       await NotificationService.init();
     } catch (e) {
-      print('Notification init failed: $e');
+      debugPrint('Notification init failed: $e');
     }
   }
 
@@ -123,7 +116,7 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       await WidgetService.initialize();
     } catch (e) {
-      print('Widget service init failed: $e');
+      debugPrint('Widget service init failed: $e');
     }
   }
 
@@ -133,74 +126,78 @@ class _SplashScreenState extends State<SplashScreen>
         await FirebaseAuth.instance.signInAnonymously();
       }
     } catch (e) {
-      print('Auth init failed: $e');
+      debugPrint('Auth init failed: $e');
     }
-  }
-
-  void _deferredWorkmanagerInit() {
-    // Initialize Workmanager after app is running (non-blocking)
-    Future.microtask(() async {
-      try {
-        await Workmanager().initialize(
-          callbackDispatcher,
-          isInDebugMode: false,
-        );
-      } catch (e) {
-        print('Workmanager init failed: $e');
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Cute animated logo
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.auto_stories_rounded,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Animated Text
-            FadeTransition(
-              opacity: _fadeAnimation, // Fade text in
-              child: Column(
-                children: [
-                  Text(
-                    'Class Now',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+      backgroundColor: isDark ? AppTheme.glassBg : AppTheme.paperBg,
+      body: Stack(
+        children: [
+          const AuroraBackground(),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppTheme.glassAccent.withOpacity(0.1)
+                          : AppTheme.paperAccent.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark
+                            ? AppTheme.glassAccent.withOpacity(0.2)
+                            : AppTheme.paperAccent.withOpacity(0.15),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.auto_stories_rounded,
+                      size: 64,
+                      color: isDark ? AppTheme.glassAccent : AppTheme.paperAccent,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Getting everything ready...',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
+                ),
+                const SizedBox(height: 32),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      Text(
+                        'Class Now',
+                        style: AppTextStyles.interTitle.copyWith(
+                          color: isDark ? AppTheme.glassInk : AppTheme.paperInk,
+                          fontSize: 32,
+                          letterSpacing: -1.0,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'YOUR ACADEMIC COMPANION',
+                        style: AppTextStyles.monoLabel.copyWith(
+                          color: isDark ? AppTheme.glassMuted : AppTheme.paperMuted,
+                          fontSize: 10,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+

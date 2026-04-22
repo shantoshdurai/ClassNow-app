@@ -16,66 +16,38 @@ class ProfileSetupScreen extends StatefulWidget {
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _nameController = TextEditingController();
-  final _rollController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  bool _isFetching = false;
   bool _isSaving = false;
-  String? _fetchError;
-  UserData? _fetched;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _rollController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchFromRoboEye() async {
-    final roll = _rollController.text.trim();
-    if (roll.isEmpty) {
-      setState(() => _fetchError = 'Enter your roll number first');
-      return;
-    }
-    setState(() {
-      _isFetching = true;
-      _fetchError = null;
-      _fetched = null;
-    });
-
-    final result = await UserService.fetchFromRoboEye(roll);
-    if (!mounted) return;
-
-    if (result != null) {
-      setState(() {
-        _fetched = result;
-        _nameController.text = result.name;
-        _isFetching = false;
-      });
-    } else {
-      setState(() {
-        _isFetching = false;
-        _fetchError = 'Could not fetch automatically — enter your name below.';
-      });
-    }
+  void _skipSetup() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const OnboardingScreen(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   Future<void> _saveAndContinue() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final userData = _fetched ??
-        UserData(
-          name: _nameController.text.trim(),
-          rollNumber: _rollController.text.trim().isEmpty
-              ? 'N/A'
-              : _rollController.text.trim(),
-          branch: 'DSU',
-        );
-
-    await UserService.saveUserData(userData.copyWith(
+    final userData = UserData(
       name: _nameController.text.trim(),
-    ));
+      rollNumber: 'N/A',
+      branch: 'DSU Student',
+    );
+
+    await UserService.saveUserData(userData);
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -113,16 +85,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Step label
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'STEP 1/2',
-                          style: AppTextStyles.monoLabel.copyWith(
-                            color: mutedColor,
-                            letterSpacing: 2.0,
+                      // Top row with step and skip
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'STEP 1/2',
+                            style: AppTextStyles.monoLabel.copyWith(
+                              color: mutedColor,
+                              letterSpacing: 2.0,
+                            ),
                           ),
-                        ),
+                          TextButton(
+                            onPressed: _skipSetup,
+                            child: Text(
+                              'SKIP',
+                              style: AppTextStyles.monoLabel.copyWith(
+                                color: mutedColor,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 36),
 
@@ -138,7 +122,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2, end: 0),
                       const SizedBox(height: 10),
                       Text(
-                        'Your name and roll number are stored only on this device.',
+                        'Your name is stored only on this device to personalize your experience.',
                         style: AppTextStyles.interSmall.copyWith(
                           color: mutedColor,
                           fontSize: 14,
@@ -156,39 +140,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Roll number row
-                            _fieldLabel('ROLL NUMBER', mutedColor),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _textField(
-                                    controller: _rollController,
-                                    hint: 'e.g. 1DS22CS001',
-                                    isDark: isDark,
-                                    inkColor: inkColor,
-                                    mutedColor: mutedColor,
-                                    capitalization: TextCapitalization.characters,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                _lookupButton(accent, isDark),
-                              ],
-                            ),
-
-                            if (_fetchError != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                _fetchError!,
-                                style: AppTextStyles.interSmall.copyWith(
-                                  color: Colors.orangeAccent,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 22),
-
                             // Name field
                             _fieldLabel('YOUR NAME', mutedColor),
                             const SizedBox(height: 8),
@@ -273,32 +224,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _lookupButton(Color accent, bool isDark) {
-    return GestureDetector(
-      onTap: _isFetching ? null : _fetchFromRoboEye,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: accent.withOpacity(0.12),
-          border: Border.all(color: accent.withOpacity(0.3)),
-        ),
-        child: _isFetching
-            ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: accent,
-                ),
-              )
-            : Icon(Icons.manage_search_rounded, color: accent, size: 20),
-      ),
-    );
-  }
-
   Widget _fieldLabel(String text, Color mutedColor) {
     return Text(
       text,
@@ -307,22 +232,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         letterSpacing: 1.4,
         fontSize: 10,
       ),
-    );
-  }
-
-  Widget _textField({
-    required TextEditingController controller,
-    required String hint,
-    required bool isDark,
-    required Color inkColor,
-    required Color mutedColor,
-    TextCapitalization capitalization = TextCapitalization.none,
-  }) {
-    return TextFormField(
-      controller: controller,
-      textCapitalization: capitalization,
-      style: AppTextStyles.interSmall.copyWith(color: inkColor, fontSize: 15),
-      decoration: _inputDecoration(hint: hint, isDark: isDark, mutedColor: mutedColor),
     );
   }
 

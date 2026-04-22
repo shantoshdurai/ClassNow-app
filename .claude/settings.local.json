@@ -7,7 +7,16 @@
       "Bash(where flutter *)",
       "Read(//c/Users/Dog/**)",
       "Read(//c/Users/Dog/AppData/Local/**)",
-      "PowerShell(Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; ls $env:LOCALAPPDATA\\\\flutter\\\\bin\\\\flutter.bat -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; ls $env:LOCALAPPDATA\\\\flutter\\\\bin\\\\flutter.bat -ErrorAction SilentlyContinue)",
+      "Bash(flutter pub *)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(~/.local/flutter/bin/flutter analyze *)",
+      "Bash(adb logcat *)",
+      "Bash(adb devices *)",
+      "Bash(flutter --version)",
+      "Read(//c/flutter/**)",
+      "Read(//c/src/flutter/**)"
     ]
   }
 }

@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_firebase_test/screens/mycamu_sync_screen.dart';
 import 'package:flutter_firebase_test/services/user_service.dart';
+import 'package:flutter_firebase_test/notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,7 +23,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;
+  bool _hasNotificationPermission = false;
   bool _widgetsEnabled = false;
   bool _showAdvancedSettings = false;
 
@@ -34,15 +36,24 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadPrefs();
+    attendanceUpdateNotifier.addListener(_loadPrefs);
+  }
+
+  @override
+  void dispose() {
+    attendanceUpdateNotifier.removeListener(_loadPrefs);
+    super.dispose();
   }
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = await UserService.getUserData();
     final streak = await UserService.getStreak();
+    final hasPermission = await NotificationService.hasPermission();
     if (!mounted) return;
     setState(() {
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _hasNotificationPermission = hasPermission;
+      _notificationsEnabled = (prefs.getBool('notifications_enabled') ?? false) && hasPermission;
       _widgetsEnabled = prefs.getBool('widgets_enabled') ?? false;
       _userData = userData;
       _streak = streak;
@@ -158,6 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         const Spacer(),
                         Text(
                           'PROFILE',
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.monoLabel.copyWith(
                             color: mutedColor,
                             letterSpacing: 1.8,
@@ -175,11 +187,20 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                         const SizedBox(width: 10),
                         _iconBtn(
-                          icon: isDark ? Icons.ios_share_rounded : Icons.settings_outlined,
+                          icon: Icons.ios_share_rounded,
                           color: inkColor,
                           border: border2,
                           surface: surface,
-                          onTap: () {},
+                          onTap: () async {
+                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app');
+                            if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not open GitHub link')),
+                                );
+                              }
+                            }
+                          },
                           isDark: isDark,
                         ),
                       ],
@@ -214,16 +235,42 @@ class _SettingsPageState extends State<SettingsPage> {
                         icon: Icons.notifications_outlined,
                         iconColor: accent,
                         title: 'Class Alerts',
-                        meta: '15 min before each class',
+                        meta: _hasNotificationPermission
+                            ? '15 min before each class'
+                            : 'Permission required',
                         inkColor: inkColor,
-                        mutedColor: mutedColor,
+                        mutedColor: _hasNotificationPermission ? mutedColor : Colors.orange,
                         surface: surface,
                         border: border,
                         isDark: isDark,
                         trailing: _toggle(on: _notificationsEnabled, accent: accent, isDark: isDark, onChanged: (v) async {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('notifications_enabled', v);
-                          if (mounted) setState(() => _notificationsEnabled = v);
+                          if (v && !_hasNotificationPermission) {
+                            final granted = await NotificationService.requestPermissions();
+                            if (!mounted) return;
+                            if (granted) {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('notifications_enabled', true);
+                              if (mounted) {
+                                setState(() {
+                                  _hasNotificationPermission = true;
+                                  _notificationsEnabled = true;
+                                });
+                              }
+                            } else {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Enable notifications in Settings > Apps > ClassNow > Notifications'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('notifications_enabled', v);
+                            if (mounted) setState(() => _notificationsEnabled = v);
+                          }
                         }),
                       ),
                       _divider(border),

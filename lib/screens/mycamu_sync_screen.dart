@@ -103,9 +103,10 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
             var isInstitutionPage = text.includes('Select your institution') || url.includes('search-institution');
             var isAttendancePage = url.includes('attendance');
             var isDashboard = url.includes('dashboard') || url.includes('home') || text.includes('Student status');
+            var isProfilePage = url.includes('profile');
             
             // Logged In if on Attendance, Dashboard, or see Logout
-            var isLoggedIn = isAttendancePage || isDashboard || !!document.querySelector('i.fa-power-off');
+            var isLoggedIn = isAttendancePage || isDashboard || isProfilePage || !!document.querySelector('i.fa-power-off');
 
             if (isInstitutionPage) {
                var input = document.querySelector('input[placeholder*="institution name"]');
@@ -139,14 +140,35 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
             }
 
             // 2. Details
-            var rollMatch = text.match(/(?:Roll|REG|Admission)\s*No?\s*[:|-]?\s*([A-Z0-9]{4,20})/i);
-            if (rollMatch) data.rollNumber = rollMatch[1].trim();
+            // Roll Number: Look for common labels or standalone patterns that look like roll numbers
+            var rollMatch = text.match(/(?:Roll|REG|Admission|Registration)\s*No?\s*[:|-]?\s*([A-Z0-9\/-]{4,25})/i);
+            if (rollMatch) {
+               data.rollNumber = rollMatch[1].trim();
+            } else {
+               // Fallback: search for typical DSU roll number patterns if labels fail
+               var potentialRolls = text.match(/[A-Z0-9]{2,5}[0-9]{4,8}/g);
+               if (potentialRolls && potentialRolls.length > 0) {
+                  data.rollNumber = potentialRolls[0];
+               }
+            }
             
-            var branchMatch = text.match(/(?:Branch|Program|Department)\s*[:|-]?\s*([A-Za-z\s()&]{3,50}?)(?:\n|$|·|•)/i);
+            var branchMatch = text.match(/(?:Branch|Program|Department|Course)\s*[:|-]?\s*([A-Za-z\s()&]{3,60}?)(?:\n|$|·|•|Admission)/i);
             if (branchMatch) data.branch = branchMatch[1].trim();
 
-            var yearMatch = text.match(/Semester-(\d+)/i);
-            if (yearMatch) data.year = yearMatch[1];
+            // Year Extraction: Look for Semester or Academic Year (e.g. 2024-2028)
+            var semesterMatch = text.match(/Semester\s*[:|-]?\s*(\d+)/i);
+            if (semesterMatch) {
+               data.year = Math.ceil(parseInt(semesterMatch[1]) / 2).toString();
+            } else {
+               var academicYearMatch = text.match(/(\d{4})\s*-\s*(\d{4})/);
+               if (academicYearMatch) {
+                  var startYear = parseInt(academicYearMatch[1]);
+                  var currentYear = new Date().getFullYear();
+                  var currentMonth = new Date().getMonth();
+                  var yearNum = currentYear - startYear + (currentMonth >= 5 ? 1 : 0);
+                  data.year = Math.max(1, Math.min(4, yearNum)).toString();
+               }
+            }
 
             // 3. Attendance
             var percentMatch = text.match(/Overall percentage\s*[:|-]?\s*(\d{1,3})%/i);
@@ -168,16 +190,33 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
                return JSON.stringify({ ...data, status: 'SCANNING_ATTENDANCE' });
             }
 
-            // If not on attendance page, try to go there
-            if (smartClick('Attendance')) {
-               return JSON.stringify({ ...data, status: 'NAVIGATING' });
+            // Navigation Flow: If identified but not on attendance page
+            if (data.name && !isAttendancePage) {
+               // 1. If on Dashboard, go to Attendance
+               if (isDashboard) {
+                  if (smartClick('Attendance')) {
+                     return JSON.stringify({ ...data, status: 'NAVIGATING' });
+                  }
+               } 
+               
+               // 2. Try to click Dashboard or Home directly if visible
+               if (smartClick('Home') || smartClick('Dashboard')) {
+                  return JSON.stringify({ ...data, status: 'GOING_HOME' });
+               }
+
+               // 3. Open menu if Dashboard/Attendance links aren't visible
+               var menuBtn = document.querySelector('.menu-icon') || 
+                            document.querySelector('.fa-bars') || 
+                            document.querySelector('button[aria-label*="menu"]');
+               if (menuBtn && menuBtn.offsetParent !== null) {
+                  clickElement(menuBtn);
+                  return JSON.stringify({ ...data, status: 'OPENING_MENU' });
+               }
             }
 
-            // Open menu if nothing is visible
-            var menuBtn = document.querySelector('button[aria-label*="menu"]') || document.querySelector('.menu-icon') || document.querySelector('.fa-bars');
-            if (menuBtn && menuBtn.offsetParent !== null) {
-               clickElement(menuBtn);
-               return JSON.stringify({ ...data, status: 'OPENING_MENU' });
+            // Final fallback: try to find Attendance link anywhere
+            if (smartClick('Attendance')) {
+               return JSON.stringify({ ...data, status: 'NAVIGATING' });
             }
 
             return JSON.stringify({ ...data, status: 'LOGGED_IN' });
@@ -218,6 +257,8 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
         setState(() => _statusMessage = "☰ Opening menu...");
       } else if (data['status'] == 'NAVIGATING') {
         setState(() => _statusMessage = "📍 Selecting Attendance...");
+      } else if (data['status'] == 'GOING_HOME') {
+        setState(() => _statusMessage = "📍 Navigating to Dashboard...");
       } else if (data['status'] == 'SWITCHING_TAB') {
         setState(() => _statusMessage = "📍 Switching to 'Over all' view...");
       } else if (data['status'] == 'FOUND') {

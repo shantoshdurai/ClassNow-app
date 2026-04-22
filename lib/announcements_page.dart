@@ -57,6 +57,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                               children: [
                                 Text(
                                   'ANNOUNCEMENTS',
+                                  textAlign: TextAlign.center,
                                   style: AppTextStyles.monoLabel.copyWith(
                                     color: theme.primaryColor,
                                     letterSpacing: 2,
@@ -65,6 +66,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                 const SizedBox(height: 4),
                                 Text(
                                   'Latest Updates',
+                                  textAlign: TextAlign.center,
                                   style: AppTextStyles.interTitle.copyWith(
                                     fontSize: 18,
                                     color: theme.colorScheme.onSurface,

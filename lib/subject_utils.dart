@@ -18,10 +18,16 @@ class SubjectUtils {
         lowerSubject.contains('programming') ||
         lowerSubject.contains('software') ||
         lowerSubject.contains('data') ||
-        lowerSubject.contains('intelligence') ||
         lowerSubject.contains('coding') ||
         lowerSubject.contains('network')) {
       return Icons.computer_rounded;
+    }
+
+    if (lowerSubject.contains('ai') ||
+        lowerSubject.contains('intelligence') ||
+        lowerSubject.contains('logic') ||
+        lowerSubject.contains('think')) {
+      return Icons.auto_awesome_rounded;
     }
 
     if (lowerSubject.contains('english') ||
@@ -72,10 +78,6 @@ class SubjectUtils {
         lowerSubject.contains('pe ') ||
         lowerSubject.contains('gym')) {
       return Icons.sports_basketball_rounded;
-    }
-
-    if (lowerSubject.contains('logic') || lowerSubject.contains('think')) {
-      return Icons.psychology_rounded;
     }
 
     return Icons.auto_stories_rounded; // Default book-like icon
