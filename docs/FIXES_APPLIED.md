@@ -70,38 +70,7 @@ GlassCard(
 
 ---
 
-### 6. **CardTheme Constructor Type Mismatch** ✅
-**Error**: `Couldn't find constructor 'CardThemeData'` in `lib/app_theme.dart` lines 102 and 165
-
-**Root Cause**: Flutter version compatibility issue. Some Flutter versions use `CardTheme` while others use `CardThemeData`. The code was using the wrong class name for the current Flutter version.
-
-**Fix Applied**:
-- Changed `CardThemeData(` → `CardTheme(` in both locations (lines 102 and 165)
-- File: `lib/app_theme.dart`
-
-```dart
-// BEFORE ❌
-cardTheme: const CardThemeData(
-  color: paperSurface,
-  ...
-)
-
-// AFTER ✅
-cardTheme: const CardTheme(
-  color: paperSurface,
-  ...
-)
-```
-
-**Key Learning**: When updating Flutter or dependencies, check Flutter's ThemeData documentation for the correct class names. The `cardTheme` property in ThemeData expects `CardTheme`, not `CardThemeData` in this version.
-
----
-
 ## 📁 Files Modified
-
-### `lib/app_theme.dart`
-- ✅ Fixed CardTheme constructor type mismatch (lines 102, 165).
-- ✅ Changed `CardThemeData` → `CardTheme` for Flutter version compatibility.
 
 ### `lib/dashboard_page.dart`
 - ✅ Fixed `isDark` scope errors in multiple UI methods.

@@ -1,33 +1,77 @@
 # ClassNow-App Documentation Index
 
-Welcome to the ClassNow documentation hub. All project docs are organized below.
+Welcome to ClassNow documentation. All guides and references are organized below.
 
-## AI & Chatbot
+## 📋 Getting Started
+- **[QUICK_START.md](QUICK_START.md)** - Quick setup and first run
+- **[SETUP_LOCAL.md](SETUP_LOCAL.md)** - Local development environment setup
+- **[README.md](../README.md)** - Project overview (at root level)
 
-- [AI Chatbot Debug Guide](../AI_CHATBOT_DEBUG.md) - Debugging steps for the AI chatbot module
-- [Chatbot Enhancement Notes](../CHATBOT_ENHANCEMENT.md) - Feature enhancement ideas and implementations
-- [Chatbot Setup Guide](../CHATBOT_SETUP.md) - How to configure and set up the chatbot
+## 🔧 Development & Configuration
+- **[DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md)** - Development tips and architecture notes
+- **[ORGANIZATION.md](ORGANIZATION.md)** - Project file structure and organization
 
-## Widgets
+## 🐛 Bug Fixes & Issues
+- **[FIXES_APPLIED.md](FIXES_APPLIED.md)** - All build and runtime fixes applied
+  - Firebase initialization errors
+  - .env file handling
+  - CardTheme/CardThemeData type fixes
+  - Design system issues
+- **[push.md](push.md)** - CI/CD debugging journey and GitHub Actions fixes
 
-- [Widget Improvements](../WIDGET_IMPROVEMENTS.md) - Summary of widget-related improvements
-- [Widget Room Fix](../WIDGET_ROOM_FIX.md) - Fix notes for widget room display issues
+## 📦 Implementation & Features
+- **[IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md)** - Feature checklist
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation overview
+- **[PROFILE_INTEGRATION_GUIDE.md](PROFILE_INTEGRATION_GUIDE.md)** - User profile integration
+- **[ROBOTEYE-IMPLEMENTATION.md](ROBOTEYE-IMPLEMENTATION.md)** - Robot eyes feature implementation
 
-## Notifications
+## 🎨 Design & UI
+- **[BEFORE_AFTER_GUIDE.md](BEFORE_AFTER_GUIDE.md)** - UI redesign before/after comparison
+- **[README_CHANGES.md](README_CHANGES.md)** - UI and feature changes log
 
-- [Notification Guide](../NOTIFICATION_GUIDE.md) - How push notifications are configured
-
-## Project Updates
-
-- [Update Summary](../UPDATE_SUMMARY.md) - Changelog and update history
-- [Root Cause Analysis](../ROOT_CAUSE.md) - Root cause analysis for resolved bugs
-- [Analysis Log](../analysis_log.txt) - Static analysis output log
-
-## Contributing
-
-- [Contributing Guidelines](../CONTRIBUTING.md) - How to contribute to ClassNow
-- [README](../README.md) - Project overview and quick start
+## 🧹 Project Maintenance
+- **[CLEANUP.md](CLEANUP.md)** - Repository cleanup and commit optimization
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 
 ---
 
-> This index is auto-maintained. Add new docs here when you create them.
+## 📂 Project Structure
+
+```
+ClassNow-app/
+├── docs/              # All documentation (this folder)
+├── config/            # Configuration files
+│   ├── analysis_options.yaml
+│   ├── firebase.json
+│   ├── firestore.rules
+│   ├── flutter_launcher_icons.yaml
+│   └── devtools_options.yaml
+├── scripts/           # Utility scripts
+│   └── new.sh
+├── lib/               # Dart/Flutter source code
+├── android/           # Android native code
+├── ios/               # iOS native code
+├── web/               # Web platform code
+├── test/              # Unit and widget tests
+├── assets/            # Images, fonts, and static assets
+├── functions/         # Firebase Cloud Functions
+├── pubspec.yaml       # Flutter dependencies
+└── .env.example       # Environment variables template
+```
+
+## 🚀 Common Tasks
+
+**Starting development?** → Start with [SETUP_LOCAL.md](SETUP_LOCAL.md)
+
+**Building the app?** → See [QUICK_START.md](QUICK_START.md)
+
+**Hit a build error?** → Check [FIXES_APPLIED.md](FIXES_APPLIED.md)
+
+**CI/CD issues?** → Review [push.md](push.md)
+
+**Need to contribute?** → Read [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+> Last updated: April 23, 2026
+> All documentation moved to `docs/` folder for better organization
