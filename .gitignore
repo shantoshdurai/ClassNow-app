@@ -49,6 +49,7 @@ google-services.json
 
 # Local env files
 .env*
+assets/.env
 
 # Analysis output
 analysis_output.txt

@@ -74,23 +74,24 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
     });
     _scrollToBottom();
 
-    if (_systemContext == null) {
-      await _initializeContext();
-      if (_systemContext == null) {
-        setState(() {
-          _messages.add(ChatMessage(
-            text: 'Unable to load context. Please try again later.',
-            isUser: false,
-            isError: true,
-          ));
-          _isLoading = false;
-          _isStreaming = false;
-        });
-        return;
-      }
-    }
-
     try {
+      if (_systemContext == null) {
+        await _initializeContext();
+        if (_systemContext == null) {
+          if (!mounted) return;
+          setState(() {
+            _messages.add(ChatMessage(
+              text: 'Unable to load context. Please try again later.',
+              isUser: false,
+              isError: true,
+            ));
+            _isLoading = false;
+            _isStreaming = false;
+          });
+          return;
+        }
+      }
+
       final history = _messages
           .where((m) => !m.isError)
           .take(_messages.length - 1)
@@ -163,6 +164,8 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
         initialChildSize: 0.92,
         minChildSize: 0.5,
         maxChildSize: 0.97,
+        snap: true,
+        snapSizes: const [0.5, 0.92],
         builder: (context, _) {
           return ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -372,7 +375,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
             children: [
               _suggestionCard("What's my next class?", Icons.schedule_rounded, isDark),
               _suggestionCard("Today's full schedule", Icons.calendar_today_rounded, isDark),
-              _suggestionCard("Who teaches OS?", Icons.person_outline_rounded, isDark),
+              _suggestionCard("Know about holidays", Icons.celebration_rounded, isDark),
               _suggestionCard("Any free periods today?", Icons.coffee_outlined, isDark),
             ],
           ),

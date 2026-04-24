@@ -18,9 +18,13 @@ class GeminiService {
   /// Get stored API key
   static Future<String?> getApiKey() async {
     // 1. Try to load from .env file first
-    final String? envKey = dotenv.env['GEMINI_API_KEY'];
-    if (envKey != null && envKey.isNotEmpty) {
-      return envKey;
+    try {
+      final String? envKey = dotenv.env['GEMINI_API_KEY'];
+      if (envKey != null && envKey.isNotEmpty) {
+        return envKey;
+      }
+    } catch (e) {
+      // Ignore dotenv initialization errors and fallback to SharedPreferences
     }
 
     // 2. Fallback to Shared Preferences
@@ -66,10 +70,10 @@ User: $userMessage''';
             'temperature': 0.7,
             'topK': 40,
             'topP': 0.95,
-            'maxOutputTokens': 1000, // Increased for global staff queries
+            'maxOutputTokens': 1000,
           },
         }),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

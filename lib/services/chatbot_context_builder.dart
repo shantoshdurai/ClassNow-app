@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'calendar_data.dart';
 
 /// Builds context information for the chatbot from user's schedule
 class ChatbotContextBuilder {
@@ -118,7 +119,8 @@ class ChatbotContextBuilder {
             .collection('sections')
             .doc(sectionId)
             .collection('schedule')
-            .get();
+            .get()
+            .timeout(const Duration(seconds: 3));
 
         final list = snapshot.docs
             .map((doc) => {'id': doc.id, ...doc.data()})
@@ -242,6 +244,10 @@ class ChatbotContextBuilder {
     buffer.writeln('=====================================');
     buffer.writeln('');
 
+    // Inject Academic Calendar Data
+    buffer.writeln(CalendarData.getContext());
+    buffer.writeln('');
+
     // Add instructions for attendance calculations
     buffer.writeln('ATTENDANCE CALCULATION INSTRUCTIONS:');
     buffer.writeln(
@@ -346,7 +352,7 @@ class ChatbotContextBuilder {
       ' If asked who developed you, say: "I was developed by **Santosh**, a 2nd Year Student at DSU Trichy."',
     );
     buffer.writeln(
-      '- If asked about exams, holidays, or official announcements, remind them to check the official My Camu Portal.',
+      '- You have access to the OFFICIAL ACADEMIC CALENDAR 2026. Use it to answer questions about holidays, vacations, and exam dates.',
     );
     buffer.writeln(
       '- You have access to the ENTIRE university database, including ALL staff schedules across all departments and sections.',
@@ -431,6 +437,9 @@ class ChatbotContextBuilder {
       '- If asked about "my next class" or "current class", use the CURRENT STATUS above',
     );
     buffer.writeln('- For specific days, refer to the FULL WEEK SCHEDULE');
+    buffer.writeln(
+      '- **HOLIDAY & FREE PERIODS**: If the user asks "When is the next holiday?" or "Am I free tomorrow?", check the ACADEMIC CALENDAR section. If a holiday is coming up, mention it as a "Free Period" for them.',
+    );
     buffer.writeln(
       '- The University Library is in the Academic Block (2nd floor). ID card is mandatory for attending classes.',
     );
