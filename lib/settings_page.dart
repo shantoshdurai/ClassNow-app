@@ -191,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           border: border2,
                           surface: surface,
                           onTap: () async {
-                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app/releases/tag/v1.1.0');
+                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app/releases/tag/v1.0.0');
                             if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
