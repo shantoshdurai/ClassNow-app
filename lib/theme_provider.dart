@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
   String? _customBackgroundPath;
-  double _glassBlur = 40.0; // Increased default blur for better "Glass" effect
+  double _glassBlur = 20.0;
   double _backgroundBlur = 0.0; 
 
   ThemeMode get themeMode => _themeMode;
@@ -20,7 +20,7 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final themeString = prefs.getString('theme') ?? 'dark';
     _customBackgroundPath = prefs.getString('custom_background');
-    _glassBlur = prefs.getDouble('glass_blur') ?? 40.0;
+    _glassBlur = prefs.getDouble('glass_blur') ?? 20.0;
     _backgroundBlur = prefs.getDouble('background_blur') ?? 0.0;
     if (themeString == 'light') {
       _themeMode = ThemeMode.light;

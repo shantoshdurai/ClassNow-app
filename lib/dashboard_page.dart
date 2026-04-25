@@ -722,16 +722,22 @@ class _DashboardPageState extends State<DashboardPage>
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: SizedBox(
               height: 70,
-              child: Row(
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-                      color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
+                  // Left lock icon
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                        color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
+                      ),
+                      onPressed: _showLoginDialog,
                     ),
-                    onPressed: _showLoginDialog,
                   ),
-                  Expanded(
+                  // Title — truly centred in the full card width
+                  IgnorePointer(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -760,25 +766,22 @@ class _DashboardPageState extends State<DashboardPage>
                       ],
                     ),
                   ),
-                  Row(
+                  // Right action icons
+                  Positioned(
+                    right: 0,
+                    child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isLoggedInViaMyCamu)
-                        IconButton(
-                          icon: Icon(
-                            Icons.person_rounded,
-                            color: theme.primaryColor,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) => const ProfilePage(),
-                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                  return FadeTransition(opacity: animation, child: child);
-                                },
-                                transitionDuration: const Duration(milliseconds: 400),
+                        Consumer<ThemeProvider>(
+                          builder: (context, themeProvider, _) {
+                            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                            return IconButton(
+                              icon: Icon(
+                                isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                                color: isDarkMode ? Colors.orangeAccent : theme.primaryColor,
                               ),
+                              onPressed: () => themeProvider.toggleTheme(!isDarkMode),
                             );
                           },
                         ),
@@ -810,6 +813,7 @@ class _DashboardPageState extends State<DashboardPage>
                       ),
                     ],
                   ),
+                  ),  // closes Positioned(right: 0)
                 ],
               ),
             ),
@@ -1102,8 +1106,8 @@ class _DashboardPageState extends State<DashboardPage>
                   });
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutExpo,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
                     gradient: isSelected
@@ -1137,7 +1141,7 @@ class _DashboardPageState extends State<DashboardPage>
                             letterSpacing: 1.0,
                             fontSize: 10,
                             fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(0.5),
+                            color: isSelected ? Colors.white : theme.colorScheme.onSurface.withOpacity(isDark ? 0.5 : 0.75),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1145,7 +1149,7 @@ class _DashboardPageState extends State<DashboardPage>
                           dateStr,
                           style: theme.textTheme.labelMedium?.copyWith(
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white.withOpacity(0.9) : theme.colorScheme.onSurface.withOpacity(0.3),
+                            color: isSelected ? Colors.white.withOpacity(0.9) : theme.colorScheme.onSurface.withOpacity(isDark ? 0.4 : 0.65),
                             fontSize: 14,
                           ),
                         ),
@@ -1323,7 +1327,19 @@ class _DashboardPageState extends State<DashboardPage>
       }
     }
 
-    return ListView.builder(
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(selectedDay),
+      tween: Tween(begin: 0.65, end: 1.0),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, (1.0 - value) * 8),
+          child: child,
+        ),
+      ),
+      child: ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -1344,6 +1360,7 @@ class _DashboardPageState extends State<DashboardPage>
           }
         }
       },
+      ),
     );
   }
 
@@ -1637,7 +1654,7 @@ class _DashboardPageState extends State<DashboardPage>
     final data = item.data;
     final start = data['startTime'] ?? '--:--';
     final end = data['endTime'] ?? '--:--';
-    final Color mutedColor = isDark ? Colors.white24 : Colors.black26;
+    final Color mutedColor = isDark ? Colors.white.withOpacity(0.45) : Colors.black.withOpacity(0.45);
 
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
@@ -1893,12 +1910,16 @@ class _DashboardPageState extends State<DashboardPage>
                 opacity: 0.1, blur: 20, borderRadius: BorderRadius.circular(16), padding: EdgeInsets.zero,
                 child: InkWell(
                   onTap: () {
-                    if (subjectsStr != null) {
-                      _showDetailedAttendance(context, subjectsStr);
-                    } else {
-                      final message = countStr != null ? 'Classes Attended: $countStr' : 'No detailed breakdown available. Sync again!';
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
-                    }
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) => const ProfilePage(),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                        transitionDuration: const Duration(milliseconds: 400),
+                      ),
+                    );
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Padding(
@@ -1923,7 +1944,7 @@ class _DashboardPageState extends State<DashboardPage>
                             ],
                           ),
                         ),
-                        if (subjectsStr != null) Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.hintColor),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.hintColor),
                       ],
                     ),
                   ),

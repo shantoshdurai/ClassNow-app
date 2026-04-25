@@ -191,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           border: border2,
                           surface: surface,
                           onTap: () async {
-                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app');
+                            final Uri url = Uri.parse('https://github.com/shantoshdurai/ClassNow-app/releases/tag/v1.1.0');
                             if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -612,19 +612,22 @@ class _SettingsPageState extends State<SettingsPage> {
                     Text(
                       _userData?.name ?? 'DSU Student',
                       style: AppTextStyles.interTitle.copyWith(
-                        fontSize: 20,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                         color: inkColor,
+                        letterSpacing: -0.6,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       _userData?.branch != null ? _userData!.branch : 'DSU · Student',
-                      style: AppTextStyles.monoLabel.copyWith(
+                      style: AppTextStyles.interSmall.copyWith(
                         color: ink2,
-                        letterSpacing: 0.4,
-                        fontSize: 10,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -757,7 +760,12 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.only(left: 4, bottom: 10),
       child: Text(
         text,
-        style: AppTextStyles.monoLabel.copyWith(color: mutedColor, letterSpacing: 1.5),
+        style: AppTextStyles.monoLabel.copyWith(
+          color: mutedColor,
+          letterSpacing: 1.8,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -814,12 +822,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Text(title,
                       style: AppTextStyles.interMentor.copyWith(
-                        color: inkColor, fontWeight: FontWeight.w600,
+                        color: inkColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        letterSpacing: -0.1,
                       )),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(meta,
                       style: AppTextStyles.interSmall.copyWith(
-                        color: mutedColor, fontSize: 12,
+                        color: mutedColor,
+                        fontSize: 12.5,
+                        height: 1.3,
                       )),
                 ],
               ),

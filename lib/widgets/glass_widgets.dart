@@ -12,7 +12,8 @@ class AuroraBackground extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Positioned.fill(
-      child: IgnorePointer(
+      child: RepaintBoundary(
+        child: IgnorePointer(
         child: Stack(
           children: [
             if (isDark) ...[
@@ -79,6 +80,7 @@ class AuroraBackground extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -92,10 +94,6 @@ class AuroraBackground extends StatelessWidget {
           colors: [color, Colors.transparent],
           stops: const [0.0, 0.65],
         ),
-      ),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: const SizedBox.expand(),
       ),
     );
   }
@@ -180,30 +178,36 @@ class GlassCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding ?? const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: color ?? defaultColor,
-              borderRadius: borderRadius ?? BorderRadius.circular(24),
-              border: border ?? Border.all(color: borderColor, width: 0.8),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        Colors.white.withOpacity(0.08),
-                        Colors.white.withOpacity(0.02),
-                      ]
-                    : [
-                        AppTheme.paperSurface.withOpacity(0.9),
-                        AppTheme.paperSurface.withOpacity(0.7),
-                      ],
+        child: Builder(
+          builder: (context) {
+            final content = Container(
+              padding: padding ?? const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: color ?? defaultColor,
+                borderRadius: borderRadius ?? BorderRadius.circular(24),
+                border: border ?? Border.all(color: borderColor, width: 0.8),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [
+                          Colors.white.withOpacity(0.08),
+                          Colors.white.withOpacity(0.02),
+                        ]
+                      : [
+                          AppTheme.paperSurface.withOpacity(0.9),
+                          AppTheme.paperSurface.withOpacity(0.7),
+                        ],
+                ),
               ),
-            ),
-            child: child,
-          ),
+              child: child,
+            );
+            if (!isDark) return content;
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+              child: content,
+            );
+          },
         ),
       ),
     );

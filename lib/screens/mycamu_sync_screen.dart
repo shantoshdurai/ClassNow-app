@@ -21,6 +21,7 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
   Timer? _automationTimer;
   bool _hasUpdated = false;
   String _statusMessage = "Waiting for login...";
+  int _stuckCount = 0;
 
   @override
   void initState() {
@@ -83,7 +84,12 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
             }
 
             function smartClick(pattern) {
-               var selectors = ['.mat-tab-label', 'a', 'button', 'mat-list-item', 'span', 'div'];
+               var selectors = [
+                  'a', 'button', '[role="menuitem"]', '[role="option"]',
+                  '[role="tab"]', '[role="link"]', '[role="button"]',
+                  'li', '.MuiListItemButton-root', '.MuiMenuItem-root',
+                  '.mat-tab-label', 'mat-list-item', 'span', 'div',
+               ];
                var p = pattern.toLowerCase();
                for (var s of selectors) {
                   var elements = document.querySelectorAll(s);
@@ -99,13 +105,44 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
                return false;
             }
 
+            // navClick: only targets navigation/sidebar/menu elements — avoids hitting dashboard content cards
+            function navClick(pattern) {
+               var navSels = [
+                  'nav a', 'aside a', '[role="navigation"] a', '[role="menuitem"]',
+                  '[role="menu"] a', '[role="menu"] li', '[role="listitem"] a',
+                  '[class*="sidebar"] a', '[class*="Sidebar"] a',
+                  '[class*="drawer"] a', '[class*="Drawer"] a',
+                  '[class*="menu"] a', '[class*="Menu"] a',
+                  '[class*="nav"] a', '[class*="Nav"] a',
+               ];
+               var p = pattern.toLowerCase();
+               for (var s of navSels) {
+                  try {
+                     var elements = document.querySelectorAll(s);
+                     for (var i = 0; i < elements.length; i++) {
+                        var txt = (elements[i].innerText || '').trim().toLowerCase();
+                        if ((txt === p || txt.includes(p)) &&
+                            (elements[i].offsetParent !== null || elements[i].getClientRects().length > 0)) {
+                           return clickElement(elements[i]);
+                        }
+                     }
+                  } catch(e) {}
+               }
+               return false;
+            }
+
             // --- STATE DETECTION ---
             var isInstitutionPage = text.includes('Select your institution') || url.includes('search-institution');
-            var isAttendancePage = url.includes('attendance');
-            var isDashboard = url.includes('dashboard') || url.includes('home') || text.includes('Student status');
-            var isProfilePage = url.includes('profile');
-            
-            // Logged In if on Attendance, Dashboard, or see Logout
+
+            // isAttendancePage: URL-based OR text-based (v2 URL may differ)
+            var isAttendancePage = url.includes('attendance') ||
+               (text.includes('Subject wise') || text.includes('No. of periods') ||
+                text.includes('Periods Present') || (text.includes('Overall') && text.includes('present')));
+
+            var isDashboard = url.includes('dashboard') || url.includes('home');
+            var isProfilePage = url.includes('profile') || text.includes('Student status') || text.includes('Admission No');
+
+            // Logged In if on Attendance, Dashboard, Profile, or Logout icon visible
             var isLoggedIn = isAttendancePage || isDashboard || isProfilePage || !!document.querySelector('i.fa-power-off');
 
             if (isInstitutionPage) {
@@ -170,11 +207,18 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
                }
             }
 
-            // 3. Attendance
-            var percentMatch = text.match(/Overall percentage\s*[:|-]?\s*(\d{1,3})%/i);
-            if (percentMatch) data.overall = percentMatch[1];
+            // 3. Attendance — try multiple label formats from both v1 and v2
+            var percentMatch =
+               text.match(/Overall\s*percentage\s*[:|-]?\s*(\d{1,3}(?:\.\d+)?)%?/i) ||
+               text.match(/Total\s*(?:attendance|percentage)\s*[:|-]?\s*(\d{1,3}(?:\.\d+)?)%?/i) ||
+               text.match(/Consolidated\s*(?:attendance|percentage|%)\s*[:|-]?\s*(\d{1,3}(?:\.\d+)?)%?/i) ||
+               text.match(/(\d{1,3}(?:\.\d+)?)\s*%\s*(?:overall|total|attendance)/i) ||
+               text.match(/Attendance\s*(?:Percentage|%)\s*[:|-]?\s*(\d{1,3}(?:\.\d+)?)/i);
+            if (percentMatch) data.overall = Math.round(parseFloat(percentMatch[1])).toString();
 
-            var countMatch = text.match(/No\.\s*of\s*periods\s*present\s*[:|-]?\s*(\d+)\s*\/\s*(\d+)/i);
+            var countMatch = text.match(/No\.\s*of\s*periods\s*present\s*[:|-]?\s*(\d+)\s*\/\s*(\d+)/i) ||
+               text.match(/Present\s*[:|-]?\s*(\d+)\s*\/\s*(\d+)/i) ||
+               text.match(/(\d+)\s*\/\s*(\d+)\s*(?:days|periods|classes)/i);
             if (countMatch) data.attendanceCount = countMatch[1] + '/' + countMatch[2];
 
             // --- AUTOMATION STEPS ---
@@ -184,39 +228,101 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
             }
 
             if (isAttendancePage) {
-               if (smartClick('Over all') || smartClick('Overall')) {
-                  return JSON.stringify({ ...data, status: 'SWITCHING_TAB' });
+               // Try named tab variations (v1: "Over all", v2: may differ)
+               var tabLabels = ['Over all', 'Overall', 'Consolidated', 'Summary', 'All Subjects', 'Total', 'All'];
+               for (var tl = 0; tl < tabLabels.length; tl++) {
+                  if (smartClick(tabLabels[tl])) {
+                     return JSON.stringify({ ...data, status: 'SWITCHING_TAB' });
+                  }
+               }
+               // Fallback: click any visible tab/pill element on the page
+               var tabEls = document.querySelectorAll('[role="tab"], .tab-item, .nav-tab, [class*="Tab"], [class*="tab-"]');
+               for (var ti = 0; ti < tabEls.length; ti++) {
+                  if (tabEls[ti].offsetParent !== null || tabEls[ti].getClientRects().length > 0) {
+                     clickElement(tabEls[ti]);
+                     return JSON.stringify({ ...data, status: 'SWITCHING_TAB' });
+                  }
                }
                return JSON.stringify({ ...data, status: 'SCANNING_ATTENDANCE' });
             }
 
-            // Navigation Flow: If identified but not on attendance page
-            if (data.name && !isAttendancePage) {
-               // 1. If on Dashboard, go to Attendance
-               if (isDashboard) {
-                  if (smartClick('Attendance')) {
-                     return JSON.stringify({ ...data, status: 'NAVIGATING' });
+            // --- OPEN MENU HELPER ---
+            function openSideMenu() {
+               // STRATEGY 1: elementFromPoint — walk up DOM looking for cursor:pointer only
+               // NO direct-click fallback — too dangerous on dashboard (clicks wrong elements)
+               var hamCoords = [
+                  [24, 40], [36, 40], [48, 40], [24, 56], [36, 56],
+                  [20, 28], [40, 28], [60, 40], [24, 70], [36, 70]
+               ];
+               for (var i = 0; i < hamCoords.length; i++) {
+                  var probe = document.elementFromPoint(hamCoords[i][0], hamCoords[i][1]);
+                  var depth = 0;
+                  while (probe && probe !== document.body && depth < 10) {
+                     var tag = probe.tagName ? probe.tagName.toUpperCase() : '';
+                     var role = probe.getAttribute ? probe.getAttribute('role') : '';
+                     var cs = window.getComputedStyle ? window.getComputedStyle(probe) : null;
+                     var cur = cs ? cs.cursor : '';
+                     if (tag === 'BUTTON' || tag === 'A' || role === 'button' || cur === 'pointer') {
+                        clickElement(probe);
+                        return true;
+                     }
+                     probe = probe.parentElement;
+                     depth++;
                   }
-               } 
-               
-               // 2. Try to click Dashboard or Home directly if visible
-               if (smartClick('Home') || smartClick('Dashboard')) {
-                  return JSON.stringify({ ...data, status: 'GOING_HOME' });
                }
 
-               // 3. Open menu if Dashboard/Attendance links aren't visible
-               var menuBtn = document.querySelector('.menu-icon') || 
-                            document.querySelector('.fa-bars') || 
-                            document.querySelector('button[aria-label*="menu"]');
-               if (menuBtn && menuBtn.offsetParent !== null) {
-                  clickElement(menuBtn);
-                  return JSON.stringify({ ...data, status: 'OPENING_MENU' });
+               // STRATEGY 2: position scan — allow negative x (myCamu v2 hamburger is at x≈-334)
+               var clickable = document.querySelectorAll('button, [role="button"], a[href]');
+               for (var i = 0; i < clickable.length; i++) {
+                  var r = clickable[i].getBoundingClientRect();
+                  if (r.top >= -20 && r.top < 150 && r.left >= -500 && r.left < 150
+                      && r.width > 8 && r.width < 150 && r.height > 8) {
+                     clickElement(clickable[i]);
+                     return true;
+                  }
                }
+
+               // STRATEGY 3: SVG in top-left (React icon buttons)
+               var svgs = document.querySelectorAll('svg');
+               for (var i = 0; i < svgs.length; i++) {
+                  var r = svgs[i].getBoundingClientRect();
+                  if (r.top >= -20 && r.top < 150 && r.left >= -500 && r.left < 150 && r.width > 8) {
+                     var parent = svgs[i].closest('button, [role="button"], a') || svgs[i].parentElement;
+                     if (parent) { clickElement(parent); return true; }
+                  }
+               }
+
+               // STRATEGY 4: aria/class name selectors
+               var fallbackSels = [
+                  '[aria-label*="menu"]', '[aria-label*="navigation"]', '[aria-label*="sidebar"]',
+                  '[aria-label*="drawer"]', '[aria-label*="toggle"]',
+                  '.menu-icon', '.hamburger', '.navbar-toggler',
+                  '[class*="MenuButton"]', '[class*="menu-btn"]', '[class*="HamburgerButton"]',
+                  '[class*="burger"]', '[class*="sidebar"]', '[class*="drawer"]',
+                  '[class*="toggle"]', '[class*="nav-icon"]',
+               ];
+               for (var s of fallbackSels) {
+                  try {
+                     var el = document.querySelector(s);
+                     if (el && el.getBoundingClientRect().width > 0) { clickElement(el); return true; }
+                  } catch(e) {}
+               }
+
+               return false;
             }
 
-            // Final fallback: try to find Attendance link anywhere
-            if (smartClick('Attendance')) {
-               return JSON.stringify({ ...data, status: 'NAVIGATING' });
+            // --- NAVIGATION FLOW ---
+            // Go straight for Attendance — no need to visit dashboard first.
+            // navClick targets sidebar/nav links only (avoids hitting dashboard content cards).
+            // smartClick is the broader fallback.
+            if (!isAttendancePage) {
+               if (navClick('Attendance') || smartClick('Attendance')) {
+                  return JSON.stringify({ ...data, status: 'NAVIGATING' });
+               }
+               // Attendance not visible — open the sidebar
+               if (openSideMenu()) {
+                  return JSON.stringify({ ...data, status: 'OPENING_MENU' });
+               }
             }
 
             return JSON.stringify({ ...data, status: 'LOGGED_IN' });
@@ -253,21 +359,36 @@ class _MyCamuSyncScreenState extends State<MyCamuSyncScreen> {
       } else if (data['status'] == 'WAITING_FOR_LOGIN') {
         setState(() => _statusMessage = "🔑 Login to your profile...");
       } else if (data['status'] == 'OPENING_MENU') {
-        setState(() => _statusMessage = "☰ Opening menu...");
+        _stuckCount = 0;
+        setState(() => _statusMessage = "☰ Opening side menu...");
       } else if (data['status'] == 'NAVIGATING') {
+        _stuckCount = 0;
         setState(() => _statusMessage = "📍 Selecting Attendance...");
       } else if (data['status'] == 'GOING_HOME') {
+        _stuckCount = 0;
         setState(() => _statusMessage = "📍 Navigating to Dashboard...");
       } else if (data['status'] == 'SWITCHING_TAB') {
-        setState(() => _statusMessage = "📍 Switching to 'Over all' view...");
+        _stuckCount = 0;
+        setState(() => _statusMessage = "📍 Switching to Overall view...");
       } else if (data['status'] == 'FOUND') {
+        _stuckCount = 0;
         _hasUpdated = true;
         setState(() => _statusMessage = "✅ Sync Complete!");
         await _saveAndNotify(data['overall'], data['attendanceCount'], data['name'], data['rollNumber'], data['branch'], data['year']);
       } else if (data['status'] == 'SCANNING_ATTENDANCE') {
+        _stuckCount = 0;
         setState(() => _statusMessage = "🔍 Calculating attendance...");
       } else {
-        setState(() => _statusMessage = "👤 Identified: ${data['name'] ?? 'Scanning...'}");
+        _stuckCount++;
+        final name = data['name'];
+        final debug = data['debug'] as String?;
+        if (name != null && _stuckCount >= 3 && debug != null) {
+          setState(() => _statusMessage = "DBG: $debug");
+        } else if (name != null && _stuckCount >= 3) {
+          setState(() => _statusMessage = "👤 $name · Tapping menu...");
+        } else {
+          setState(() => _statusMessage = "👤 Identified: ${name ?? 'Scanning...'}");
+        }
       }
     } catch (e) {
       // ignore
