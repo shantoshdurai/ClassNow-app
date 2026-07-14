@@ -99,7 +99,7 @@ class AppTheme {
         elevation: 0,
       ),
     ),
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: paperSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -162,7 +162,7 @@ class AppTheme {
         shadowColor: glassAccentGlow,
       ),
     ),
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: Color(0x0AFFFFFF), // glassSurface
       elevation: 0,
       shape: RoundedRectangleBorder(

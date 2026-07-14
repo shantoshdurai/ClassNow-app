@@ -37,7 +37,7 @@ dependencies:
   firebase_core: ^3.15.1
   cloud_firestore: ^5.6.10
   intl: ^0.20.2
-  home_widget: ^0.9.0
+  home_widget: ^0.9.3
   flutter_local_notifications: ^17.1.0
   shared_preferences: ^2.3.2
   timezone: ^0.9.3
@@ -45,10 +45,10 @@ dependencies:
   firebase_auth: ^5.6.1
   shimmer: ^3.0.0
   cloud_functions: ^5.6.0
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
   connectivity_plus: ^6.1.0
-  workmanager: ^0.5.2
-  android_alarm_manager_plus: ^3.0.3
+  workmanager: ^0.9.0+3
+  android_alarm_manager_plus: ^5.1.0
   flutter_animate: ^4.5.2
   image_picker: ^1.0.7
   google_generative_ai: ^0.4.0
