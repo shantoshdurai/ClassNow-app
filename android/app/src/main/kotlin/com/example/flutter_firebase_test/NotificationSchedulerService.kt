@@ -71,6 +71,7 @@ class NotificationSchedulerService(private val context: Context) {
                 val dayOfWeek = classData.optString("dayOfWeek", "")
                 val startTime = classData.optString("startTime", "")
                 val room = classData.optString("room", "")
+                val staff = classData.optString("staff", "")
                 val id = classData.optString("id", "")
                 
                 // Filter based on user preferences
@@ -89,6 +90,7 @@ class NotificationSchedulerService(private val context: Context) {
                     id = id,
                     subject = subject,
                     room = room,
+                    staff = staff,
                     dayOfWeek = dayOfWeek,
                     startTime = startTime,
                     leadTimeMinutes = leadTimeMinutes
@@ -109,6 +111,7 @@ class NotificationSchedulerService(private val context: Context) {
         id: String,
         subject: String,
         room: String,
+        staff: String,
         dayOfWeek: String,
         startTime: String,
         leadTimeMinutes: Int
@@ -165,6 +168,7 @@ class NotificationSchedulerService(private val context: Context) {
             val intent = Intent(context, NotificationReceiver::class.java).apply {
                 putExtra("subject", subject)
                 putExtra("room", room)
+                putExtra("staff", staff)
                 putExtra("leadTime", leadTimeMinutes)
                 putExtra("dayOfWeek", dayOfWeek)
                 putExtra("startTime", startTime)

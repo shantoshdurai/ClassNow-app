@@ -58,18 +58,19 @@ class NotificationReceiver : BroadcastReceiver() {
         }
         
         val room = intent.getStringExtra("room") ?: "Unknown Room"
+        val staff = intent.getStringExtra("staff") ?: ""
         val leadTime = intent.getIntExtra("leadTime", 15)
         val dayOfWeek = intent.getStringExtra("dayOfWeek") ?: ""
         val startTime = intent.getStringExtra("startTime") ?: ""
         
         // Show the notification
-        showNotification(context, subject, room, leadTime)
+        showNotification(context, subject, room, staff, leadTime, startTime)
         
         // Reschedule for next week (only if enabled)
         rescheduleForNextWeek(context, intent, dayOfWeek, startTime)
     }
     
-    private fun showNotification(context: Context, subject: String, room: String, leadTime: Int) {
+    private fun showNotification(context: Context, subject: String, room: String, staff: String, leadTime: Int, startTime: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         
         // Create notification channel (required for Android 8.0+)
@@ -99,12 +100,17 @@ class NotificationReceiver : BroadcastReceiver() {
         )
         
         // Build the notification
+        val title = if (staff.isNotEmpty()) "$subject - $staff @ $startTime" else "$subject @ $startTime"
+        val contentText = "Room: $room starts in $leadTime minutes."
+        val bigText = "Your $subject class in Room $room starts in $leadTime minutes. Get ready!"
+        
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Class Starting Soon: $subject")
-            .setContentText("Room: $room starts in $leadTime minutes.")
+            .setContentTitle(title)
+            .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Your $subject class in Room $room starts in $leadTime minutes. Get ready!"))
+                .bigText(bigText)
+                .setBigContentTitle(title))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -124,12 +130,14 @@ class NotificationReceiver : BroadcastReceiver() {
             // Get the class ID from the original intent to maintain the same request code
             val subject = originalIntent.getStringExtra("subject") ?: return
             val room = originalIntent.getStringExtra("room") ?: return
+            val staff = originalIntent.getStringExtra("staff") ?: ""
             val leadTime = originalIntent.getIntExtra("leadTime", 15)
             
             // Create a new intent for next week
             val newIntent = Intent(context, NotificationReceiver::class.java).apply {
                 putExtra("subject", subject)
                 putExtra("room", room)
+                putExtra("staff", staff)
                 putExtra("leadTime", leadTime)
                 putExtra("dayOfWeek", dayOfWeek)
                 putExtra("startTime", startTime)
