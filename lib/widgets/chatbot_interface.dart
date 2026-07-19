@@ -49,7 +49,7 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
       if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(
-          text: 'API key not configured. Please set up your Gemini API key to use the AI assistant.',
+          text: "I'm too broke to have an API key right now 😭",
           isUser: false,
           isError: true,
         ));

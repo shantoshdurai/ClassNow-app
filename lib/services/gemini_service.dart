@@ -46,7 +46,7 @@ class GeminiService {
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null || apiKey.isEmpty) {
-      return 'Please configure your API key in settings first.';
+      return "I'm too broke to have an API key right now 😭";
     }
 
     try {

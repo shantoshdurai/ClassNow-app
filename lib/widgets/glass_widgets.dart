@@ -48,26 +48,7 @@ class AuroraBackground extends StatelessWidget {
                 ),
               ),
             ] else ...[
-              // Paper mode: Soft warm amber blob
-              Positioned(
-                top: -100,
-                right: -50,
-                child: _blob(
-                  size: 400,
-                  color: AppTheme.paperAccent.withOpacity(0.08),
-                  blur: 100,
-                ),
-              ),
-              // Soft peach/cream blob bottom left
-              Positioned(
-                bottom: -50,
-                left: -50,
-                child: _blob(
-                  size: 350,
-                  color: const Color(0xFFF3E9DD).withOpacity(0.5),
-                  blur: 80,
-                ),
-              ),
+              // Paper mode: Clean background (no blobs)
             ],
             // Subtle dot grid
             Opacity(

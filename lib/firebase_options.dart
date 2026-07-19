@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError('Web is not configured. Use FlutterFire CLI.');
+      return android;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:

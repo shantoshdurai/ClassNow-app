@@ -358,6 +358,7 @@ class _DashboardPageState extends State<DashboardPage>
     'Thursday',
     'Friday',
     'Saturday',
+    'Sunday',
   ];
 
   @override

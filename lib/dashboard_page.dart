@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -71,6 +72,7 @@ class _DashboardPageState extends State<DashboardPage>
     'Thursday',
     'Friday',
     'Saturday',
+    'Sunday',
   ];
 
   @override
@@ -548,7 +550,7 @@ class _DashboardPageState extends State<DashboardPage>
           .get();
       if (mounted) {
         setState(() {
-          isAdmin = doc.exists && doc.data()?['role'] == 'mentor';
+          isAdmin = kIsWeb && doc.exists && doc.data()?['role'] == 'mentor';
         });
       }
     } catch (_) {
@@ -725,15 +727,33 @@ class _DashboardPageState extends State<DashboardPage>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Left lock icon
+                  // Left icons
                   Positioned(
                     left: 0,
-                    child: IconButton(
-                      icon: Icon(
-                        isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-                        color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
-                      ),
-                      onPressed: _showLoginDialog,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (kIsWeb)
+                          IconButton(
+                            icon: Icon(
+                              isAdmin ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                              color: isAdmin ? AppTheme.accentPurple : theme.hintColor,
+                            ),
+                            onPressed: _showLoginDialog,
+                          ),
+                        Consumer<ThemeProvider>(
+                          builder: (context, themeProvider, _) {
+                            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                            return IconButton(
+                              icon: Icon(
+                                isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                                color: isDarkMode ? Colors.orangeAccent : theme.primaryColor,
+                              ),
+                              onPressed: () => themeProvider.toggleTheme(!isDarkMode),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   // Title — truly centred in the full card width
@@ -770,49 +790,36 @@ class _DashboardPageState extends State<DashboardPage>
                   Positioned(
                     right: 0,
                     child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isLoggedInViaMyCamu)
-                        Consumer<ThemeProvider>(
-                          builder: (context, themeProvider, _) {
-                            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-                            return IconButton(
-                              icon: Icon(
-                                isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                                color: isDarkMode ? Colors.orangeAccent : theme.primaryColor,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isAdmin)
+                          IconButton(
+                            icon: Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: theme.primaryColor,
+                            ),
+                            onPressed: () => _showClassDialog(context),
+                          ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: theme.primaryColor,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return FadeTransition(opacity: animation, child: child);
+                                },
+                                transitionDuration: const Duration(milliseconds: 400),
                               ),
-                              onPressed: () => themeProvider.toggleTheme(!isDarkMode),
                             );
                           },
                         ),
-                      if (isAdmin)
-                        IconButton(
-                          icon: Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: theme.primaryColor,
-                          ),
-                          onPressed: () => _showClassDialog(context),
-                        ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.settings_outlined,
-                          color: theme.primaryColor,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder: (context, animation, secondaryAnimation) => const SettingsPage(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                return FadeTransition(opacity: animation, child: child);
-                              },
-                              transitionDuration: const Duration(milliseconds: 400),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   ),  // closes Positioned(right: 0)
                 ],
               ),
@@ -1281,7 +1288,7 @@ class _DashboardPageState extends State<DashboardPage>
         child: Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.35),
+          color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : theme.colorScheme.surfaceContainerHighest.withOpacity(0.35),
           child: Padding(
             padding: const EdgeInsets.all(18.0),
             child: Column(
