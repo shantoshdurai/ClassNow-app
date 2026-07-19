@@ -21,6 +21,7 @@ import 'package:flutter_firebase_test/subject_utils.dart';
 import 'package:flutter_firebase_test/notifiers.dart';
 import 'package:flutter_firebase_test/widgets/chatbot_interface.dart';
 import 'package:flutter_firebase_test/theme_provider.dart';
+import 'package:flutter_firebase_test/widgets/morphic_navigation_bar.dart';
 import 'package:flutter_firebase_test/widgets/class_selection_widget.dart';
 import 'package:flutter_firebase_test/login_screen.dart';
 import 'package:flutter_firebase_test/settings_page.dart';
@@ -943,134 +944,62 @@ class _DashboardPageState extends State<DashboardPage>
           ),
         ],
       ),
-      floatingActionButton: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, child) {
-                return GlassCard(
-                  blur: themeProvider.glassBlur,
-                  opacity: isDark ? 0.2 : 0.5,
-                  borderRadius: BorderRadius.circular(30),
-                  padding: EdgeInsets.zero,
-                  child: FloatingActionButton(
-                    heroTag: 'ai_assistant',
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const ChatbotInterface(),
-                      );
-                    },
-                    child: Icon(
-                      Icons.auto_awesome_rounded,
-                      color: theme.primaryColor,
-                      size: 28,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, child) {
-                return GlassCard(
-                  blur: themeProvider.glassBlur,
-                  opacity: isDark ? 0.2 : 0.5,
-                  borderRadius: BorderRadius.circular(30),
-                  padding: EdgeInsets.zero,
-                  child: FloatingActionButton(
-                    heroTag: 'announcements',
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    onPressed: () async {
-                      final now = DateTime.now();
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString(
-                        'last_announcement_read_time',
-                        now.toIso8601String(),
-                      );
-                      if (mounted) {
-                        setState(() {
-                          _lastAnnouncementReadTime = now;
-                        });
-                      }
-                      Navigator.push(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            AnnouncementsPage(isAdmin: isAdmin),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(opacity: animation, child: child);
-                        },
-                        transitionDuration: const Duration(milliseconds: 400),
-                      ),
-                    );
-                    },
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('announcements')
-                          .orderBy('timestamp', descending: true)
-                          .limit(1)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        bool hasUnread = false;
-                        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                          final latestDoc = snapshot.data!.docs.first;
-                          final data = latestDoc.data() as Map<String, dynamic>;
-                          final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-                          if (timestamp != null) {
-                            if (_lastAnnouncementReadTime == null || timestamp.isAfter(_lastAnnouncementReadTime!)) {
-                              hasUnread = true;
-                            }
-                          }
-                        }
-                        return Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            Icon(
-                              Icons.campaign_rounded,
-                              color: theme.primaryColor,
-                              size: 28,
-                            ),
-                            if (hasUnread)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.error,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 1.5),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: theme.colorScheme.error.withOpacity(0.4),
-                                        blurRadius: 4,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+      extendBody: true,
+      bottomNavigationBar: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('announcements')
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .snapshots(),
+        builder: (context, snapshot) {
+          bool hasUnread = false;
+          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+            final latestDoc = snapshot.data!.docs.first;
+            final data = latestDoc.data() as Map<String, dynamic>;
+            final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+            if (timestamp != null) {
+              if (_lastAnnouncementReadTime == null || timestamp.isAfter(_lastAnnouncementReadTime!)) {
+                hasUnread = true;
+              }
+            }
+          }
+          return MorphicNavigationBar(
+            hasUnreadAnnouncements: hasUnread,
+            onAnnouncementTap: () async {
+              final now = DateTime.now();
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(
+                'last_announcement_read_time',
+                now.toIso8601String(),
+              );
+              if (mounted) {
+                setState(() {
+                  _lastAnnouncementReadTime = now;
+                });
+              }
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      AnnouncementsPage(isAdmin: isAdmin),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: const Duration(milliseconds: 400),
+                ),
+              );
+            },
+            onAITap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const ChatbotInterface(),
+              );
+            },
+          );
+        },
       ),
     );
   }
