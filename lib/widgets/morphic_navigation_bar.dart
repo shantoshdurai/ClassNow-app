@@ -234,6 +234,6 @@ class _MorphicNavigationBarState extends State<MorphicNavigationBar>
           ],
         ),
       ),
-    );
+    ));
   }
 }
