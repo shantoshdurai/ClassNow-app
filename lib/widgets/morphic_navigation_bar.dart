@@ -55,17 +55,19 @@ class _MorphicNavigationBarState extends State<MorphicNavigationBar>
     final fabRing = isDark ? Colors.white.withOpacity(0.18) : Colors.white.withOpacity(0.18);
     final fabIconColor = isDark ? const Color(0xFF0E1016) : const Color(0xFFFBF8F1);
     
-    // Oklch(72% 0.18 230) approx to #65B0FF (aurora blue/cyan) for dark
-    // Oklch(62% 0.18 48) approx to #C67634 (amber) for light
-    final fabHalo = isDark ? const Color(0x8C65B0FF) : const Color(0x80C67634);
+    // Remove ugly brown/amber glow in light mode
+    final fabHalo = isDark ? const Color(0x8C65B0FF) : Colors.transparent;
     
     final iconColor = isDark ? const Color(0xFFD7D9E0) : const Color(0xFF3C382F);
 
     return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-        height: 64,
-        child: Stack(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          width: 280, // Restrict width to avoid taking up full bottom
+          margin: const EdgeInsets.only(bottom: 20),
+          height: 64,
+          child: Stack(
           clipBehavior: Clip.none,
           children: [
             // Pill Container
