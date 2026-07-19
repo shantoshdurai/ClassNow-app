@@ -7,7 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class GeminiService {
   static const String _apiKeyPref = 'gemini_api_key';
   static const String _baseUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent';
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
   /// Save API key securely
   static Future<void> saveApiKey(String apiKey) async {

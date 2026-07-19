@@ -1428,7 +1428,17 @@ class _DashboardPageState extends State<DashboardPage>
             color: theme.primaryColor.withOpacity(isDark ? 0.4 : 0.2),
             width: 1.2,
           ),
-          child: Column(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => ChatbotInterface(initialSubject: data['subject'] ?? 'the subject'),
+              );
+            },
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -1569,6 +1579,14 @@ class _DashboardPageState extends State<DashboardPage>
           borderRadius: BorderRadius.circular(22),
           padding: EdgeInsets.zero,
           child: InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => ChatbotInterface(initialSubject: data['subject'] ?? 'the subject'),
+              );
+            },
             onLongPress: (isAdmin && item.doc != null) ? () => _showEditOptions(item.doc!) : null,
             borderRadius: BorderRadius.circular(22),
             child: Padding(
@@ -1672,6 +1690,14 @@ class _DashboardPageState extends State<DashboardPage>
           borderRadius: BorderRadius.circular(12),
           padding: EdgeInsets.zero,
           child: InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => ChatbotInterface(initialSubject: data['subject'] ?? 'the subject'),
+              );
+            },
             onLongPress: (isAdmin && item.doc != null) ? () => _showEditOptions(item.doc!) : null,
             borderRadius: BorderRadius.circular(12),
             child: Padding(

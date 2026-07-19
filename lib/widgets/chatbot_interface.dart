@@ -7,7 +7,8 @@ import '../services/chatbot_context_builder.dart';
 import 'chat_bubble.dart';
 
 class ChatbotInterface extends StatefulWidget {
-  const ChatbotInterface({super.key});
+  final String? initialSubject;
+  const ChatbotInterface({super.key, this.initialSubject});
 
   @override
   State<ChatbotInterface> createState() => _ChatbotInterfaceState();
@@ -30,6 +31,12 @@ class _ChatbotInterfaceState extends State<ChatbotInterface> {
   void initState() {
     super.initState();
     _controller.addListener(() => setState(() {}));
+    if (widget.initialSubject != null) {
+      _messages.add(ChatMessage(
+        text: "Ask anything about ${widget.initialSubject}...",
+        isUser: false,
+      ));
+    }
     _initializeContext();
   }
 
