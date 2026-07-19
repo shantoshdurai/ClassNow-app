@@ -945,52 +945,14 @@ class _DashboardPageState extends State<DashboardPage>
         ],
       ),
       extendBody: true,
-      bottomNavigationBar: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('announcements')
-            .orderBy('timestamp', descending: true)
-            .limit(1)
-            .snapshots(),
-        builder: (context, snapshot) {
-          bool hasUnread = false;
-          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            final latestDoc = snapshot.data!.docs.first;
-            final data = latestDoc.data() as Map<String, dynamic>;
-            final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-            if (timestamp != null) {
-              if (_lastAnnouncementReadTime == null || timestamp.isAfter(_lastAnnouncementReadTime!)) {
-                hasUnread = true;
-              }
-            }
-          }
-          return MorphicNavigationBar(
-            hasUnreadAnnouncements: hasUnread,
-            onAnnouncementTap: () async {
-              final now = DateTime.now();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString(
-                'last_announcement_read_time',
-                now.toIso8601String(),
-              );
-              if (mounted) {
-                setState(() {
-                  _lastAnnouncementReadTime = now;
-                });
-              }
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      AnnouncementsPage(isAdmin: isAdmin),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  transitionDuration: const Duration(milliseconds: 400),
-                ),
-              );
-            },
-            onAITap: () {
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: "btn_ai",
+            backgroundColor: isDark ? const Color(0xFF1B1916) : const Color(0xFFEBF6F2),
+            onPressed: () {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -998,8 +960,83 @@ class _DashboardPageState extends State<DashboardPage>
                 builder: (context) => const ChatbotInterface(),
               );
             },
-          );
-        },
+            child: Icon(Icons.auto_awesome_rounded, color: isDark ? Colors.white : Colors.black87),
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('announcements')
+                .orderBy('timestamp', descending: true)
+                .limit(1)
+                .snapshots(),
+            builder: (context, snapshot) {
+              bool hasUnread = false;
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                final latestDoc = snapshot.data!.docs.first;
+                final data = latestDoc.data() as Map<String, dynamic>;
+                final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+                if (timestamp != null) {
+                  if (_lastAnnouncementReadTime == null || timestamp.isAfter(_lastAnnouncementReadTime!)) {
+                    hasUnread = true;
+                  }
+                }
+              }
+              return FloatingActionButton(
+                heroTag: "btn_announcements",
+                backgroundColor: isDark ? const Color(0xFF1B1916) : const Color(0xFFEBF6F2),
+                onPressed: () async {
+                  final now = DateTime.now();
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString(
+                    'last_announcement_read_time',
+                    now.toIso8601String(),
+                  );
+                  if (mounted) {
+                    setState(() {
+                      _lastAnnouncementReadTime = now;
+                    });
+                  }
+                  if (!mounted) return;
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.9,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        child: AnnouncementsPage(isAdmin: isAdmin),
+                      ),
+                    ),
+                  );
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(Icons.campaign_rounded, color: isDark ? Colors.white : Colors.black87),
+                    if (hasUnread)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1B1916) : const Color(0xFFEBF6F2),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
