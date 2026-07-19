@@ -61,13 +61,14 @@ class _MorphicNavigationBarState extends State<MorphicNavigationBar>
     final iconColor = isDark ? const Color(0xFFD7D9E0) : const Color(0xFF3C382F);
 
     return SafeArea(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          width: 280, // Restrict width to avoid taking up full bottom
-          margin: const EdgeInsets.only(bottom: 20),
-          height: 64,
-          child: Stack(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 280, // Restrict width to avoid taking up full bottom
+            margin: const EdgeInsets.only(bottom: 20),
+            height: 64,
+            child: Stack(
           clipBehavior: Clip.none,
           children: [
             // Pill Container
@@ -232,8 +233,10 @@ class _MorphicNavigationBarState extends State<MorphicNavigationBar>
               ),
             ),
           ],
-        ),
-      ),
-    ));
+        ), // Stack
+      ), // Container
+        ], // Row children
+      ), // Row
+    ); // SafeArea
   }
 }
